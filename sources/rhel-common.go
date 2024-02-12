@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
 	"golang.org/x/sys/unix"
 
 	"github.com/canonical/lxd-imagebuilder/shared"
@@ -52,7 +52,7 @@ func (c *commonRHEL) unpackISO(filePath, rootfsDir string, scriptRunner func(str
 
 	var rootfsImage string
 	squashfsImage := filepath.Join(isoDir, "LiveOS", "squashfs.img")
-	if incus.PathExists(squashfsImage) {
+	if lxd_shared.PathExists(squashfsImage) {
 		// The squashfs.img contains an image containing the rootfs, so first
 		// mount squashfs.img
 		err = shared.RunCommand(c.ctx, nil, nil, "mount", "-t", "squashfs", "-o", "ro", squashfsImage, squashfsDir)
@@ -88,15 +88,15 @@ func (c *commonRHEL) unpackISO(filePath, rootfsDir string, scriptRunner func(str
 	packagesDir := filepath.Join(isoDir, "Packages")
 	repodataDir := filepath.Join(isoDir, "repodata")
 
-	if !incus.PathExists(packagesDir) {
+	if !lxd_shared.PathExists(packagesDir) {
 		packagesDir = filepath.Join(isoDir, "BaseOS", "Packages")
 	}
 
-	if !incus.PathExists(repodataDir) {
+	if !lxd_shared.PathExists(repodataDir) {
 		repodataDir = filepath.Join(isoDir, "BaseOS", "repodata")
 	}
 
-	if incus.PathExists(packagesDir) {
+	if lxd_shared.PathExists(packagesDir) {
 		entries, err := os.ReadDir(packagesDir)
 		if err != nil {
 			return fmt.Errorf("Failed reading directory %q: %w", packagesDir, err)
@@ -110,7 +110,7 @@ func (c *commonRHEL) unpackISO(filePath, rootfsDir string, scriptRunner func(str
 		}
 	}
 
-	if incus.PathExists(packagesDir) && incus.PathExists(repodataDir) {
+	if lxd_shared.PathExists(packagesDir) && lxd_shared.PathExists(repodataDir) {
 		// Create cdrom repo for yum
 		err = os.MkdirAll(filepath.Join(tempRootDir, "mnt", "cdrom"), 0755)
 		if err != nil {
@@ -209,7 +209,7 @@ func (c *commonRHEL) unpackRootfsImage(imageFile string, target string) error {
 	rootfsDir := installDir
 	rootfsFile := filepath.Join(installDir, "LiveOS", "rootfs.img")
 
-	if incus.PathExists(rootfsFile) {
+	if lxd_shared.PathExists(rootfsFile) {
 		rootfsDir, err = os.MkdirTemp(c.cacheDir, "temp_")
 		if err != nil {
 			return fmt.Errorf("Failed to create temporary directory: %w", err)

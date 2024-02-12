@@ -8,9 +8,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	client "github.com/lxc/incus/client"
-	"github.com/lxc/incus/shared/api"
-	incus "github.com/lxc/incus/shared/util"
+	client "github.com/canonical/lxd/client"
+	lxd_shared "github.com/canonical/lxd/shared"
+	"github.com/canonical/lxd/shared/api"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/sys/unix"
@@ -45,7 +45,7 @@ func (c *cmdIncus) commandBuild() *cobra.Command {
 `, typeDescription, compressionDescription),
 		Args: cobra.RangeArgs(1, 2),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if !incus.ValueInSlice(c.flagType, []string{"split", "unified"}) {
+			if !lxd_shared.ValueInSlice(c.flagType, []string{"split", "unified"}) {
 				return errors.New("--type needs to be one of ['split', 'unified']")
 			}
 
@@ -114,7 +114,7 @@ func (c *cmdIncus) commandPack() *cobra.Command {
 `, typeDescription, compressionDescription),
 		Args: cobra.RangeArgs(2, 3),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if !incus.ValueInSlice(c.flagType, []string{"split", "unified"}) {
+			if !lxd_shared.ValueInSlice(c.flagType, []string{"split", "unified"}) {
 				return errors.New("--type needs to be one of ['split', 'unified']")
 			}
 
@@ -453,7 +453,7 @@ func (c *cmdIncus) run(cmd *cobra.Command, args []string, overlayDir string) err
 	if importFlag.Changed {
 		path := ""
 
-		server, err := client.ConnectIncusUnix(path, nil)
+		server, err := client.ConnectLXDUnix(path, nil)
 		if err != nil {
 			return fmt.Errorf("Failed to connect to Incus: %w", err)
 		}

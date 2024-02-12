@@ -4,7 +4,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/lxc/incus/shared/osarch"
+	"github.com/canonical/lxd/shared/osarch"
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 )

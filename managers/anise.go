@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
 
 	"github.com/canonical/lxd-imagebuilder/shared"
 )
@@ -66,7 +66,7 @@ func (m *anise) manageRepository(repoAction shared.DefinitionPackagesRepository)
 		targetFile = filepath.Join("/etc/anise/repos.conf.d", repoAction.Name+".yml")
 	}
 
-	if !incus.PathExists(filepath.Dir(targetFile)) {
+	if !lxd_shared.PathExists(filepath.Dir(targetFile)) {
 		err := os.MkdirAll(filepath.Dir(targetFile), 0755)
 		if err != nil {
 			return fmt.Errorf("Failed to create directory %q: %w", filepath.Dir(targetFile), err)

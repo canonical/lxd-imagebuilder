@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
 
 	"github.com/canonical/lxd-imagebuilder/image"
 	"github.com/canonical/lxd-imagebuilder/shared"
@@ -128,7 +128,7 @@ func (g *incusAgent) Run() error {
 
 func (g *incusAgent) handleSystemd() error {
 	systemdPath := filepath.Join("/", "lib", "systemd")
-	if !incus.PathExists(filepath.Join(g.sourceDir, systemdPath)) {
+	if !lxd_shared.PathExists(filepath.Join(g.sourceDir, systemdPath)) {
 		systemdPath = filepath.Join("/", "usr", "lib", "systemd")
 	}
 
@@ -165,7 +165,7 @@ StartLimitBurst=10
 
 	udevPath := filepath.Join("/", "lib", "udev", "rules.d")
 	stat, err := os.Lstat(filepath.Join(g.sourceDir, "lib", "udev"))
-	if err == nil && stat.Mode()&os.ModeSymlink != 0 || !incus.PathExists(filepath.Dir(filepath.Join(g.sourceDir, udevPath))) {
+	if err == nil && stat.Mode()&os.ModeSymlink != 0 || !lxd_shared.PathExists(filepath.Dir(filepath.Join(g.sourceDir, udevPath))) {
 		udevPath = filepath.Join("/", "usr", "lib", "udev", "rules.d")
 	}
 

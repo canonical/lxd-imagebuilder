@@ -8,14 +8,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lxc/incus/shared/archive"
-	"github.com/lxc/incus/shared/subprocess"
+	lxd_shared "github.com/canonical/lxd/shared"
 	"golang.org/x/sys/unix"
 )
 
 // Unpack unpacks a tarball.
 func Unpack(file string, path string) error {
-	extractArgs, extension, _, err := archive.DetectCompression(file)
+	extractArgs, extension, _, err := lxd_shared.DetectCompression(file)
 	if err != nil {
 		return err
 	}
@@ -47,11 +46,11 @@ func Unpack(file string, path string) error {
 		return fmt.Errorf("Unsupported image format: %s", extension)
 	}
 
-	err = subprocess.RunCommandWithFds(context.TODO(), reader, nil, command, args...)
+	err = lxd_shared.RunCommandWithFds(context.TODO(), reader, nil, command, args...)
 	if err != nil {
 		// We can't create char/block devices in unpriv containers so ignore related errors.
 		if command == "unsquashfs" {
-			var runError *subprocess.RunError
+			var runError *lxd_shared.RunError
 
 			ok := errors.As(err, &runError)
 			if !ok || runError.StdErr().String() == "" {

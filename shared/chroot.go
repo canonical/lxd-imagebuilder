@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strconv"
 
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
 	"golang.org/x/sys/unix"
 )
 
@@ -91,7 +91,7 @@ func moveMounts(mounts []ChrootMount) error {
 		// If the target's parent directory is a symlink, we need to resolve that as well.
 		targetDir := filepath.Dir(target)
 
-		if incus.PathExists(targetDir) {
+		if lxd_shared.PathExists(targetDir) {
 			// Get information on current target
 			fi, err := os.Lstat(targetDir)
 			if err != nil {
@@ -305,7 +305,7 @@ func SetupChroot(rootfs string, definition Definition, m []ChrootMount) (func() 
 
 	// Setup policy-rc.d override
 	policyCleanup := false
-	if incus.PathExists("/usr/sbin/") && !incus.PathExists("/usr/sbin/policy-rc.d") {
+	if lxd_shared.PathExists("/usr/sbin/") && !lxd_shared.PathExists("/usr/sbin/policy-rc.d") {
 		err = os.WriteFile("/usr/sbin/policy-rc.d", []byte(`#!/bin/sh
 exit 101
 `), 0755)
@@ -394,7 +394,7 @@ func populateDev() error {
 	}
 
 	for _, d := range devs {
-		if incus.PathExists(d.Path) {
+		if lxd_shared.PathExists(d.Path) {
 			continue
 		}
 

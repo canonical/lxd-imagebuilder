@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/lxc/incus/shared/api"
+	"github.com/canonical/lxd/shared/api"
 	"gopkg.in/yaml.v2"
 
 	"github.com/canonical/lxd-imagebuilder/shared"

@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lxc/incus/shared/api"
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
+	"github.com/canonical/lxd/shared/api"
 
 	"github.com/canonical/lxd-imagebuilder/image"
 	"github.com/canonical/lxd-imagebuilder/shared"
@@ -19,7 +19,7 @@ type hostname struct {
 // RunLXC creates a hostname template.
 func (g *hostname) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) error {
 	// Skip if the file doesn't exist
-	if !incus.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
+	if !lxd_shared.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
 		return nil
 	}
 
@@ -49,7 +49,7 @@ func (g *hostname) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC
 // RunIncus creates a hostname template.
 func (g *hostname) RunIncus(img *image.IncusImage, target shared.DefinitionTargetIncus) error {
 	// Skip if the file doesn't exist
-	if !incus.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
+	if !lxd_shared.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
 		return nil
 	}
 
