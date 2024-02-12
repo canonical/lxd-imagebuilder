@@ -23,8 +23,8 @@ Then, copy one of the example YAML configuration files for images into this dire
 ```{note}
 The YAML configuration file contains an image template that gives instructions to distrobuilder.
 
-Distrobuilder provides examples of YAML files for various distributions in the [examples directory](https://github.com/lxc/distrobuilder/tree/master/doc/examples).
-[`scheme.yaml`](https://github.com/lxc/distrobuilder/blob/master/doc/examples/scheme.yaml) is a standard template that includes all available options.
+Distrobuilder provides examples of YAML files for various distributions in the [examples directory](https://github.com/canonical/lxd-imagebuilder/tree/master/doc/examples).
+[`scheme.yaml`](https://github.com/canonical/lxd-imagebuilder/blob/master/doc/examples/scheme.yaml) is a standard template that includes all available options.
 
 Official Incus templates for various distributions are available in the [`lxc-ci` repository](https://github.com/lxc/lxc-ci/tree/master/images).
 ```
@@ -32,7 +32,7 @@ Official Incus templates for various distributions are available in the [`lxc-ci
 In this example, we are creating an Ubuntu image.
 
 ```
-cp $HOME/go/src/github.com/lxc/distrobuilder/doc/examples/ubuntu.yaml ubuntu.yaml
+cp $HOME/go/src/github.com/canonical/lxd-imagebuilder/doc/examples/ubuntu.yaml ubuntu.yaml
 ```
 
 ### Edit the template file

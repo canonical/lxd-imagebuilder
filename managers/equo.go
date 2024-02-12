@@ -3,7 +3,7 @@ package managers
 import (
 	"errors"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type equo struct {

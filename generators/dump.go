@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type dump struct {

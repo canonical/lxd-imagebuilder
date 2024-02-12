@@ -4,8 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type remove struct {

@@ -20,8 +20,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sys/unix"
 
-	"github.com/lxc/distrobuilder/shared"
-	"github.com/lxc/distrobuilder/windows"
+	"github.com/canonical/lxd-imagebuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/windows"
 )
 
 type cmdRepackWindows struct {

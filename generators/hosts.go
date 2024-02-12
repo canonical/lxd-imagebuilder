@@ -9,8 +9,8 @@ import (
 	"github.com/lxc/incus/shared/api"
 	incus "github.com/lxc/incus/shared/util"
 
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type hosts struct {

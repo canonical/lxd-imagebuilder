@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sys/unix"
 	"gopkg.in/antchfx/htmlquery.v1"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type oraclelinux struct {

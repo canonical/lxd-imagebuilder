@@ -46,7 +46,7 @@ You can also use it to build images from ISO files that require licenses and the
 `distrobuilder` is free software and developed under the [Apache 2 license](https://www.apache.org/licenses/LICENSE-2.0).
 It's an open source project that warmly welcomes community projects, contributions, suggestions, fixes and constructive feedback.
 
-- [Contribute to the project](https://github.com/lxc/distrobuilder/blob/master/CONTRIBUTING.md)  <!-- wokeignore:rule=master -->
+- [Contribute to the project](https://github.com/canonical/lxd-imagebuilder/blob/master/CONTRIBUTING.md)  <!-- wokeignore:rule=master -->
 - [Discuss on IRC](https://web.libera.chat/#lxc) (see [Getting started with IRC](https://discuss.linuxcontainers.org/t/getting-started-with-irc/11920) if needed)
 - [Ask and answer questions on the forum](https://discuss.linuxcontainers.org)
 - [Join the mailing lists](https://lists.linuxcontainers.org)

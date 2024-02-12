@@ -11,7 +11,7 @@ import (
 	incus "github.com/lxc/incus/shared/util"
 	"github.com/stretchr/testify/require"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 func TestVerifyFile(t *testing.T) {

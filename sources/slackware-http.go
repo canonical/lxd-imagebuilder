@@ -11,7 +11,7 @@ import (
 	incus "github.com/lxc/incus/shared/util"
 	"gopkg.in/antchfx/htmlquery.v1"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type slackware struct {

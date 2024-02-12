@@ -71,10 +71,10 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 
-	"github.com/lxc/distrobuilder/managers"
-	"github.com/lxc/distrobuilder/shared"
-	"github.com/lxc/distrobuilder/shared/version"
-	"github.com/lxc/distrobuilder/sources"
+	"github.com/canonical/lxd-imagebuilder/managers"
+	"github.com/canonical/lxd-imagebuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared/version"
+	"github.com/canonical/lxd-imagebuilder/sources"
 )
 
 //go:embed lxc.generator

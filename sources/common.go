@@ -17,7 +17,7 @@ import (
 	incus "github.com/lxc/incus/shared/util"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type common struct {

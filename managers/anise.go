@@ -9,7 +9,7 @@ import (
 
 	incus "github.com/lxc/incus/shared/util"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type anise struct {

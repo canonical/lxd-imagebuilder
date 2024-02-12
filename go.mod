@@ -1,4 +1,4 @@
-module github.com/lxc/distrobuilder
+module github.com/canonical/lxd-imagebuilder
 
 go 1.21
 

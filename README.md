@@ -76,9 +76,9 @@ NOTE: Distrobuilder requires Go 1.21 or higher, if your distribution doesn't hav
 Second, download the source code of the `distrobuilder` repository (this repository).
 
 ```
-mkdir -p $HOME/go/src/github.com/lxc/
-cd $HOME/go/src/github.com/lxc/
-git clone https://github.com/lxc/distrobuilder
+mkdir -p $HOME/go/src/github.com/canonical/
+cd $HOME/go/src/github.com/canonical/
+git clone https://github.com/canonical/lxd-imagebuilder
 ```
 
 Third, enter the directory with the source code of `distrobuilder` and run `make` to compile the source code. This will generate the executable program `distrobuilder`, and it will be located at `$HOME/go/bin/distrobuilder`.

@@ -11,7 +11,7 @@ import (
 	"github.com/lxc/incus/shared/api"
 	"gopkg.in/yaml.v2"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 // An IncusImage represents an Incus image.

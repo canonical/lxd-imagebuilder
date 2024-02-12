@@ -26,8 +26,8 @@ dist:
 	# Create build dir
 	$(eval TMP := $(shell mktemp -d))
 	git archive --prefix=distrobuilder-$(VERSION)/ HEAD | tar -x -C $(TMP)
-	mkdir -p $(TMP)/_dist/src/github.com/lxc
-	ln -s ../../../../distrobuilder-$(VERSION) $(TMP)/_dist/src/github.com/lxc/distrobuilder
+	mkdir -p $(TMP)/_dist/src/github.com/canonical
+	ln -s ../../../../distrobuilder-$(VERSION) $(TMP)/_dist/src/github.com/canonical/lxd-distrobuilder
 
 	# Download dependencies
 	cd $(TMP)/distrobuilder-$(VERSION) && go mod vendor

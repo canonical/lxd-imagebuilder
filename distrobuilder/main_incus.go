@@ -15,10 +15,10 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sys/unix"
 
-	"github.com/lxc/distrobuilder/generators"
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/managers"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/generators"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/managers"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type cmdIncus struct {

@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 func TestHostsGeneratorRunLXC(t *testing.T) {

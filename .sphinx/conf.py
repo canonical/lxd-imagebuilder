@@ -111,7 +111,7 @@ html_theme_options = {
 }
 
 html_context = {
-    "github_url": "https://github.com/lxc/distrobuilder",
+    "github_url": "https://github.com/canonical/lxd-imagebuilder",
     "github_version": "master",
     "github_folder": "/doc/",
     "github_filetype": "md",
