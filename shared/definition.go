@@ -447,7 +447,7 @@ func (d *Definition) Validate() error {
 		"hosts",
 		"remove",
 		"cloud-init",
-		"incus-agent",
+		"lxd-agent",
 		"fstab",
 	}
 
