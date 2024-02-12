@@ -198,7 +198,7 @@ type DefinitionTargetLXD struct {
 // A DefinitionTarget specifies target dependent files.
 type DefinitionTarget struct {
 	LXC  DefinitionTargetLXC  `yaml:"lxc,omitempty"`
-	LXD  DefinitionTargetLXD  `yaml:"incus,omitempty"`
+	LXD  DefinitionTargetLXD  `yaml:"lxd,omitempty"`
 	Type DefinitionFilterType // This field is internal only and used only for simplicity.
 }
 

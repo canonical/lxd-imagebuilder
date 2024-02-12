@@ -54,7 +54,7 @@ func (g *template) RunLXD(img *image.LXDImage, target shared.DefinitionTargetLXD
 			return fmt.Errorf("Failed to parse template: %w", err)
 		}
 
-		content, err = tpl.Execute(pongo2.Context{"incus": target})
+		content, err = tpl.Execute(pongo2.Context{"lxd": target})
 		if err != nil {
 			return fmt.Errorf("Failed to execute template: %w", err)
 		}
