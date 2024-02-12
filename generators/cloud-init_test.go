@@ -62,7 +62,7 @@ func TestCloudInitGeneratorRunLXC(t *testing.T) {
 	require.FileExists(t, filepath.Join(rootfsDir, "etc", "cloud", "cloud-init.disabled"))
 }
 
-func TestCloudInitGeneratorRunIncus(t *testing.T) {
+func TestCloudInitGeneratorRunLXD(t *testing.T) {
 	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test")
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
@@ -76,7 +76,7 @@ func TestCloudInitGeneratorRunIncus(t *testing.T) {
 		},
 	}
 
-	image := image.NewIncusImage(context.TODO(), cacheDir, "", cacheDir, definition)
+	image := image.NewLXDImage(context.TODO(), cacheDir, "", cacheDir, definition)
 
 	tests := []struct {
 		name       string
@@ -148,7 +148,7 @@ config:
 		require.IsType(t, &cloudInit{}, generator)
 		require.NoError(t, err)
 
-		err = generator.RunIncus(image, shared.DefinitionTargetIncus{})
+		err = generator.RunLXD(image, shared.DefinitionTargetLXD{})
 
 		if !tt.shouldFail {
 			require.NoError(t, err)

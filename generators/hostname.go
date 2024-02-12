@@ -46,8 +46,8 @@ func (g *hostname) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC
 	return nil
 }
 
-// RunIncus creates a hostname template.
-func (g *hostname) RunIncus(img *image.IncusImage, target shared.DefinitionTargetIncus) error {
+// RunLXD creates a hostname template.
+func (g *hostname) RunLXD(img *image.LXDImage, target shared.DefinitionTargetLXD) error {
 	// Skip if the file doesn't exist
 	if !lxd_shared.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
 		return nil
@@ -72,7 +72,7 @@ func (g *hostname) RunIncus(img *image.IncusImage, target shared.DefinitionTarge
 		return fmt.Errorf("Failed to write to hostname file: %w", err)
 	}
 
-	// Add to Incus templates
+	// Add to LXD templates
 	img.Metadata.Templates[g.defFile.Path] = &api.ImageMetadataTemplate{
 		Template:   "hostname.tpl",
 		Properties: g.defFile.Template.Properties,

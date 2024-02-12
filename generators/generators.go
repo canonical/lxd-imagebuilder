@@ -24,7 +24,7 @@ type generator interface {
 // Generator interface.
 type Generator interface {
 	RunLXC(*image.LXCImage, shared.DefinitionTargetLXC) error
-	RunIncus(*image.IncusImage, shared.DefinitionTargetIncus) error
+	RunLXD(*image.LXDImage, shared.DefinitionTargetLXD) error
 	Run() error
 }
 
@@ -35,12 +35,12 @@ var generators = map[string]func() generator{
 	"fstab":       func() generator { return &fstab{} },
 	"hostname":    func() generator { return &hostname{} },
 	"hosts":       func() generator { return &hosts{} },
-	"incus-agent": func() generator { return &incusAgent{} },
+	"incus-agent": func() generator { return &lxdAgent{} },
 	"remove":      func() generator { return &remove{} },
 	"template":    func() generator { return &template{} },
 
 	// Legacy.
-	"lxd-agent": func() generator { return &incusAgent{} },
+	"lxd-agent": func() generator { return &lxdAgent{} },
 }
 
 // Load loads and initializes a generator.

@@ -45,7 +45,7 @@ func TestHostsGeneratorRunLXC(t *testing.T) {
 		"127.0.0.1\tlocalhost\n127.0.0.1\tLXC_NAME\n")
 }
 
-func TestHostsGeneratorRunIncus(t *testing.T) {
+func TestHostsGeneratorRunLXD(t *testing.T) {
 	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test")
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
@@ -63,7 +63,7 @@ func TestHostsGeneratorRunIncus(t *testing.T) {
 		},
 	}
 
-	image := image.NewIncusImage(context.TODO(), cacheDir, "", cacheDir, definition)
+	image := image.NewLXDImage(context.TODO(), cacheDir, "", cacheDir, definition)
 
 	err = os.MkdirAll(filepath.Join(cacheDir, "rootfs", "etc"), 0755)
 	require.NoError(t, err)
@@ -71,7 +71,7 @@ func TestHostsGeneratorRunIncus(t *testing.T) {
 	createTestFile(t, filepath.Join(cacheDir, "rootfs", "etc", "hosts"),
 		"127.0.0.1\tlocalhost\n127.0.0.1\tdistrobuilder\n")
 
-	err = generator.RunIncus(image, shared.DefinitionTargetIncus{})
+	err = generator.RunLXD(image, shared.DefinitionTargetLXD{})
 	require.NoError(t, err)
 
 	validateTestFile(t, filepath.Join(cacheDir, "templates", "hosts.tpl"),

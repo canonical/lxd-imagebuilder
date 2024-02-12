@@ -184,22 +184,22 @@ type DefinitionTargetLXC struct {
 	Config        []DefinitionTargetLXCConfig `yaml:"config,omitempty"`
 }
 
-// DefinitionTargetIncusVM represents Incus VM specific options.
-type DefinitionTargetIncusVM struct {
+// DefinitionTargetLXDVM represents LXD VM specific options.
+type DefinitionTargetLXDVM struct {
 	Size       uint64 `yaml:"size,omitempty"`
 	Filesystem string `yaml:"filesystem,omitempty"`
 }
 
-// DefinitionTargetIncus represents Incus specific options.
-type DefinitionTargetIncus struct {
-	VM DefinitionTargetIncusVM `yaml:"vm,omitempty"`
+// DefinitionTargetLXD represents LXD specific options.
+type DefinitionTargetLXD struct {
+	VM DefinitionTargetLXDVM `yaml:"vm,omitempty"`
 }
 
 // A DefinitionTarget specifies target dependent files.
 type DefinitionTarget struct {
-	LXC   DefinitionTargetLXC   `yaml:"lxc,omitempty"`
-	Incus DefinitionTargetIncus `yaml:"incus,omitempty"`
-	Type  DefinitionFilterType  // This field is internal only and used only for simplicity.
+	LXC  DefinitionTargetLXC  `yaml:"lxc,omitempty"`
+	LXD  DefinitionTargetLXD  `yaml:"incus,omitempty"`
+	Type DefinitionFilterType // This field is internal only and used only for simplicity.
 }
 
 // A DefinitionFile represents a file which is to be created inside to chroot.
@@ -345,7 +345,7 @@ func (d *Definition) SetDefaults() {
 		d.Image.Description = "{{ image.distribution|capfirst }} {{ image.release }} {{ image.architecture_mapped }}{% if image.variant != \"default\" %} ({{ image.variant }}){% endif %} ({{ image.serial }})"
 	}
 
-	// Set default target type. This will only be overridden if building VMs for Incus.
+	// Set default target type. This will only be overridden if building VMs for LXD.
 	d.Targets.Type = DefinitionFilterTypeContainer
 }
 

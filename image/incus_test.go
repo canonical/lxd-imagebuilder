@@ -34,7 +34,7 @@ var incusDef = shared.Definition{
 	},
 }
 
-func setupIncus(t *testing.T) *IncusImage {
+func setupLXD(t *testing.T) *LXDImage {
 	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test-incus")
 
 	err := os.MkdirAll(filepath.Join(cacheDir, "rootfs"), 0755)
@@ -43,12 +43,12 @@ func setupIncus(t *testing.T) *IncusImage {
 	err = os.MkdirAll(filepath.Join(cacheDir, "templates"), 0755)
 	require.NoError(t, err)
 
-	image := NewIncusImage(context.TODO(), cacheDir, "", cacheDir, incusDef)
+	image := NewLXDImage(context.TODO(), cacheDir, "", cacheDir, incusDef)
 
 	fail := true
 	defer func() {
 		if fail {
-			teardownIncus(t)
+			teardownLXD(t)
 		}
 	}()
 
@@ -65,19 +65,19 @@ func setupIncus(t *testing.T) *IncusImage {
 	return image
 }
 
-func teardownIncus(t *testing.T) {
+func teardownLXD(t *testing.T) {
 	os.RemoveAll(filepath.Join(os.TempDir(), "distrobuilder-test-incus"))
 }
 
-func TestIncusBuild(t *testing.T) {
-	image := setupIncus(t)
-	defer teardownIncus(t)
+func TestLXDBuild(t *testing.T) {
+	image := setupLXD(t)
+	defer teardownLXD(t)
 
-	testIncusBuildSplitImage(t, image)
-	testIncusBuildUnifiedImage(t, image)
+	testLXDBuildSplitImage(t, image)
+	testLXDBuildUnifiedImage(t, image)
 }
 
-func testIncusBuildSplitImage(t *testing.T, image *IncusImage) {
+func testLXDBuildSplitImage(t *testing.T, image *LXDImage) {
 	// Create split tarball and squashfs.
 	imageFile, rootfsFile, err := image.Build(false, "xz", false)
 	require.NoError(t, err)
@@ -100,7 +100,7 @@ func testIncusBuildSplitImage(t *testing.T, image *IncusImage) {
 	os.Remove("rootfs.squashfs")
 }
 
-func testIncusBuildUnifiedImage(t *testing.T, image *IncusImage) {
+func testLXDBuildUnifiedImage(t *testing.T, image *LXDImage) {
 	// Create unified tarball with custom name.
 	_, _, err := image.Build(true, "xz", false)
 	require.NoError(t, err)
@@ -123,9 +123,9 @@ func testIncusBuildUnifiedImage(t *testing.T, image *IncusImage) {
 	require.FileExists(t, "incus.tar.xz")
 }
 
-func TestIncusCreateMetadata(t *testing.T) {
-	image := setupIncus(t)
-	defer teardownIncus(t)
+func TestLXDCreateMetadata(t *testing.T) {
+	image := setupLXD(t)
+	defer teardownLXD(t)
 
 	err := image.createMetadata()
 	require.NoError(t, err)

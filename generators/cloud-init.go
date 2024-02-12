@@ -66,8 +66,8 @@ func (g *cloudInit) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLX
 	return nil
 }
 
-// RunIncus creates cloud-init template files.
-func (g *cloudInit) RunIncus(img *image.IncusImage, target shared.DefinitionTargetIncus) error {
+// RunLXD creates cloud-init template files.
+func (g *cloudInit) RunLXD(img *image.LXDImage, target shared.DefinitionTargetLXD) error {
 	templateDir := filepath.Join(g.cacheDir, "templates")
 
 	err := os.MkdirAll(templateDir, 0755)
@@ -165,7 +165,7 @@ config:
 		targetPath = g.defFile.Path
 	}
 
-	// Add to Incus templates
+	// Add to LXD templates
 	img.Metadata.Templates[targetPath] = &api.ImageMetadataTemplate{
 		Template:   template,
 		Properties: properties,

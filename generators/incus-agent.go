@@ -83,17 +83,17 @@ restorecon -R "${PREFIX}" >/dev/null 2>&1 || true
 exit 0
 `
 
-type incusAgent struct {
+type lxdAgent struct {
 	common
 }
 
 // RunLXC is not supported.
-func (g *incusAgent) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) error {
+func (g *lxdAgent) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) error {
 	return ErrNotSupported
 }
 
-// RunIncus creates systemd unit files for the agent.
-func (g *incusAgent) RunIncus(img *image.IncusImage, target shared.DefinitionTargetIncus) error {
+// RunLXD creates systemd unit files for the agent.
+func (g *lxdAgent) RunLXD(img *image.LXDImage, target shared.DefinitionTargetLXD) error {
 	initFile := filepath.Join(g.sourceDir, "sbin", "init")
 
 	fi, err := os.Lstat(initFile)
@@ -122,11 +122,11 @@ func (g *incusAgent) RunIncus(img *image.IncusImage, target shared.DefinitionTar
 }
 
 // Run does nothing.
-func (g *incusAgent) Run() error {
+func (g *lxdAgent) Run() error {
 	return nil
 }
 
-func (g *incusAgent) handleSystemd() error {
+func (g *lxdAgent) handleSystemd() error {
 	systemdPath := filepath.Join("/", "lib", "systemd")
 	if !lxd_shared.PathExists(filepath.Join(g.sourceDir, systemdPath)) {
 		systemdPath = filepath.Join("/", "usr", "lib", "systemd")
@@ -182,7 +182,7 @@ SYMLINK=="virtio-ports/org.linuxcontainers.lxd", TAG+="systemd", ENV{SYSTEMD_WAN
 	return nil
 }
 
-func (g *incusAgent) handleOpenRC() error {
+func (g *lxdAgent) handleOpenRC() error {
 	incusAgentScript := `#!/sbin/openrc-run
 
 description="Incus - agent"
@@ -237,7 +237,7 @@ required_dirs=/dev/virtio-ports/
 	return nil
 }
 
-func (g *incusAgent) getInitSystemFromInittab() error {
+func (g *lxdAgent) getInitSystemFromInittab() error {
 	f, err := os.Open(filepath.Join(g.sourceDir, "etc", "inittab"))
 	if err != nil {
 		return fmt.Errorf("Failed to open file %q: %w", filepath.Join(g.sourceDir, "etc", "inittab"), err)
