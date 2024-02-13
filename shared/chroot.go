@@ -26,14 +26,14 @@ var ActiveChroots = make(map[string]func() error)
 
 func setupMounts(rootfs string, mounts []ChrootMount) error {
 	// Create a temporary mount path
-	err := os.MkdirAll(filepath.Join(rootfs, ".distrobuilder"), 0700)
+	err := os.MkdirAll(filepath.Join(rootfs, ".lxd-imagebuilder"), 0700)
 	if err != nil {
-		return fmt.Errorf("Failed to create directory %q: %w", filepath.Join(rootfs, ".distrobuilder"), err)
+		return fmt.Errorf("Failed to create directory %q: %w", filepath.Join(rootfs, ".lxd-imagebuilder"), err)
 	}
 
 	for i, mount := range mounts {
 		// Target path
-		tmpTarget := filepath.Join(rootfs, ".distrobuilder", fmt.Sprintf("%d", i))
+		tmpTarget := filepath.Join(rootfs, ".lxd-imagebuilder", fmt.Sprintf("%d", i))
 
 		// Create the target mountpoint
 		if mount.IsDir {
@@ -63,7 +63,7 @@ func setupMounts(rootfs string, mounts []ChrootMount) error {
 func moveMounts(mounts []ChrootMount) error {
 	for i, mount := range mounts {
 		// Source path
-		tmpSource := filepath.Join("/", ".distrobuilder", fmt.Sprintf("%d", i))
+		tmpSource := filepath.Join("/", ".lxd-imagebuilder", fmt.Sprintf("%d", i))
 
 		// Resolve symlinks
 		target := mount.Target
@@ -136,9 +136,9 @@ func moveMounts(mounts []ChrootMount) error {
 	}
 
 	// Cleanup our temporary path
-	err := os.RemoveAll(filepath.Join("/", ".distrobuilder"))
+	err := os.RemoveAll(filepath.Join("/", ".lxd-imagebuilder"))
 	if err != nil {
-		return fmt.Errorf("Failed to remove directory %q: %w", filepath.Join("/", ".distrobuilder"), err)
+		return fmt.Errorf("Failed to remove directory %q: %w", filepath.Join("/", ".lxd-imagebuilder"), err)
 	}
 
 	return nil

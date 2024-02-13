@@ -25,8 +25,8 @@ __attribute__((constructor)) void init(void) {
 		_exit(1);
 	}
 
-	// Hardcode the hostname to "distrobuilder"
-	if (sethostname("distrobuilder", 13) < 0) {
+	// Hardcode the hostname to "lxd-imagebuilder"
+	if (sethostname("lxd-imagebuilder", 13) < 0) {
 		fprintf(stderr, "Failed to set hostname: %s\n", strerror(errno));
 		_exit(1);
 	}
@@ -129,7 +129,7 @@ func main() {
 	globalCmd := cmdGlobal{}
 
 	app := &cobra.Command{
-		Use:   "distrobuilder",
+		Use:   "lxd-imagebuilder",
 		Short: "System container and VM image builder for LXC and LXD",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// Quick checks
@@ -181,7 +181,7 @@ func main() {
 
 			// Create temp directory if the cache directory isn't explicitly set
 			if globalCmd.flagCacheDir == "" {
-				dir, err := os.MkdirTemp("/var/cache", "distrobuilder.")
+				dir, err := os.MkdirTemp("/var/cache", "lxd-imagebuilder.")
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to create cache directory: %s\n", err)
 					os.Exit(1)
@@ -238,9 +238,9 @@ func main() {
 	err := app.Execute()
 	if err != nil {
 		if globalCmd.logger != nil {
-			globalCmd.logger.WithFields(logrus.Fields{"err": err}).Error("Failed running distrobuilder")
+			globalCmd.logger.WithFields(logrus.Fields{"err": err}).Error("Failed running imagebuilder")
 		} else {
-			fmt.Fprintf(os.Stderr, "Failed running distrobuilder: %s\n", err.Error())
+			fmt.Fprintf(os.Stderr, "Failed running imagebuilder: %s\n", err.Error())
 		}
 
 		_ = globalCmd.postRun(globalCmd.subCommand, nil)

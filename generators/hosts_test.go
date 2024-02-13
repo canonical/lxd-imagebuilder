@@ -13,7 +13,7 @@ import (
 )
 
 func TestHostsGeneratorRunLXC(t *testing.T) {
-	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test")
+	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test")
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
 	setup(t, cacheDir)
@@ -36,7 +36,7 @@ func TestHostsGeneratorRunLXC(t *testing.T) {
 	require.NoError(t, err)
 
 	createTestFile(t, filepath.Join(cacheDir, "rootfs", "etc", "hosts"),
-		"127.0.0.1\tlocalhost\n127.0.0.1\tdistrobuilder\n")
+		"127.0.0.1\tlocalhost\n127.0.0.1\tlxd-imagebuilder\n")
 
 	err = generator.RunLXC(image, shared.DefinitionTargetLXC{})
 	require.NoError(t, err)
@@ -46,7 +46,7 @@ func TestHostsGeneratorRunLXC(t *testing.T) {
 }
 
 func TestHostsGeneratorRunLXD(t *testing.T) {
-	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test")
+	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test")
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
 	setup(t, cacheDir)
@@ -69,7 +69,7 @@ func TestHostsGeneratorRunLXD(t *testing.T) {
 	require.NoError(t, err)
 
 	createTestFile(t, filepath.Join(cacheDir, "rootfs", "etc", "hosts"),
-		"127.0.0.1\tlocalhost\n127.0.0.1\tdistrobuilder\n")
+		"127.0.0.1\tlocalhost\n127.0.0.1\tlxd-imagebuilder\n")
 
 	err = generator.RunLXD(image, shared.DefinitionTargetLXD{})
 	require.NoError(t, err)

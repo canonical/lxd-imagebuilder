@@ -1,4 +1,4 @@
 package version
 
-// Version contains the distrobuilder version number.
+// Version contains the lxd-imagebuilder version number.
 var Version = "3.0"

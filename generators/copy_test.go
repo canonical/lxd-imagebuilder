@@ -13,7 +13,7 @@ import (
 )
 
 func TestCopyGeneratorRun(t *testing.T) {
-	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test")
+	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test")
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
 	setup(t, cacheDir)

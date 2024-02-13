@@ -46,7 +46,7 @@ func downloadChecksum(ctx context.Context, client *http.Client, targetDir string
 		done := make(chan struct{})
 		defer close(done)
 
-		_, err = lxd_shared.DownloadFileHash(ctx, client, "distrobuilder", nil, nil, "", URL, "", hashFunc, tempFile)
+		_, err = lxd_shared.DownloadFileHash(ctx, client, "lxd-imagebuilder", nil, nil, "", URL, "", hashFunc, tempFile)
 		// ignore hash mismatch
 		if err != nil && !strings.HasPrefix(err.Error(), "Hash mismatch") {
 			return nil, err

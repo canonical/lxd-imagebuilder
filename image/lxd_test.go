@@ -35,7 +35,7 @@ var lxdDef = shared.Definition{
 }
 
 func setupLXD(t *testing.T) *LXDImage {
-	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test-lxd")
+	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test-lxd")
 
 	err := os.MkdirAll(filepath.Join(cacheDir, "rootfs"), 0755)
 	require.NoError(t, err)
@@ -66,7 +66,7 @@ func setupLXD(t *testing.T) *LXDImage {
 }
 
 func teardownLXD(t *testing.T) {
-	os.RemoveAll(filepath.Join(os.TempDir(), "distrobuilder-test-lxd"))
+	os.RemoveAll(filepath.Join(os.TempDir(), "lxd-imagebuilder-test-lxd"))
 }
 
 func TestLXDBuild(t *testing.T) {

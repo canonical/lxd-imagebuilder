@@ -87,7 +87,7 @@ func (c *cmdBuildDir) command() *cobra.Command {
 		},
 	}
 
-	c.cmdBuild.Flags().StringVar(&c.global.flagSourcesDir, "sources-dir", filepath.Join(os.TempDir(), "distrobuilder"), "Sources directory for distribution tarballs"+"``")
+	c.cmdBuild.Flags().StringVar(&c.global.flagSourcesDir, "sources-dir", filepath.Join(os.TempDir(), "lxd-imagebuilder"), "Sources directory for distribution tarballs"+"``")
 	c.cmdBuild.Flags().BoolVar(&c.global.flagKeepSources, "keep-sources", true, "Keep sources after build"+"``")
 	c.cmdBuild.Flags().BoolVar(&c.flagWithPostFiles, "with-post-files", false, "Run post-files actions"+"``")
 	return c.cmdBuild

@@ -16,7 +16,7 @@ import (
 )
 
 func TestCloudInitGeneratorRunLXC(t *testing.T) {
-	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test")
+	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test")
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
 	setup(t, cacheDir)
@@ -63,7 +63,7 @@ func TestCloudInitGeneratorRunLXC(t *testing.T) {
 }
 
 func TestCloudInitGeneratorRunLXD(t *testing.T) {
-	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test")
+	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test")
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
 	setup(t, cacheDir)
