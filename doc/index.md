@@ -1,13 +1,13 @@
-# `distrobuilder`
+# `lxd-imagebuilder`
 
-`distrobuilder` is an image building tool for LXC and Incus.
+`lxd-imagebuilder` is an image building tool for LXC and LXD.
 
 Its modern design uses pre-built official images whenever available and supports a variety of modifications on the base image.
-`distrobuilder` creates LXC or Incus images, or just a plain root file system, from a declarative image definition (in YAML format) that defines the source of the image, its package manager, what packages to install or remove for specific image variants, OS releases and architectures, as well as additional files to generate and arbitrary actions to execute as part of the image build process.
+`lxd-imagebuilder` creates LXC or LXD images, or just a plain root file system, from a declarative image definition (in YAML format) that defines the source of the image, its package manager, what packages to install or remove for specific image variants, OS releases and architectures, as well as additional files to generate and arbitrary actions to execute as part of the image build process.
 
-`distrobuilder` can be used to create custom images that can be used as the base for LXC containers or Incus instances.
+`lxd-imagebuilder` can be used to create custom images that can be used as the base for LXC containers or LXD instances.
 
-`distrobuilder` is used to build the images on the [Linux containers image server](https://images.linuxcontainers.org/).
+`lxd-imagebuilder` is used to build the images on the [Linux containers image server](https://images.linuxcontainers.org/).
 You can also use it to build images from ISO files that require licenses and therefore cannot be distributed.
 
 ---
@@ -17,7 +17,7 @@ You can also use it to build images from ISO files that require licenses and the
 ````{grid} 1 1 2 2
 ```{grid-item} [](tutorials/index)
 
-**Start here**: a hands-on introduction to `distrobuilder` for new users
+**Start here**: a hands-on introduction to `lxd-imagebuilder` for new users
 ```
 ```{grid-item} [](howto/index)
 
@@ -43,11 +43,11 @@ You can also use it to build images from ISO files that require licenses and the
 
 ## Project and community
 
-`distrobuilder` is free software and developed under the [Apache 2 license](https://www.apache.org/licenses/LICENSE-2.0).
+`lxd-imagebuilder` is free software and developed under the [Apache 2 license](https://www.apache.org/licenses/LICENSE-2.0).
 It's an open source project that warmly welcomes community projects, contributions, suggestions, fixes and constructive feedback.
 
 - [Contribute to the project](https://github.com/canonical/lxd-imagebuilder/blob/master/CONTRIBUTING.md)  <!-- wokeignore:rule=master -->
-- [Discuss on IRC](https://web.libera.chat/#lxc) (see [Getting started with IRC](https://discuss.linuxcontainers.org/t/getting-started-with-irc/11920) if needed)
+- [Discuss on IRC](https://web.libera.chat/#lxd) (see [Getting started with IRC](https://discuss.linuxcontainers.org/t/getting-started-with-irc/11920) if needed)
 - [Ask and answer questions on the forum](https://discuss.linuxcontainers.org)
 - [Join the mailing lists](https://lists.linuxcontainers.org)
 

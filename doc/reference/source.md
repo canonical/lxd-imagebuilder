@@ -62,7 +62,7 @@ All other downloaders ignore this field.
 The `suite` field is only used by the `debootstrap` downloader.
 If set, `debootstrap` will use `suite` instead of `image.release` as its first positional argument.
 
-If the `same_as` field is set, distrobuilder creates a temporary symlink in `/usr/share/debootstrap/scripts` which points to the `same_as` file inside that directory.
+If the `same_as` field is set, LXD imagebuilder creates a temporary symlink in `/usr/share/debootstrap/scripts` which points to the `same_as` file inside that directory.
 This can be used if you want to run `debootstrap foo` but `foo` is missing due to `debootstrap` not being up-to-date.
 
 If `skip_verification` is true, the source tarball is not verified.

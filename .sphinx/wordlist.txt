@@ -48,7 +48,6 @@ dereferenced
 devtmpfs
 DHCP
 DHCPv
-distrobuilder
 DNS
 DNSSEC
 DoS
@@ -93,8 +92,8 @@ ICMP
 idmap
 idmapped
 idmaps
+imagebuilder
 incrementing
-Incus
 InfiniBand
 InfluxDB
 init
@@ -118,6 +117,7 @@ LV
 LVM
 LXC
 LXCFS
+lxd
 LXD
 LXD's
 MAAS

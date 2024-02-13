@@ -4,8 +4,8 @@ import sys
 import yaml
 
 # Project config.
-project = "distrobuilder"
-author = "distrobuilder contributors"
+project = "lxd-imagebuilder"
+author = "lxd-imagebuilder contributors"
 copyright = "2018-%s %s" % (datetime.date.today().year, author)
 
 with open("../shared/version/version.go") as fd:
@@ -36,7 +36,7 @@ myst_linkify_fuzzy_links=False
 myst_heading_anchors = 7
 
 intersphinx_mapping = {
-    'incus': ('https://linuxcontainers.org/incus/docs/main/', None)
+    'lxd': ('https://documentation.ubuntu.com/lxd/en/latest/', None)
 }
 
 if os.path.exists("../doc/substitutions.yaml"):
@@ -112,7 +112,7 @@ html_theme_options = {
 
 html_context = {
     "github_url": "https://github.com/canonical/lxd-imagebuilder",
-    "github_version": "master",
+    "github_version": "main",
     "github_folder": "/doc/",
     "github_filetype": "md",
     "discourse_prefix": "https://discuss.linuxcontainers.org/t/"
@@ -137,14 +137,14 @@ exclude_patterns = ['html', 'README.md']
 
 # Open Graph configuration
 
-ogp_site_url = "https://linuxcontainers.org/distrobuilder/docs/latest/"
-ogp_site_name = "distrobuilder documentation"
-ogp_image = "https://linuxcontainers.org/static/img/containers.png"
+ogp_site_url = "https://documentation.ubuntu.com/lxd/en/latest/"
+ogp_site_name = "lxd-imagebuilder documentation"
+ogp_image = "https://documentation.ubuntu.com/lxd/en/latest/_static/tag.png"
 
 # Links to ignore when checking links
 
 linkcheck_ignore = [
-    'https://web.libera.chat/#lxc'
+    'https://web.libera.chat/#lxd'
 ]
 
 # Setup redirects (https://documatt.gitlab.io/sphinx-reredirects/usage.html)
