@@ -10,7 +10,7 @@ exclude (
 )
 
 require (
-	github.com/flosch/pongo2 v0.0.0-20200913210552-0d938eb266f3
+	github.com/flosch/pongo2/v4 v4.0.2
 	github.com/google/go-github/v56 v56.0.0
 	github.com/lxc/incus v0.5.1
 	github.com/mudler/docker-companion v0.4.6-0.20211015133729-bd4704fad372
@@ -20,7 +20,6 @@ require (
 	golang.org/x/sys v0.17.0
 	golang.org/x/text v0.14.0
 	gopkg.in/antchfx/htmlquery.v1 v1.2.2
-	gopkg.in/flosch/pongo2.v3 v3.0.0-20141028000813-5e81b817a0c4
 	gopkg.in/yaml.v2 v2.4.0
 )
 
