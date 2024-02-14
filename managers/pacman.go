@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	lxd_shared "github.com/canonical/lxd/shared"
+	lxdShared "github.com/canonical/lxd/shared"
 
 	"github.com/canonical/lxd-imagebuilder/shared"
 )
@@ -100,7 +100,7 @@ func (m *pacman) setupTrustedKeys() error {
 
 	var keyring string
 
-	if lxd_shared.ValueInSlice(runtime.GOARCH, []string{"arm", "arm64"}) {
+	if lxdShared.ValueInSlice(runtime.GOARCH, []string{"arm", "arm64"}) {
 		keyring = "archlinuxarm"
 	} else {
 		keyring = "archlinux"
@@ -124,7 +124,7 @@ func (m *pacman) setMirrorlist() error {
 
 	var mirror string
 
-	if lxd_shared.ValueInSlice(runtime.GOARCH, []string{"arm", "arm64"}) {
+	if lxdShared.ValueInSlice(runtime.GOARCH, []string{"arm", "arm64"}) {
 		mirror = "Server = http://mirror.archlinuxarm.org/$arch/$repo"
 	} else {
 		mirror = "Server = http://mirrors.kernel.org/archlinux/$repo/os/$arch"
