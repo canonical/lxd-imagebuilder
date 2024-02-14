@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	lxd_shared "github.com/canonical/lxd/shared"
+	lxdShared "github.com/canonical/lxd/shared"
 	"gopkg.in/antchfx/htmlquery.v1"
 
 	"github.com/canonical/lxd-imagebuilder/shared"
@@ -150,7 +150,7 @@ func (s *slackware) downloadFiles(def shared.DefinitionImage, URL string, requir
 			pkgName := strings.Split(target, "-")[0]
 			twoPkgName := strings.Split(target, "-")[0] + "-" + strings.Split(target, "-")[1]
 
-			if !((lxd_shared.ValueInSlice(pkgName, requiredPkgs)) || (lxd_shared.ValueInSlice(twoPkgName, requiredPkgs))) {
+			if !((lxdShared.ValueInSlice(pkgName, requiredPkgs)) || (lxdShared.ValueInSlice(twoPkgName, requiredPkgs))) {
 				continue
 			}
 

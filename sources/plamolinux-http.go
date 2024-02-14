@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	lxd_shared "github.com/canonical/lxd/shared"
+	lxdShared "github.com/canonical/lxd/shared"
 	"gopkg.in/antchfx/htmlquery.v1"
 
 	"github.com/canonical/lxd-imagebuilder/shared"
@@ -152,7 +152,7 @@ func (s *plamolinux) downloadFiles(def shared.DefinitionImage, URL string, ignor
 
 		if strings.HasSuffix(target, ".txz") || strings.HasSuffix(target, ".tzst") {
 			pkgName := strings.Split(target, "-")[0]
-			if lxd_shared.ValueInSlice(pkgName, ignoredPkgs) {
+			if lxdShared.ValueInSlice(pkgName, ignoredPkgs) {
 				continue
 			}
 
