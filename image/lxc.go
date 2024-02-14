@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	lxd_shared "github.com/canonical/lxd/shared"
+	lxdShared "github.com/canonical/lxd/shared"
 
 	"github.com/canonical/lxd-imagebuilder/shared"
 )
@@ -152,7 +152,7 @@ func (l *LXCImage) createMetadata() error {
 
 	var excludesUser string
 
-	if lxd_shared.PathExists(filepath.Join(l.sourceDir, "dev")) {
+	if lxdShared.PathExists(filepath.Join(l.sourceDir, "dev")) {
 		err := filepath.Walk(filepath.Join(l.sourceDir, "dev"),
 			func(path string, info os.FileInfo, err error) error {
 				if err != nil {
@@ -192,7 +192,7 @@ func (l *LXCImage) packMetadata() error {
 		files = append(files, filepath.Base(c))
 	}
 
-	if lxd_shared.PathExists(filepath.Join(l.cacheDir, "metadata", "templates")) {
+	if lxdShared.PathExists(filepath.Join(l.cacheDir, "metadata", "templates")) {
 		files = append(files, "templates")
 	}
 
