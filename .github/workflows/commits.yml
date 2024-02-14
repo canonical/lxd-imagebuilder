@@ -6,18 +6,27 @@ permissions:
   contents: read
 
 jobs:
-  target-branch:
-    permissions:
-      contents: none
-    name: Branch target
+  commits:
+    name: Branch target and CLA
     runs-on: ubuntu-22.04
     steps:
     - name: Check branch target
       env:
         TARGET: ${{ github.event.pull_request.base.ref }}
+        TITLE: ${{ github.event.pull_request.title }}
+      if: ${{ github.actor != 'dependabot[bot]' }}
       run: |
-        set -x
-        [ "${TARGET}" = "main" ] && exit 0
+        set -eux
+        TARGET_FROM_PR_TITLE="$(echo "${TITLE}" | sed -n 's/.*(\(stable-[0-9]\.[0-9]\))$/\1/p')"
+        if [ -z "${TARGET_FROM_PR_TITLE}" ]; then
+          TARGET_FROM_PR_TITLE="main"
+        else
+          echo "Branch target overridden from PR title"
+        fi
+        [ "${TARGET}" = "${TARGET_FROM_PR_TITLE}" ] && exit 0
 
-        echo "Invalid branch target: ${TARGET}"
+        echo "Invalid branch target: ${TARGET} != ${TARGET_FROM_PR_TITLE}"
         exit 1
+
+    - name: Check if CLA signed
+      uses: simondeziel/has-signed-canonical-cla@implicit-approval-from-licenses
