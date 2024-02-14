@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 const maxLXCCompatLevel = 5
@@ -152,7 +152,7 @@ func (l *LXCImage) createMetadata() error {
 
 	var excludesUser string
 
-	if incus.PathExists(filepath.Join(l.sourceDir, "dev")) {
+	if lxd_shared.PathExists(filepath.Join(l.sourceDir, "dev")) {
 		err := filepath.Walk(filepath.Join(l.sourceDir, "dev"),
 			func(path string, info os.FileInfo, err error) error {
 				if err != nil {
@@ -192,7 +192,7 @@ func (l *LXCImage) packMetadata() error {
 		files = append(files, filepath.Base(c))
 	}
 
-	if incus.PathExists(filepath.Join(l.cacheDir, "metadata", "templates")) {
+	if lxd_shared.PathExists(filepath.Join(l.cacheDir, "metadata", "templates")) {
 		files = append(files, "templates")
 	}
 

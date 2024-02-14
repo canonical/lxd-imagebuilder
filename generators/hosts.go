@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lxc/incus/shared/api"
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
+	"github.com/canonical/lxd/shared/api"
 
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type hosts struct {
@@ -20,7 +20,7 @@ type hosts struct {
 // RunLXC creates a LXC specific entry in the hosts file.
 func (g *hosts) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) error {
 	// Skip if the file doesn't exist
-	if !incus.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
+	if !lxd_shared.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
 		return nil
 	}
 
@@ -31,7 +31,7 @@ func (g *hosts) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) e
 	}
 
 	// Replace hostname with placeholder
-	content = []byte(strings.Replace(string(content), "distrobuilder", "LXC_NAME", -1))
+	content = []byte(strings.Replace(string(content), "lxd-imagebuilder", "LXC_NAME", -1))
 
 	// Add a new line if needed
 	if !strings.Contains(string(content), "LXC_NAME") {
@@ -60,10 +60,10 @@ func (g *hosts) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) e
 	return nil
 }
 
-// RunIncus creates a hosts template.
-func (g *hosts) RunIncus(img *image.IncusImage, target shared.DefinitionTargetIncus) error {
+// RunLXD creates a hosts template.
+func (g *hosts) RunLXD(img *image.LXDImage, target shared.DefinitionTargetLXD) error {
 	// Skip if the file doesn't exist
-	if !incus.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
+	if !lxd_shared.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
 		return nil
 	}
 
@@ -82,7 +82,7 @@ func (g *hosts) RunIncus(img *image.IncusImage, target shared.DefinitionTargetIn
 	}
 
 	// Replace hostname with placeholder
-	content = []byte(strings.Replace(string(content), "distrobuilder", "{{ container.name }}", -1))
+	content = []byte(strings.Replace(string(content), "lxd-imagebuilder", "{{ container.name }}", -1))
 
 	// Add a new line if needed
 	if !strings.Contains(string(content), "{{ container.name }}") {

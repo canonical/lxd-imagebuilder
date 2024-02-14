@@ -8,16 +8,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
 
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
-var incusAgentSetupScript = `#!/bin/sh
+var lxdAgentSetupScript = `#!/bin/sh
 set -eu
-PREFIX="/run/incus_agent"
-CDROM="/dev/disk/by-id/scsi-0QEMU_QEMU_CD-ROM_incus_agent"
+PREFIX="/run/lxd_agent"
+CDROM="/dev/disk/by-id/scsi-0QEMU_QEMU_CD-ROM_lxd_agent"
 
 # Functions.
 mount_virtiofs() {
@@ -36,7 +36,7 @@ mount_cdrom() {
 fail() {
     # Check if we already have an agent in place.
     # This will typically be true during restart in the case of a cdrom-based setup.
-    if [ -x "${PREFIX}/incus-agent" ]; then
+    if [ -x "${PREFIX}/lxd-agent" ]; then
         echo "${1}, re-using existing agent"
         exit 0
     fi
@@ -72,28 +72,23 @@ eject "${CDROM}" >/dev/null 2>&1 || true
 # Fix up permissions.
 chown -R root:root "${PREFIX}"
 
-# Legacy.
-if [ ! -e "${PREFIX}/incus-agent" ] && [ -e "${PREFIX}/lxd-agent" ]; then
-    ln -s lxd-agent "${PREFIX}"/incus-agent
-fi
-
 # Attempt to restore SELinux labels.
 restorecon -R "${PREFIX}" >/dev/null 2>&1 || true
 
 exit 0
 `
 
-type incusAgent struct {
+type lxdAgent struct {
 	common
 }
 
 // RunLXC is not supported.
-func (g *incusAgent) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) error {
+func (g *lxdAgent) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) error {
 	return ErrNotSupported
 }
 
-// RunIncus creates systemd unit files for the agent.
-func (g *incusAgent) RunIncus(img *image.IncusImage, target shared.DefinitionTargetIncus) error {
+// RunLXD creates systemd unit files for the agent.
+func (g *lxdAgent) RunLXD(img *image.LXDImage, target shared.DefinitionTargetLXD) error {
 	initFile := filepath.Join(g.sourceDir, "sbin", "init")
 
 	fi, err := os.Lstat(initFile)
@@ -122,114 +117,114 @@ func (g *incusAgent) RunIncus(img *image.IncusImage, target shared.DefinitionTar
 }
 
 // Run does nothing.
-func (g *incusAgent) Run() error {
+func (g *lxdAgent) Run() error {
 	return nil
 }
 
-func (g *incusAgent) handleSystemd() error {
+func (g *lxdAgent) handleSystemd() error {
 	systemdPath := filepath.Join("/", "lib", "systemd")
-	if !incus.PathExists(filepath.Join(g.sourceDir, systemdPath)) {
+	if !lxd_shared.PathExists(filepath.Join(g.sourceDir, systemdPath)) {
 		systemdPath = filepath.Join("/", "usr", "lib", "systemd")
 	}
 
-	incusAgentServiceUnit := fmt.Sprintf(`[Unit]
-Description=Incus - agent
-Documentation=https://linuxcontainers.org/incus/docs/main/
+	lxdAgentServiceUnit := fmt.Sprintf(`[Unit]
+Description=LXD - agent
+Documentation=https://documentation.ubuntu.com/lxd
 Before=multi-user.target cloud-init.target cloud-init.service cloud-init-local.service
 DefaultDependencies=no
 
 [Service]
 Type=notify
-WorkingDirectory=-/run/incus_agent
-ExecStartPre=%s/incus-agent-setup
-ExecStart=/run/incus_agent/incus-agent
+WorkingDirectory=-/run/lxd_agent
+ExecStartPre=%s/lxd-agent-setup
+ExecStart=/run/lxd_agent/lxd-agent
 Restart=on-failure
 RestartSec=5s
 StartLimitInterval=60
 StartLimitBurst=10
 `, systemdPath)
 
-	path := filepath.Join(g.sourceDir, systemdPath, "system", "incus-agent.service")
+	path := filepath.Join(g.sourceDir, systemdPath, "system", "lxd-agent.service")
 
-	err := os.WriteFile(path, []byte(incusAgentServiceUnit), 0644)
+	err := os.WriteFile(path, []byte(lxdAgentServiceUnit), 0644)
 	if err != nil {
 		return fmt.Errorf("Failed to write file %q: %w", path, err)
 	}
 
-	path = filepath.Join(g.sourceDir, systemdPath, "incus-agent-setup")
+	path = filepath.Join(g.sourceDir, systemdPath, "lxd-agent-setup")
 
-	err = os.WriteFile(path, []byte(incusAgentSetupScript), 0755)
+	err = os.WriteFile(path, []byte(lxdAgentSetupScript), 0755)
 	if err != nil {
 		return fmt.Errorf("Failed to write file %q: %w", path, err)
 	}
 
 	udevPath := filepath.Join("/", "lib", "udev", "rules.d")
 	stat, err := os.Lstat(filepath.Join(g.sourceDir, "lib", "udev"))
-	if err == nil && stat.Mode()&os.ModeSymlink != 0 || !incus.PathExists(filepath.Dir(filepath.Join(g.sourceDir, udevPath))) {
+	if err == nil && stat.Mode()&os.ModeSymlink != 0 || !lxd_shared.PathExists(filepath.Dir(filepath.Join(g.sourceDir, udevPath))) {
 		udevPath = filepath.Join("/", "usr", "lib", "udev", "rules.d")
 	}
 
-	incusAgentRules := `SYMLINK=="virtio-ports/org.linuxcontainers.incus", TAG+="systemd", ENV{SYSTEMD_WANTS}+="incus-agent.service"
+	lxdAgentRules := `SYMLINK=="virtio-ports/com.canonical.lxd", TAG+="systemd", ENV{SYSTEMD_WANTS}+="lxd-agent.service"
 
 # Legacy.
 SYMLINK=="virtio-ports/org.linuxcontainers.lxd", TAG+="systemd", ENV{SYSTEMD_WANTS}+="lxd-agent.service"
 `
-	err = os.WriteFile(filepath.Join(g.sourceDir, udevPath, "99-incus-agent.rules"), []byte(incusAgentRules), 0400)
+	err = os.WriteFile(filepath.Join(g.sourceDir, udevPath, "99-lxd-agent.rules"), []byte(lxdAgentRules), 0400)
 	if err != nil {
-		return fmt.Errorf("Failed to write file %q: %w", filepath.Join(g.sourceDir, udevPath, "99-incus-agent.rules"), err)
+		return fmt.Errorf("Failed to write file %q: %w", filepath.Join(g.sourceDir, udevPath, "99-lxd-agent.rules"), err)
 	}
 
 	return nil
 }
 
-func (g *incusAgent) handleOpenRC() error {
-	incusAgentScript := `#!/sbin/openrc-run
+func (g *lxdAgent) handleOpenRC() error {
+	lxdAgentScript := `#!/sbin/openrc-run
 
-description="Incus - agent"
-command=/run/incus_agent/incus-agent
+description="LXD - agent"
+command=/run/lxd_agent/lxd-agent
 command_background=true
-pidfile=/run/incus-agent.pid
-start_stop_daemon_args="--chdir /run/incus_agent"
-required_dirs=/run/incus_agent
+pidfile=/run/lxd-agent.pid
+start_stop_daemon_args="--chdir /run/lxd_agent"
+required_dirs=/run/lxd_agent
 
 depend() {
-	need incus-agent-setup
-	after incus-agent-setup
+	need lxd-agent-setup
+	after lxd-agent-setup
 	before cloud-init
 	before cloud-init-local
 }
 `
 
-	err := os.WriteFile(filepath.Join(g.sourceDir, "/etc/init.d/incus-agent"), []byte(incusAgentScript), 0755)
+	err := os.WriteFile(filepath.Join(g.sourceDir, "/etc/init.d/lxd-agent"), []byte(lxdAgentScript), 0755)
 	if err != nil {
-		return fmt.Errorf("Failed to write file %q: %w", filepath.Join(g.sourceDir, "/etc/init.d/incus-agent"), err)
+		return fmt.Errorf("Failed to write file %q: %w", filepath.Join(g.sourceDir, "/etc/init.d/lxd-agent"), err)
 	}
 
-	err = os.Symlink("/etc/init.d/incus-agent", filepath.Join(g.sourceDir, "/etc/runlevels/default/incus-agent"))
+	err = os.Symlink("/etc/init.d/lxd-agent", filepath.Join(g.sourceDir, "/etc/runlevels/default/lxd-agent"))
 	if err != nil {
-		return fmt.Errorf("Failed to create symlink %q: %w", filepath.Join(g.sourceDir, "/etc/runlevels/default/incus-agent"), err)
+		return fmt.Errorf("Failed to create symlink %q: %w", filepath.Join(g.sourceDir, "/etc/runlevels/default/lxd-agent"), err)
 	}
 
-	incusConfigShareMountScript := `#!/sbin/openrc-run
+	lxdConfigShareMountScript := `#!/sbin/openrc-run
 
-description="Incus - agent - setup"
-command=/usr/local/bin/incus-agent-setup
+description="LXD - agent - setup"
+command=/usr/local/bin/lxd-agent-setup
 required_dirs=/dev/virtio-ports/
 `
 
-	err = os.WriteFile(filepath.Join(g.sourceDir, "/etc/init.d/incus-agent-setup"), []byte(incusConfigShareMountScript), 0755)
+	err = os.WriteFile(filepath.Join(g.sourceDir, "/etc/init.d/lxd-agent-setup"), []byte(lxdConfigShareMountScript), 0755)
 	if err != nil {
-		return fmt.Errorf("Failed to write file %q: %w", filepath.Join(g.sourceDir, "/etc/init.d/incus-agent-setup"), err)
+		return fmt.Errorf("Failed to write file %q: %w", filepath.Join(g.sourceDir, "/etc/init.d/lxd-agent-setup"), err)
 	}
 
-	err = os.Symlink("/etc/init.d/incus-agent-setup", filepath.Join(g.sourceDir, "/etc/runlevels/default/incus-agent-setup"))
+	err = os.Symlink("/etc/init.d/lxd-agent-setup", filepath.Join(g.sourceDir, "/etc/runlevels/default/lxd-agent-setup"))
 	if err != nil {
-		return fmt.Errorf("Failed to create symlink %q: %w", filepath.Join(g.sourceDir, "/etc/runlevels/default/incus-agent-setup"), err)
+		return fmt.Errorf("Failed to create symlink %q: %w", filepath.Join(g.sourceDir, "/etc/runlevels/default/lxd-agent-setup"), err)
 	}
 
-	path := filepath.Join(g.sourceDir, "/usr/local/bin", "incus-agent-setup")
+	path := filepath.Join(g.sourceDir, "/usr/local/bin", "lxd-agent-setup")
 
-	err = os.WriteFile(path, []byte(incusAgentSetupScript), 0755)
+	err = os.WriteFile(path, []byte(lxdAgentSetupScript), 0755)
 	if err != nil {
 		return fmt.Errorf("Failed to write file %q: %w", path, err)
 	}
@@ -237,7 +232,7 @@ required_dirs=/dev/virtio-ports/
 	return nil
 }
 
-func (g *incusAgent) getInitSystemFromInittab() error {
+func (g *lxdAgent) getInitSystemFromInittab() error {
 	f, err := os.Open(filepath.Join(g.sourceDir, "etc", "inittab"))
 	if err != nil {
 		return fmt.Errorf("Failed to open file %q: %w", filepath.Join(g.sourceDir, "etc", "inittab"), err)

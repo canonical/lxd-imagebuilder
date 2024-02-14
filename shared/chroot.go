@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strconv"
 
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
 	"golang.org/x/sys/unix"
 )
 
@@ -26,14 +26,14 @@ var ActiveChroots = make(map[string]func() error)
 
 func setupMounts(rootfs string, mounts []ChrootMount) error {
 	// Create a temporary mount path
-	err := os.MkdirAll(filepath.Join(rootfs, ".distrobuilder"), 0700)
+	err := os.MkdirAll(filepath.Join(rootfs, ".lxd-imagebuilder"), 0700)
 	if err != nil {
-		return fmt.Errorf("Failed to create directory %q: %w", filepath.Join(rootfs, ".distrobuilder"), err)
+		return fmt.Errorf("Failed to create directory %q: %w", filepath.Join(rootfs, ".lxd-imagebuilder"), err)
 	}
 
 	for i, mount := range mounts {
 		// Target path
-		tmpTarget := filepath.Join(rootfs, ".distrobuilder", fmt.Sprintf("%d", i))
+		tmpTarget := filepath.Join(rootfs, ".lxd-imagebuilder", fmt.Sprintf("%d", i))
 
 		// Create the target mountpoint
 		if mount.IsDir {
@@ -63,7 +63,7 @@ func setupMounts(rootfs string, mounts []ChrootMount) error {
 func moveMounts(mounts []ChrootMount) error {
 	for i, mount := range mounts {
 		// Source path
-		tmpSource := filepath.Join("/", ".distrobuilder", fmt.Sprintf("%d", i))
+		tmpSource := filepath.Join("/", ".lxd-imagebuilder", fmt.Sprintf("%d", i))
 
 		// Resolve symlinks
 		target := mount.Target
@@ -91,7 +91,7 @@ func moveMounts(mounts []ChrootMount) error {
 		// If the target's parent directory is a symlink, we need to resolve that as well.
 		targetDir := filepath.Dir(target)
 
-		if incus.PathExists(targetDir) {
+		if lxd_shared.PathExists(targetDir) {
 			// Get information on current target
 			fi, err := os.Lstat(targetDir)
 			if err != nil {
@@ -136,9 +136,9 @@ func moveMounts(mounts []ChrootMount) error {
 	}
 
 	// Cleanup our temporary path
-	err := os.RemoveAll(filepath.Join("/", ".distrobuilder"))
+	err := os.RemoveAll(filepath.Join("/", ".lxd-imagebuilder"))
 	if err != nil {
-		return fmt.Errorf("Failed to remove directory %q: %w", filepath.Join("/", ".distrobuilder"), err)
+		return fmt.Errorf("Failed to remove directory %q: %w", filepath.Join("/", ".lxd-imagebuilder"), err)
 	}
 
 	return nil
@@ -305,7 +305,7 @@ func SetupChroot(rootfs string, definition Definition, m []ChrootMount) (func() 
 
 	// Setup policy-rc.d override
 	policyCleanup := false
-	if incus.PathExists("/usr/sbin/") && !incus.PathExists("/usr/sbin/policy-rc.d") {
+	if lxd_shared.PathExists("/usr/sbin/") && !lxd_shared.PathExists("/usr/sbin/policy-rc.d") {
 		err = os.WriteFile("/usr/sbin/policy-rc.d", []byte(`#!/bin/sh
 exit 101
 `), 0755)
@@ -394,7 +394,7 @@ func populateDev() error {
 	}
 
 	for _, d := range devs {
-		if incus.PathExists(d.Path) {
+		if lxd_shared.PathExists(d.Path) {
 			continue
 		}
 

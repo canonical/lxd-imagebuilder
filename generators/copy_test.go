@@ -9,11 +9,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 func TestCopyGeneratorRun(t *testing.T) {
-	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test")
+	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test")
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
 	setup(t, cacheDir)

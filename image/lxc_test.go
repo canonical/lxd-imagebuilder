@@ -15,7 +15,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 var lxcDef = shared.Definition{
@@ -83,7 +83,7 @@ var lxcDef = shared.Definition{
 
 func lxcCacheDir() string {
 	wd, _ := os.Getwd()
-	return filepath.Join(wd, "distrobuilder-test-lxc")
+	return filepath.Join(wd, "lxd-imagebuilder-test-lxc")
 }
 
 func setupLXC() *LXCImage {

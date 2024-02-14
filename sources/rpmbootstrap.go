@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type rpmbootstrap struct {

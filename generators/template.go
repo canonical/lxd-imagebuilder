@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/canonical/lxd/shared/api"
 	"github.com/flosch/pongo2/v4"
-	"github.com/lxc/incus/shared/api"
 
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type template struct {
@@ -23,8 +23,8 @@ func (g *template) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC
 	return nil
 }
 
-// RunIncus dumps content to a file.
-func (g *template) RunIncus(img *image.IncusImage, target shared.DefinitionTargetIncus) error {
+// RunLXD dumps content to a file.
+func (g *template) RunLXD(img *image.LXDImage, target shared.DefinitionTargetLXD) error {
 	templateDir := filepath.Join(g.cacheDir, "templates")
 
 	err := os.MkdirAll(templateDir, 0755)
@@ -54,7 +54,7 @@ func (g *template) RunIncus(img *image.IncusImage, target shared.DefinitionTarge
 			return fmt.Errorf("Failed to parse template: %w", err)
 		}
 
-		content, err = tpl.Execute(pongo2.Context{"incus": target})
+		content, err = tpl.Execute(pongo2.Context{"lxd": target})
 		if err != nil {
 			return fmt.Errorf("Failed to execute template: %w", err)
 		}
@@ -65,7 +65,7 @@ func (g *template) RunIncus(img *image.IncusImage, target shared.DefinitionTarge
 		return fmt.Errorf("Failed to write to content to %s template: %w", g.defFile.Name, err)
 	}
 
-	// Add to Incus templates
+	// Add to LXD templates
 	img.Metadata.Templates[g.defFile.Path] = &api.ImageMetadataTemplate{
 		Template:   template,
 		Properties: g.defFile.Template.Properties,

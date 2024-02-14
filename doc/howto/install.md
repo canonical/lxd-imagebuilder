@@ -1,4 +1,4 @@
-# How to install `distrobuilder`
+# How to install `lxd-imagebuilder`
 
 % Include content from [../../README.md](../../README.md)
 ```{include} ../../README.md

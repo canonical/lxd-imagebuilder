@@ -4,8 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type remove struct {
@@ -17,8 +17,8 @@ func (g *remove) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) 
 	return g.Run()
 }
 
-// RunIncus removes a path.
-func (g *remove) RunIncus(img *image.IncusImage, target shared.DefinitionTargetIncus) error {
+// RunLXD removes a path.
+func (g *remove) RunLXD(img *image.LXDImage, target shared.DefinitionTargetLXD) error {
 	return g.Run()
 }
 

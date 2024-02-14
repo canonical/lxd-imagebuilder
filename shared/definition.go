@@ -8,9 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lxc/incus/shared/osarch"
-	incusArch "github.com/lxc/incus/shared/osarch"
-	"github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
+	"github.com/canonical/lxd/shared/osarch"
 )
 
 // ImageTarget represents the image target.
@@ -185,22 +184,22 @@ type DefinitionTargetLXC struct {
 	Config        []DefinitionTargetLXCConfig `yaml:"config,omitempty"`
 }
 
-// DefinitionTargetIncusVM represents Incus VM specific options.
-type DefinitionTargetIncusVM struct {
+// DefinitionTargetLXDVM represents LXD VM specific options.
+type DefinitionTargetLXDVM struct {
 	Size       uint64 `yaml:"size,omitempty"`
 	Filesystem string `yaml:"filesystem,omitempty"`
 }
 
-// DefinitionTargetIncus represents Incus specific options.
-type DefinitionTargetIncus struct {
-	VM DefinitionTargetIncusVM `yaml:"vm,omitempty"`
+// DefinitionTargetLXD represents LXD specific options.
+type DefinitionTargetLXD struct {
+	VM DefinitionTargetLXDVM `yaml:"vm,omitempty"`
 }
 
 // A DefinitionTarget specifies target dependent files.
 type DefinitionTarget struct {
-	LXC   DefinitionTargetLXC   `yaml:"lxc,omitempty"`
-	Incus DefinitionTargetIncus `yaml:"incus,omitempty"`
-	Type  DefinitionFilterType  // This field is internal only and used only for simplicity.
+	LXC  DefinitionTargetLXC  `yaml:"lxc,omitempty"`
+	LXD  DefinitionTargetLXD  `yaml:"lxd,omitempty"`
+	Type DefinitionFilterType // This field is internal only and used only for simplicity.
 }
 
 // A DefinitionFile represents a file which is to be created inside to chroot.
@@ -346,7 +345,7 @@ func (d *Definition) SetDefaults() {
 		d.Image.Description = "{{ image.distribution|capfirst }} {{ image.release }} {{ image.architecture_mapped }}{% if image.variant != \"default\" %} ({{ image.variant }}){% endif %} ({{ image.serial }})"
 	}
 
-	// Set default target type. This will only be overridden if building VMs for Incus.
+	// Set default target type. This will only be overridden if building VMs for LXD.
 	d.Targets.Type = DefinitionFilterTypeContainer
 }
 
@@ -386,7 +385,7 @@ func (d *Definition) Validate() error {
 		"nixos-http",
 	}
 
-	if !util.ValueInSlice(strings.TrimSpace(d.Source.Downloader), validDownloaders) {
+	if !lxd_shared.ValueInSlice(strings.TrimSpace(d.Source.Downloader), validDownloaders) {
 		return fmt.Errorf("source.downloader must be one of %v", validDownloaders)
 	}
 
@@ -407,7 +406,7 @@ func (d *Definition) Validate() error {
 			"slackpkg",
 		}
 
-		if !util.ValueInSlice(strings.TrimSpace(d.Packages.Manager), validManagers) {
+		if !lxd_shared.ValueInSlice(strings.TrimSpace(d.Packages.Manager), validManagers) {
 			return fmt.Errorf("packages.manager must be one of %v", validManagers)
 		}
 
@@ -448,12 +447,12 @@ func (d *Definition) Validate() error {
 		"hosts",
 		"remove",
 		"cloud-init",
-		"incus-agent",
+		"lxd-agent",
 		"fstab",
 	}
 
 	for _, file := range d.Files {
-		if !util.ValueInSlice(strings.TrimSpace(file.Generator), validGenerators) {
+		if !lxd_shared.ValueInSlice(strings.TrimSpace(file.Generator), validGenerators) {
 			return fmt.Errorf("files.*.generator must be one of %v", validGenerators)
 		}
 	}
@@ -474,7 +473,7 @@ func (d *Definition) Validate() error {
 
 	architectureMap := strings.TrimSpace(d.Mappings.ArchitectureMap)
 	if architectureMap != "" {
-		if !util.ValueInSlice(architectureMap, validMappings) {
+		if !lxd_shared.ValueInSlice(architectureMap, validMappings) {
 			return fmt.Errorf("mappings.architecture_map must be one of %v", validMappings)
 		}
 	}
@@ -487,7 +486,7 @@ func (d *Definition) Validate() error {
 	}
 
 	for _, action := range d.Actions {
-		if !util.ValueInSlice(action.Trigger, validTriggers) {
+		if !lxd_shared.ValueInSlice(action.Trigger, validTriggers) {
 			return fmt.Errorf("actions.*.trigger must be one of %v", validTriggers)
 		}
 	}
@@ -498,7 +497,7 @@ func (d *Definition) Validate() error {
 	}
 
 	for _, set := range d.Packages.Sets {
-		if !util.ValueInSlice(set.Action, validPackageActions) {
+		if !lxd_shared.ValueInSlice(set.Action, validPackageActions) {
 			return fmt.Errorf("packages.*.set.*.action must be one of %v", validPackageActions)
 		}
 	}
@@ -512,19 +511,19 @@ func (d *Definition) Validate() error {
 	d.Image.ArchitectureMapped = archMapped
 
 	// Kernel architecture and personality
-	archID, err := incusArch.ArchitectureId(d.Image.Architecture)
+	archID, err := osarch.ArchitectureId(d.Image.Architecture)
 	if err != nil {
 		return fmt.Errorf("Failed to get architecture ID: %w", err)
 	}
 
-	archName, err := incusArch.ArchitectureName(archID)
+	archName, err := osarch.ArchitectureName(archID)
 	if err != nil {
 		return fmt.Errorf("Failed to get architecture name: %w", err)
 	}
 
 	d.Image.ArchitectureKernel = archName
 
-	archPersonality, err := incusArch.ArchitecturePersonality(archID)
+	archPersonality, err := osarch.ArchitecturePersonality(archID)
 	if err != nil {
 		return fmt.Errorf("Failed to get architecture personality: %w", err)
 	}
@@ -643,15 +642,15 @@ func getFieldByTag(v reflect.Value, t reflect.Type, tag string) (reflect.Value, 
 
 // ApplyFilter returns true if the filter matches.
 func ApplyFilter(filter Filter, release string, architecture string, variant string, targetType DefinitionFilterType, acceptedImageTargets ImageTarget) bool {
-	if len(filter.GetReleases()) > 0 && !util.ValueInSlice(release, filter.GetReleases()) {
+	if len(filter.GetReleases()) > 0 && !lxd_shared.ValueInSlice(release, filter.GetReleases()) {
 		return false
 	}
 
-	if len(filter.GetArchitectures()) > 0 && !util.ValueInSlice(architecture, filter.GetArchitectures()) {
+	if len(filter.GetArchitectures()) > 0 && !lxd_shared.ValueInSlice(architecture, filter.GetArchitectures()) {
 		return false
 	}
 
-	if len(filter.GetVariants()) > 0 && !util.ValueInSlice(variant, filter.GetVariants()) {
+	if len(filter.GetVariants()) > 0 && !lxd_shared.ValueInSlice(variant, filter.GetVariants()) {
 		return false
 	}
 

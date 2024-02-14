@@ -8,15 +8,15 @@ import (
 	"path/filepath"
 	"testing"
 
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
 	"github.com/stretchr/testify/require"
 
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 func TestCloudInitGeneratorRunLXC(t *testing.T) {
-	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test")
+	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test")
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
 	setup(t, cacheDir)
@@ -47,7 +47,7 @@ func TestCloudInitGeneratorRunLXC(t *testing.T) {
 	// Check whether the generator has altered the rootfs
 	for _, f := range []string{"cloud-init-local", "cloud-config", "cloud-init", "cloud-final"} {
 		fullPath := filepath.Join(rootfsDir, "etc", "runlevels", f)
-		require.Falsef(t, incus.PathExists(fullPath), "File '%s' exists but shouldn't", fullPath)
+		require.Falsef(t, lxd_shared.PathExists(fullPath), "File '%s' exists but shouldn't", fullPath)
 	}
 
 	for i := 0; i <= 6; i++ {
@@ -55,15 +55,15 @@ func TestCloudInitGeneratorRunLXC(t *testing.T) {
 
 		for _, f := range []string{"cloud-init-local", "cloud-config", "cloud-init", "cloud-final"} {
 			fullPath := filepath.Join(dir, fmt.Sprintf("S99%s", f))
-			require.Falsef(t, incus.PathExists(fullPath), "File '%s' exists but shouldn't", fullPath)
+			require.Falsef(t, lxd_shared.PathExists(fullPath), "File '%s' exists but shouldn't", fullPath)
 		}
 	}
 
 	require.FileExists(t, filepath.Join(rootfsDir, "etc", "cloud", "cloud-init.disabled"))
 }
 
-func TestCloudInitGeneratorRunIncus(t *testing.T) {
-	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test")
+func TestCloudInitGeneratorRunLXD(t *testing.T) {
+	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test")
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
 	setup(t, cacheDir)
@@ -76,7 +76,7 @@ func TestCloudInitGeneratorRunIncus(t *testing.T) {
 		},
 	}
 
-	image := image.NewIncusImage(context.TODO(), cacheDir, "", cacheDir, definition)
+	image := image.NewLXDImage(context.TODO(), cacheDir, "", cacheDir, definition)
 
 	tests := []struct {
 		name       string
@@ -148,7 +148,7 @@ config:
 		require.IsType(t, &cloudInit{}, generator)
 		require.NoError(t, err)
 
-		err = generator.RunIncus(image, shared.DefinitionTargetIncus{})
+		err = generator.RunLXD(image, shared.DefinitionTargetLXD{})
 
 		if !tt.shouldFail {
 			require.NoError(t, err)

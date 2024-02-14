@@ -25,8 +25,8 @@ __attribute__((constructor)) void init(void) {
 		_exit(1);
 	}
 
-	// Hardcode the hostname to "distrobuilder"
-	if (sethostname("distrobuilder", 13) < 0) {
+	// Hardcode the hostname to "lxd-imagebuilder"
+	if (sethostname("lxd-imagebuilder", 13) < 0) {
 		fprintf(stderr, "Failed to set hostname: %s\n", strerror(errno));
 		_exit(1);
 	}
@@ -66,15 +66,15 @@ import (
 	"strings"
 	"time"
 
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 
-	"github.com/lxc/distrobuilder/managers"
-	"github.com/lxc/distrobuilder/shared"
-	"github.com/lxc/distrobuilder/shared/version"
-	"github.com/lxc/distrobuilder/sources"
+	"github.com/canonical/lxd-imagebuilder/managers"
+	"github.com/canonical/lxd-imagebuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared/version"
+	"github.com/canonical/lxd-imagebuilder/sources"
 )
 
 //go:embed lxc.generator
@@ -129,8 +129,8 @@ func main() {
 	globalCmd := cmdGlobal{}
 
 	app := &cobra.Command{
-		Use:   "distrobuilder",
-		Short: "System container and VM image builder for LXC and Incus",
+		Use:   "lxd-imagebuilder",
+		Short: "System container and VM image builder for LXC and LXD",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// Quick checks
 			if os.Geteuid() != 0 {
@@ -181,7 +181,7 @@ func main() {
 
 			// Create temp directory if the cache directory isn't explicitly set
 			if globalCmd.flagCacheDir == "" {
-				dir, err := os.MkdirTemp("/var/cache", "distrobuilder.")
+				dir, err := os.MkdirTemp("/var/cache", "lxd-imagebuilder.")
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to create cache directory: %s\n", err)
 					os.Exit(1)
@@ -215,10 +215,10 @@ func main() {
 	app.AddCommand(LXCCmd.commandBuild())
 	app.AddCommand(LXCCmd.commandPack())
 
-	// Incus sub-commands
-	IncusCmd := cmdIncus{global: &globalCmd}
-	app.AddCommand(IncusCmd.commandBuild())
-	app.AddCommand(IncusCmd.commandPack())
+	// LXD sub-commands
+	LXDCmd := cmdLXD{global: &globalCmd}
+	app.AddCommand(LXDCmd.commandBuild())
+	app.AddCommand(LXDCmd.commandPack())
 
 	// build-dir sub-command
 	buildDirCmd := cmdBuildDir{global: &globalCmd}
@@ -238,9 +238,9 @@ func main() {
 	err := app.Execute()
 	if err != nil {
 		if globalCmd.logger != nil {
-			globalCmd.logger.WithFields(logrus.Fields{"err": err}).Error("Failed running distrobuilder")
+			globalCmd.logger.WithFields(logrus.Fields{"err": err}).Error("Failed running imagebuilder")
 		} else {
-			fmt.Fprintf(os.Stderr, "Failed running distrobuilder: %s\n", err.Error())
+			fmt.Fprintf(os.Stderr, "Failed running imagebuilder: %s\n", err.Error())
 		}
 
 		_ = globalCmd.postRun(globalCmd.subCommand, nil)
@@ -316,7 +316,7 @@ func (c *cmdGlobal) preRunBuild(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Failed to get definition: %w", err)
 	}
 
-	// Create cache directory if we also plan on creating LXC or Incus images
+	// Create cache directory if we also plan on creating LXC or LXD images
 	if !isRunningBuildDir {
 		err = os.MkdirAll(c.flagCacheDir, 0755)
 		if err != nil {
@@ -365,7 +365,7 @@ func (c *cmdGlobal) preRunBuild(cmd *cobra.Command, args []string) error {
 	// only these sections will be processed.
 	imageTargets := shared.ImageTargetUndefined
 
-	// If we're running either build-lxc or build-incus, include types which are
+	// If we're running either build-lxc or build-lxd, include types which are
 	// meant for all.
 	if !isRunningBuildDir {
 		imageTargets |= shared.ImageTargetAll
@@ -375,9 +375,9 @@ func (c *cmdGlobal) preRunBuild(cmd *cobra.Command, args []string) error {
 	case "build-lxc":
 		// If we're running build-lxc, also process container-only sections.
 		imageTargets |= shared.ImageTargetContainer
-	case "build-incus", "build-lxd":
+	case "build-lxd":
 		// Include either container-specific or vm-specific sections when
-		// running build-incus.
+		// running build-lxd.
 		ok, err := cmd.Flags().GetBool("vm")
 		if err != nil {
 			return fmt.Errorf(`Failed to get bool value of "vm": %w`, err)
@@ -618,7 +618,7 @@ func getDefinition(fname string, options []string) (*shared.Definition, error) {
 // addSystemdGenerator creates a systemd-generator which runs on boot, and does some configuration around the system itself and networking.
 func addSystemdGenerator() error {
 	// Check if container has systemd
-	if !incus.PathExists("/etc/systemd") {
+	if !lxd_shared.PathExists("/etc/systemd") {
 		return nil
 	}
 

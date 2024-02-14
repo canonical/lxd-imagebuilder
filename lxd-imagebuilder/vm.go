@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"strings"
 
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
 	"golang.org/x/sys/unix"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type vm struct {
@@ -29,7 +29,7 @@ func newVM(ctx context.Context, imageFile, rootfsDir, fs string, size uint64) (*
 		fs = "ext4"
 	}
 
-	if !incus.ValueInSlice(fs, []string{"btrfs", "ext4"}) {
+	if !lxd_shared.ValueInSlice(fs, []string{"btrfs", "ext4"}) {
 		return nil, fmt.Errorf("Unsupported fs: %s", fs)
 	}
 
@@ -124,7 +124,7 @@ func (v *vm) mountImage() error {
 
 	deviceNumbers := strings.Split(out.String(), "\n")
 
-	if !incus.PathExists(v.getUEFIDevFile()) {
+	if !lxd_shared.PathExists(v.getUEFIDevFile()) {
 		fields := strings.Split(deviceNumbers[1], ":")
 
 		major, err := strconv.Atoi(fields[0])
@@ -145,7 +145,7 @@ func (v *vm) mountImage() error {
 		}
 	}
 
-	if !incus.PathExists(v.getRootfsDevFile()) {
+	if !lxd_shared.PathExists(v.getRootfsDevFile()) {
 		fields := strings.Split(deviceNumbers[2], ":")
 
 		major, err := strconv.Atoi(fields[0])
@@ -171,7 +171,7 @@ func (v *vm) mountImage() error {
 
 func (v *vm) umountImage() error {
 	// If loopDevice is empty, the image probably isn't mounted.
-	if v.loopDevice == "" || !incus.PathExists(v.loopDevice) {
+	if v.loopDevice == "" || !lxd_shared.PathExists(v.loopDevice) {
 		return nil
 	}
 
@@ -181,14 +181,14 @@ func (v *vm) umountImage() error {
 	}
 
 	// Make sure that p1 and p2 are also removed.
-	if incus.PathExists(v.getUEFIDevFile()) {
+	if lxd_shared.PathExists(v.getUEFIDevFile()) {
 		err := os.Remove(v.getUEFIDevFile())
 		if err != nil {
 			return fmt.Errorf("Failed to remove file %q: %w", v.getUEFIDevFile(), err)
 		}
 	}
 
-	if incus.PathExists(v.getRootfsDevFile()) {
+	if lxd_shared.PathExists(v.getRootfsDevFile()) {
 		err := os.Remove(v.getRootfsDevFile())
 		if err != nil {
 			return fmt.Errorf("Failed to remove file %q: %w", v.getRootfsDevFile(), err)

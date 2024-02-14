@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
 
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type copy struct {
@@ -22,8 +22,8 @@ func (g *copy) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) er
 	return g.Run()
 }
 
-// RunIncus copies a file to the container.
-func (g *copy) RunIncus(img *image.IncusImage, target shared.DefinitionTargetIncus) error {
+// RunLXD copies a file to the container.
+func (g *copy) RunLXD(img *image.LXDImage, target shared.DefinitionTargetLXD) error {
 	return g.Run()
 }
 
@@ -186,7 +186,7 @@ func (g *copy) copyFile(src, dest string, defFile shared.DefinitionFile) error {
 			return err
 		}
 
-		if util.PathExists(dest) {
+		if lxd_shared.PathExists(dest) {
 			err = os.Remove(dest)
 			if err != nil {
 				return err

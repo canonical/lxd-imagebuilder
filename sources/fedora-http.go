@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"sort"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type fedora struct {

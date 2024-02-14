@@ -5,8 +5,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 // ErrNotSupported returns a "Not supported" error.
@@ -24,23 +24,20 @@ type generator interface {
 // Generator interface.
 type Generator interface {
 	RunLXC(*image.LXCImage, shared.DefinitionTargetLXC) error
-	RunIncus(*image.IncusImage, shared.DefinitionTargetIncus) error
+	RunLXD(*image.LXDImage, shared.DefinitionTargetLXD) error
 	Run() error
 }
 
 var generators = map[string]func() generator{
-	"cloud-init":  func() generator { return &cloudInit{} },
-	"copy":        func() generator { return &copy{} },
-	"dump":        func() generator { return &dump{} },
-	"fstab":       func() generator { return &fstab{} },
-	"hostname":    func() generator { return &hostname{} },
-	"hosts":       func() generator { return &hosts{} },
-	"incus-agent": func() generator { return &incusAgent{} },
-	"remove":      func() generator { return &remove{} },
-	"template":    func() generator { return &template{} },
-
-	// Legacy.
-	"lxd-agent": func() generator { return &incusAgent{} },
+	"cloud-init": func() generator { return &cloudInit{} },
+	"copy":       func() generator { return &copy{} },
+	"dump":       func() generator { return &dump{} },
+	"fstab":      func() generator { return &fstab{} },
+	"hostname":   func() generator { return &hostname{} },
+	"hosts":      func() generator { return &hosts{} },
+	"lxd-agent":  func() generator { return &lxdAgent{} },
+	"remove":     func() generator { return &remove{} },
+	"template":   func() generator { return &template{} },
 }
 
 // Load loads and initializes a generator.

@@ -11,4 +11,4 @@ linters-settings:
     sections:
       - standard
       - default
-      - prefix(github.com/lxc/distrobuilder)
+      - prefix(github.com/canonical/lxd-imagebuilder)

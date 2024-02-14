@@ -139,12 +139,12 @@ files:
   types:
   - vm
 
-- name: incus-agent
-  generator: incus-agent
+- name: lxd-agent
+  generator: lxd-agent
   types:
   - vm
 
-- path: /etc/default/grub.d/50-incus.cfg
+- path: /etc/default/grub.d/50-lxd.cfg
   generator: dump
   content: |-
     GRUB_RECORDFAIL_TIMEOUT=0
@@ -154,7 +154,7 @@ files:
   types:
   - vm
 
-- path: /etc/sudoers.d/90-incus
+- path: /etc/sudoers.d/90-lxd
   generator: dump
   mode: 0440
   content: |-

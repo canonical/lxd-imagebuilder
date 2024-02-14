@@ -3,7 +3,7 @@
 ## Pull requests:
 
 Changes to this project should be proposed as pull requests on Github
-at: <https://github.com/lxc/distrobuilder>
+at: <https://github.com/canonical/lxd-imagebuilder>
 
 Proposed changes will then go through code review there and once acked,
 be merged in the main branch.

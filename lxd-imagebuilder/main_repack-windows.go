@@ -14,14 +14,14 @@ import (
 	"strconv"
 	"strings"
 
+	lxd_shared "github.com/canonical/lxd/shared"
 	"github.com/flosch/pongo2/v4"
-	incus "github.com/lxc/incus/shared/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/sys/unix"
 
-	"github.com/lxc/distrobuilder/shared"
-	"github.com/lxc/distrobuilder/windows"
+	"github.com/canonical/lxd-imagebuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/windows"
 )
 
 type cmdRepackWindows struct {
@@ -110,7 +110,7 @@ func (c *cmdRepackWindows) preRun(cmd *cobra.Command, args []string) error {
 	} else {
 		supportedVersions := []string{"w11", "w10", "2k19", "2k12", "2k16", "2k22"}
 
-		if !incus.ValueInSlice(c.flagWindowsVersion, supportedVersions) {
+		if !lxd_shared.ValueInSlice(c.flagWindowsVersion, supportedVersions) {
 			return fmt.Errorf("Version must be one of %v", supportedVersions)
 		}
 	}
@@ -126,7 +126,7 @@ func (c *cmdRepackWindows) preRun(cmd *cobra.Command, args []string) error {
 	} else {
 		supportedArchitectures := []string{"amd64", "ARM64"}
 
-		if !incus.ValueInSlice(c.flagWindowsArchitecture, supportedArchitectures) {
+		if !lxd_shared.ValueInSlice(c.flagWindowsArchitecture, supportedArchitectures) {
 			return fmt.Errorf("Architecture must be one of %v", supportedArchitectures)
 		}
 	}
@@ -191,7 +191,7 @@ func (c *cmdRepackWindows) run(cmd *cobra.Command, args []string, overlayDir str
 
 		virtioISOPath = filepath.Join(c.global.flagSourcesDir, "windows", "virtio-win.iso")
 
-		if !incus.PathExists(virtioISOPath) {
+		if !lxd_shared.PathExists(virtioISOPath) {
 			err := os.MkdirAll(filepath.Dir(virtioISOPath), 0755)
 			if err != nil {
 				return fmt.Errorf("Failed to create directory %q: %w", filepath.Dir(virtioISOPath), err)
@@ -208,7 +208,7 @@ func (c *cmdRepackWindows) run(cmd *cobra.Command, args []string, overlayDir str
 
 			logger.Info("Downloading drivers ISO")
 
-			_, err = incus.DownloadFileHash(c.global.ctx, &client, "", nil, nil, "virtio-win.iso", virtioURL, "", nil, f)
+			_, err = lxd_shared.DownloadFileHash(c.global.ctx, &client, "", nil, nil, "virtio-win.iso", virtioURL, "", nil, f)
 			if err != nil {
 				f.Close()
 				os.Remove(virtioISOPath)
@@ -219,7 +219,7 @@ func (c *cmdRepackWindows) run(cmd *cobra.Command, args []string, overlayDir str
 		}
 	}
 
-	if !incus.PathExists(driverPath) {
+	if !lxd_shared.PathExists(driverPath) {
 		err := os.MkdirAll(driverPath, 0755)
 		if err != nil {
 			return fmt.Errorf("Failed to create directory %q: %w", driverPath, err)
@@ -354,7 +354,7 @@ func (c *cmdRepackWindows) modifyWim(path string, index int) error {
 	wimFile := filepath.Join(path)
 	wimPath := filepath.Join(c.global.flagCacheDir, "wim")
 
-	if !incus.PathExists(wimPath) {
+	if !lxd_shared.PathExists(wimPath) {
 		err := os.MkdirAll(wimPath, 0755)
 		if err != nil {
 			return fmt.Errorf("Failed to create directory %q: %w", wimPath, err)
@@ -542,7 +542,7 @@ func (c *cmdRepackWindows) injectDrivers(dirs map[string]string) error {
 		sourceDir := filepath.Join(driverPath, driver, c.flagWindowsVersion, c.flagWindowsArchitecture)
 		targetBasePath := filepath.Join(dirs["filerepository"], info.PackageName)
 
-		if !incus.PathExists(targetBasePath) {
+		if !lxd_shared.PathExists(targetBasePath) {
 			err := os.MkdirAll(targetBasePath, 0755)
 			if err != nil {
 				return fmt.Errorf("Failed to create directory %q: %w", targetBasePath, err)
@@ -554,7 +554,7 @@ func (c *cmdRepackWindows) injectDrivers(dirs map[string]string) error {
 			targetPath := filepath.Join(targetBasePath, filepath.Base(path))
 
 			// Copy driver files
-			if incus.ValueInSlice(ext, []string{".cat", ".dll", ".inf", ".sys"}) {
+			if lxd_shared.ValueInSlice(ext, []string{".cat", ".dll", ".inf", ".sys"}) {
 				logger.WithFields(logrus.Fields{"src": path, "dest": targetPath}).Debug("Copying file")
 
 				err := shared.Copy(path, targetPath)

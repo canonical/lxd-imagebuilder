@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lxc/incus/shared/ioprogress"
-	incus "github.com/lxc/incus/shared/util"
+	lxd_shared "github.com/canonical/lxd/shared"
+	"github.com/canonical/lxd/shared/ioprogress"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type common struct {
@@ -145,7 +145,7 @@ func (s *common) DownloadHash(def shared.DefinitionImage, file, checksum string,
 
 	if checksum == "" {
 		err = shared.Retry(func() error {
-			_, err = incus.DownloadFileHash(s.ctx, s.client, "distrobuilder", progress, nil, imagePath, file, "", nil, image)
+			_, err = lxd_shared.DownloadFileHash(s.ctx, s.client, "lxd-imagebuilder", progress, nil, imagePath, file, "", nil, image)
 			if err != nil {
 				os.Remove(imagePath)
 			}
@@ -160,7 +160,7 @@ func (s *common) DownloadHash(def shared.DefinitionImage, file, checksum string,
 					hashFunc.Reset()
 				}
 
-				_, err = incus.DownloadFileHash(s.ctx, s.client, "distrobuilder", progress, nil, imagePath, file, h, hashFunc, image)
+				_, err = lxd_shared.DownloadFileHash(s.ctx, s.client, "lxd-imagebuilder", progress, nil, imagePath, file, h, hashFunc, image)
 				if err == nil {
 					break
 				}
@@ -266,11 +266,11 @@ func (s *common) CreateGPGKeyring() (string, error) {
 
 	// Export keys to support gpg1 and gpg2
 	err = shared.RunCommand(s.ctx, nil, &out, "gpg", "--homedir", gpgDir, "--export", "--output",
-		filepath.Join(gpgDir, "distrobuilder.gpg"))
+		filepath.Join(gpgDir, "lxd-imagebuilder.gpg"))
 	if err != nil {
 		os.RemoveAll(gpgDir)
 		return "", fmt.Errorf("Failed to export keyring: %s: %w", out.String(), err)
 	}
 
-	return filepath.Join(gpgDir, "distrobuilder.gpg"), nil
+	return filepath.Join(gpgDir, "lxd-imagebuilder.gpg"), nil
 }

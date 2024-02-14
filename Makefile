@@ -1,5 +1,5 @@
 VERSION=$(shell grep "var Version" shared/version/version.go | cut -d'"' -f2)
-ARCHIVE=distrobuilder-$(VERSION).tar
+ARCHIVE=lxd-imagebuilder-$(VERSION).tar
 GO111MODULE=on
 SPHINXENV=.sphinx/venv/bin/activate
 
@@ -7,7 +7,7 @@ SPHINXENV=.sphinx/venv/bin/activate
 default:
 	gofmt -s -w .
 	go install -v ./...
-	@echo "distrobuilder built successfully"
+	@echo "lxd-imagebuilder built successfully"
 
 .PHONY: update-gomod
 update-gomod:
@@ -25,15 +25,15 @@ dist:
 
 	# Create build dir
 	$(eval TMP := $(shell mktemp -d))
-	git archive --prefix=distrobuilder-$(VERSION)/ HEAD | tar -x -C $(TMP)
-	mkdir -p $(TMP)/_dist/src/github.com/lxc
-	ln -s ../../../../distrobuilder-$(VERSION) $(TMP)/_dist/src/github.com/lxc/distrobuilder
+	git archive --prefix=lxd-imagebuilder-$(VERSION)/ HEAD | tar -x -C $(TMP)
+	mkdir -p $(TMP)/_dist/src/github.com/canonical
+	ln -s ../../../../lxd-imagebuilder-$(VERSION) $(TMP)/_dist/src/github.com/canonical/lxd-imagebuilder
 
 	# Download dependencies
-	cd $(TMP)/distrobuilder-$(VERSION) && go mod vendor
+	cd $(TMP)/lxd-imagebuilder-$(VERSION) && go mod vendor
 
 	# Assemble tarball
-	tar --exclude-vcs -C $(TMP) -zcf $(ARCHIVE).gz distrobuilder-$(VERSION)/
+	tar --exclude-vcs -C $(TMP) -zcf $(ARCHIVE).gz lxd-imagebuilder-$(VERSION)/
 
 	# Cleanup
 	rm -Rf $(TMP)

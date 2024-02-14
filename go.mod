@@ -1,4 +1,4 @@
-module github.com/lxc/distrobuilder
+module github.com/canonical/lxd-imagebuilder
 
 go 1.21
 
@@ -10,9 +10,9 @@ exclude (
 )
 
 require (
+	github.com/canonical/lxd v0.0.0-20240212112812-adfaa529e9b6
 	github.com/flosch/pongo2/v4 v4.0.2
 	github.com/google/go-github/v56 v56.0.0
-	github.com/lxc/incus v0.5.1
 	github.com/mudler/docker-companion v0.4.6-0.20211015133729-bd4704fad372
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
@@ -43,6 +43,7 @@ require (
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
+	github.com/flosch/pongo2 v0.0.0-20200913210552-0d938eb266f3 // indirect
 	github.com/fsouza/go-dockerclient v1.10.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -70,6 +71,7 @@ require (
 	github.com/opencontainers/umoci v0.4.8-0.20211009121349-9c76304c034d // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/sftp v1.13.6 // indirect
+	github.com/pkg/xattr v0.4.9 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rootless-containers/proto/go-proto v0.0.0-20230421021042-4cd87ebadd67 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect

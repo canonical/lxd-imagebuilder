@@ -18,12 +18,7 @@ is_lxc_privileged_container() {
 
 # is_lxd_vm succeeds if we're running inside a LXD VM
 is_lxd_vm() {
-	[ -e /dev/virtio-ports/org.linuxcontainers.lxd ]
-}
-
-# is_incus_vm succeeds if we're running inside an Incus VM
-is_incus_vm() {
-	[ -e /dev/virtio-ports/org.linuxcontainers.incus ]
+	[ -e /dev/virtio-ports/com.canonical.lxd ]
 }
 
 # is_in_path succeeds if the given file exists in on of the paths
@@ -152,10 +147,10 @@ fix_systemd_sysctl() {
 }
 
 ## Main logic
-# Nothing to do in Incus VM but deployed in case it is later converted to a container
-is_incus_vm || is_lxd_vm && exit 0
+# Nothing to do in LXD VM but deployed in case it is later converted to a container
+is_lxd_vm && exit 0
 
-# Exit immediately if not an Incus/LXC container
+# Exit immediately if not an LXD/LXC container
 is_lxc_container || exit 0
 
 # Check for NetworkManager
@@ -219,7 +214,7 @@ fi
 if [ -d /etc/udev ]; then
 	mkdir -p /run/udev/rules.d
 	cat <<-EOF > /run/udev/rules.d/90-lxc-net.rules
-		# This file was created by distrobuilder.
+		# This file was created by lxd-imagebuilder.
 		#
 		# Its purpose is to convince NetworkManager to treat the eth0 veth
 		# interface like a regular Ethernet. NetworkManager ordinarily doesn't

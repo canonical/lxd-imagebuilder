@@ -8,12 +8,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/lxc/distrobuilder/image"
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/image"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
-func TestTemplateGeneratorRunIncus(t *testing.T) {
-	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test")
+func TestTemplateGeneratorRunLXD(t *testing.T) {
+	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test")
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
 	setup(t, cacheDir)
@@ -35,22 +35,22 @@ func TestTemplateGeneratorRunIncus(t *testing.T) {
 	require.IsType(t, &template{}, generator)
 	require.NoError(t, err)
 
-	image := image.NewIncusImage(context.TODO(), cacheDir, "", cacheDir, definition)
+	image := image.NewLXDImage(context.TODO(), cacheDir, "", cacheDir, definition)
 
 	err = os.MkdirAll(filepath.Join(cacheDir, "rootfs", "root"), 0755)
 	require.NoError(t, err)
 
 	createTestFile(t, filepath.Join(cacheDir, "rootfs", "root", "template"), "--test--")
 
-	err = generator.RunIncus(image, shared.DefinitionTargetIncus{})
+	err = generator.RunLXD(image, shared.DefinitionTargetLXD{})
 	require.NoError(t, err)
 
 	validateTestFile(t, filepath.Join(cacheDir, "templates", "template.tpl"), "==test==\n")
 	validateTestFile(t, filepath.Join(cacheDir, "rootfs", "root", "template"), "--test--")
 }
 
-func TestTemplateGeneratorRunIncusDefaultWhen(t *testing.T) {
-	cacheDir := filepath.Join(os.TempDir(), "distrobuilder-test")
+func TestTemplateGeneratorRunLXDDefaultWhen(t *testing.T) {
+	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test")
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
 	setup(t, cacheDir)
@@ -72,9 +72,9 @@ func TestTemplateGeneratorRunIncusDefaultWhen(t *testing.T) {
 	require.IsType(t, &template{}, generator)
 	require.NoError(t, err)
 
-	image := image.NewIncusImage(context.TODO(), cacheDir, "", cacheDir, definition)
+	image := image.NewLXDImage(context.TODO(), cacheDir, "", cacheDir, definition)
 
-	err = generator.RunIncus(image, shared.DefinitionTargetIncus{})
+	err = generator.RunLXD(image, shared.DefinitionTargetLXD{})
 	require.NoError(t, err)
 
 	generator, err = Load("template", nil, cacheDir, rootfsDir, shared.DefinitionFile{
@@ -89,7 +89,7 @@ func TestTemplateGeneratorRunIncusDefaultWhen(t *testing.T) {
 	require.IsType(t, &template{}, generator)
 	require.NoError(t, err)
 
-	err = generator.RunIncus(image, shared.DefinitionTargetIncus{})
+	err = generator.RunLXD(image, shared.DefinitionTargetLXD{})
 	require.NoError(t, err)
 
 	testvalue := []string{"create", "copy"}

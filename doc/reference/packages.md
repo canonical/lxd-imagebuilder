@@ -47,7 +47,7 @@ Valid package manager are:
 * `zypper`
 
 It's also possible to specify a custom package manager.
-This is useful if the desired package manager is not supported by distrobuilder.
+This is useful if the desired package manager is not supported by LXD imagebuilder.
 
 ```yaml
 packages:

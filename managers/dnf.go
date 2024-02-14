@@ -1,7 +1,7 @@
 package managers
 
 import (
-	"github.com/lxc/distrobuilder/shared"
+	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
 type dnf struct {
