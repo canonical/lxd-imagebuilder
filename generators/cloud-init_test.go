@@ -16,7 +16,9 @@ import (
 )
 
 func TestCloudInitGeneratorRunLXC(t *testing.T) {
-	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test")
+	cacheDir, err := os.MkdirTemp(os.TempDir(), "lxd-imagebuilder-test-")
+	require.NoError(t, err)
+
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
 	setup(t, cacheDir)
@@ -63,7 +65,9 @@ func TestCloudInitGeneratorRunLXC(t *testing.T) {
 }
 
 func TestCloudInitGeneratorRunLXD(t *testing.T) {
-	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test")
+	cacheDir, err := os.MkdirTemp(os.TempDir(), "lxd-imagebuilder-test-")
+	require.NoError(t, err)
+
 	rootfsDir := filepath.Join(cacheDir, "rootfs")
 
 	setup(t, cacheDir)
