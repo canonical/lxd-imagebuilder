@@ -1,0 +1,76 @@
+name: Build Debian Image
+
+on:
+  push:
+  workflow_dispatch:
+  # schedule:
+  #   # Run at 00:00 UTC daily.
+  #   - cron: '0 0 * * *'
+
+jobs:
+  debian:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distro:
+          - debian
+        release:
+          # - buster
+          # - bullseye
+          # - sid
+          # - bookworm
+          - trixie
+        architecture:
+          - amd64
+          # - arm64
+        variant:
+          # - default
+          - cloud
+    env:
+      goVersion: 1.22.x
+      target: "${HOME}/build"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "${{ env.goVersion }}"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get -qq update
+          sudo apt-get install -y \
+              debootstrap \
+              qemu-utils \
+              git \
+              gpg \
+              rsync \
+              squashfs-tools
+
+      - name: Build LXD imagebuilder
+        run: make
+
+      - name: Clone LXD CI repository
+        run: git clone https://github.com/musicdin/lxd-ci --branch cp/images2
+
+      - name: Build image
+        run: |
+          TIMEOUT=1800
+          YAML="${{ github.workspace }}/lxd-ci/images/${{ matrix.distro }}.yaml"
+          ARCH=${{ matrix.architecture }}
+
+          TYPE="container"
+          if [ "${ARCH}" = "amd64" ] || [ "${ARCH}" = "arm64" ]; then
+              TYPE="container,vm"
+          fi
+
+          ./bin/build-distro "${YAML}" "${ARCH}" "${TYPE}" "${TIMEOUT}" "${{ env.target }}" \
+              -o image.architecture=${{ matrix.architecture }} \
+              -o image.release=${{ matrix.release }} \
+              -o image.variant=${{ matrix.variant }} \
+              -o source.url="http://ftp.us.debian.org/debian"
+
+      - name: Print build artifacts
+        run: ls -lah "${{ env.target }}"
