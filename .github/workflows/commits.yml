@@ -7,6 +7,8 @@ permissions:
 
 jobs:
   commits:
+    permissions:
+      pull-requests: read   # needed for private repos
     name: Branch target and CLA
     runs-on: ubuntu-22.04
     steps:
