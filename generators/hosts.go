@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	lxd_shared "github.com/canonical/lxd/shared"
+	lxdShared "github.com/canonical/lxd/shared"
 	"github.com/canonical/lxd/shared/api"
 
 	"github.com/canonical/lxd-imagebuilder/image"
@@ -20,7 +20,7 @@ type hosts struct {
 // RunLXC creates a LXC specific entry in the hosts file.
 func (g *hosts) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) error {
 	// Skip if the file doesn't exist
-	if !lxd_shared.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
+	if !lxdShared.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
 		return nil
 	}
 
@@ -63,7 +63,7 @@ func (g *hosts) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) e
 // RunLXD creates a hosts template.
 func (g *hosts) RunLXD(img *image.LXDImage, target shared.DefinitionTargetLXD) error {
 	// Skip if the file doesn't exist
-	if !lxd_shared.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
+	if !lxdShared.PathExists(filepath.Join(g.sourceDir, g.defFile.Path)) {
 		return nil
 	}
 

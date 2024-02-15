@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	lxd_shared "github.com/canonical/lxd/shared"
+	lxdShared "github.com/canonical/lxd/shared"
 	"github.com/canonical/lxd/shared/osarch"
 )
 
@@ -385,7 +385,7 @@ func (d *Definition) Validate() error {
 		"nixos-http",
 	}
 
-	if !lxd_shared.ValueInSlice(strings.TrimSpace(d.Source.Downloader), validDownloaders) {
+	if !lxdShared.ValueInSlice(strings.TrimSpace(d.Source.Downloader), validDownloaders) {
 		return fmt.Errorf("source.downloader must be one of %v", validDownloaders)
 	}
 
@@ -406,7 +406,7 @@ func (d *Definition) Validate() error {
 			"slackpkg",
 		}
 
-		if !lxd_shared.ValueInSlice(strings.TrimSpace(d.Packages.Manager), validManagers) {
+		if !lxdShared.ValueInSlice(strings.TrimSpace(d.Packages.Manager), validManagers) {
 			return fmt.Errorf("packages.manager must be one of %v", validManagers)
 		}
 
@@ -452,7 +452,7 @@ func (d *Definition) Validate() error {
 	}
 
 	for _, file := range d.Files {
-		if !lxd_shared.ValueInSlice(strings.TrimSpace(file.Generator), validGenerators) {
+		if !lxdShared.ValueInSlice(strings.TrimSpace(file.Generator), validGenerators) {
 			return fmt.Errorf("files.*.generator must be one of %v", validGenerators)
 		}
 	}
@@ -473,7 +473,7 @@ func (d *Definition) Validate() error {
 
 	architectureMap := strings.TrimSpace(d.Mappings.ArchitectureMap)
 	if architectureMap != "" {
-		if !lxd_shared.ValueInSlice(architectureMap, validMappings) {
+		if !lxdShared.ValueInSlice(architectureMap, validMappings) {
 			return fmt.Errorf("mappings.architecture_map must be one of %v", validMappings)
 		}
 	}
@@ -486,7 +486,7 @@ func (d *Definition) Validate() error {
 	}
 
 	for _, action := range d.Actions {
-		if !lxd_shared.ValueInSlice(action.Trigger, validTriggers) {
+		if !lxdShared.ValueInSlice(action.Trigger, validTriggers) {
 			return fmt.Errorf("actions.*.trigger must be one of %v", validTriggers)
 		}
 	}
@@ -497,7 +497,7 @@ func (d *Definition) Validate() error {
 	}
 
 	for _, set := range d.Packages.Sets {
-		if !lxd_shared.ValueInSlice(set.Action, validPackageActions) {
+		if !lxdShared.ValueInSlice(set.Action, validPackageActions) {
 			return fmt.Errorf("packages.*.set.*.action must be one of %v", validPackageActions)
 		}
 	}
@@ -642,15 +642,15 @@ func getFieldByTag(v reflect.Value, t reflect.Type, tag string) (reflect.Value, 
 
 // ApplyFilter returns true if the filter matches.
 func ApplyFilter(filter Filter, release string, architecture string, variant string, targetType DefinitionFilterType, acceptedImageTargets ImageTarget) bool {
-	if len(filter.GetReleases()) > 0 && !lxd_shared.ValueInSlice(release, filter.GetReleases()) {
+	if len(filter.GetReleases()) > 0 && !lxdShared.ValueInSlice(release, filter.GetReleases()) {
 		return false
 	}
 
-	if len(filter.GetArchitectures()) > 0 && !lxd_shared.ValueInSlice(architecture, filter.GetArchitectures()) {
+	if len(filter.GetArchitectures()) > 0 && !lxdShared.ValueInSlice(architecture, filter.GetArchitectures()) {
 		return false
 	}
 
-	if len(filter.GetVariants()) > 0 && !lxd_shared.ValueInSlice(variant, filter.GetVariants()) {
+	if len(filter.GetVariants()) > 0 && !lxdShared.ValueInSlice(variant, filter.GetVariants()) {
 		return false
 	}
 

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	lxd_shared "github.com/canonical/lxd/shared"
+	lxdShared "github.com/canonical/lxd/shared"
 
 	"github.com/canonical/lxd-imagebuilder/image"
 	"github.com/canonical/lxd-imagebuilder/shared"
@@ -186,7 +186,7 @@ func (g *copy) copyFile(src, dest string, defFile shared.DefinitionFile) error {
 			return err
 		}
 
-		if lxd_shared.PathExists(dest) {
+		if lxdShared.PathExists(dest) {
 			err = os.Remove(dest)
 			if err != nil {
 				return err

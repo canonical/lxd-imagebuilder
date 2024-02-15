@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	lxd_shared "github.com/canonical/lxd/shared"
+	lxdShared "github.com/canonical/lxd/shared"
 	"github.com/canonical/lxd/shared/api"
 
 	"github.com/canonical/lxd-imagebuilder/image"
@@ -23,13 +23,13 @@ func (g *cloudInit) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLX
 	// Remove all symlinks to /etc/init.d/cloud-{init-local,config,init,final} in /etc/runlevels/*
 	fullPath := filepath.Join(g.sourceDir, "etc", "runlevels")
 
-	if lxd_shared.PathExists(fullPath) {
+	if lxdShared.PathExists(fullPath) {
 		err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
 			if info.IsDir() {
 				return nil
 			}
 
-			if lxd_shared.ValueInSlice(info.Name(), []string{"cloud-init-local", "cloud-config", "cloud-init", "cloud-final"}) {
+			if lxdShared.ValueInSlice(info.Name(), []string{"cloud-init-local", "cloud-config", "cloud-init", "cloud-final"}) {
 				err := os.Remove(path)
 				if err != nil {
 					return fmt.Errorf("Failed to remove file %q: %w", path, err)
@@ -46,7 +46,7 @@ func (g *cloudInit) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLX
 	// With systemd:
 	path := filepath.Join(g.sourceDir, "/etc/cloud")
 
-	if !lxd_shared.PathExists(path) {
+	if !lxdShared.PathExists(path) {
 		err := os.MkdirAll(path, 0755)
 		if err != nil {
 			return fmt.Errorf("Failed to create directory %q: %w", path, err)

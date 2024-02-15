@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	client "github.com/canonical/lxd/client"
-	lxd_shared "github.com/canonical/lxd/shared"
+	lxdShared "github.com/canonical/lxd/shared"
 	"github.com/canonical/lxd/shared/api"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -44,7 +44,7 @@ func (c *cmdLXD) commandBuild() *cobra.Command {
 `, typeDescription, compressionDescription),
 		Args: cobra.RangeArgs(1, 2),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if !lxd_shared.ValueInSlice(c.flagType, []string{"split", "unified"}) {
+			if !lxdShared.ValueInSlice(c.flagType, []string{"split", "unified"}) {
 				return errors.New("--type needs to be one of ['split', 'unified']")
 			}
 
@@ -112,7 +112,7 @@ func (c *cmdLXD) commandPack() *cobra.Command {
 `, typeDescription, compressionDescription),
 		Args: cobra.RangeArgs(2, 3),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if !lxd_shared.ValueInSlice(c.flagType, []string{"split", "unified"}) {
+			if !lxdShared.ValueInSlice(c.flagType, []string{"split", "unified"}) {
 				return errors.New("--type needs to be one of ['split', 'unified']")
 			}
 
