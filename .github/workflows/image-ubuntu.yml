@@ -29,6 +29,11 @@ jobs:
           - default
           - desktop
           - cloud
+        exclude:
+          - { variant: desktop, release: bionic }
+          - { variant: desktop, release: xenial }
+          - { variant: desktop, architecture: arm64 }
+
     env:
       type: "container"
       distro: "${{ github.job }}"
