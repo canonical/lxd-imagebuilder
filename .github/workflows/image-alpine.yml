@@ -1,0 +1,79 @@
+name: Build Alpine Images
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  alpine:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        release:
+          # - "3.16"
+          # - "3.17"
+          # - "3.18"
+          - "3.19"
+          # - "edge"
+        architecture:
+          - amd64
+          # - arm64
+        variant:
+          # - default
+          - cloud
+    env:
+      type: "container"
+      distro: "${{ github.job }}"
+      target: "${HOME}/build"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/image-setup
+
+      - name: Determine image types
+        run: |
+          ARCH="${{ matrix.architecture }}"
+          if [ "${ARCH}" = "amd64" ] || [ "${ARCH}" = "arm64" ]; then
+            echo "type=container,vm" >> $GITHUB_ENV
+          fi
+
+      - name: Build image
+        run: |
+          TIMEOUT=1800
+          YAML="${{ github.workspace }}/lxd-ci/images/${{ env.distro }}.yaml"
+          ARCH="${{ matrix.architecture }}"
+          TYPE="${{ env.type }}"
+
+          IMAGE_ARCH="${ARCH}"
+          [ "${ARCH}" = "amd64" ] && IMAGE_ARCH="x86_64"
+          [ "${ARCH}" = "arm64" ] && IMAGE_ARCH="aarch64"
+
+          ./bin/build-distro "${YAML}" "${ARCH}" "${TYPE}" "${TIMEOUT}" "${{ env.target }}" \
+              -o image.architecture="${IMAGE_ARCH}" \
+              -o image.release=${{ matrix.release }} \
+              -o image.variant=${{ matrix.variant }}
+
+      - name: Print build artifacts
+        run: ls -lah "${{ env.target }}"
+
+      - name: Test container image
+        uses: ./.github/actions/image-test
+        if: contains(env.type, 'container')
+        with:
+          type: container
+          target: ${{ env.target }}
+          distro: ${{ env.distro }}
+          release: ${{ matrix.release }}
+          variant: ${{ matrix.variant }}
+
+      - name: Test VM image
+        uses: ./.github/actions/image-test
+        if: contains(env.type, 'vm')
+        with:
+          type: vm
+          target: ${{ env.target }}
+          distro: ${{ env.distro }}
+          release: ${{ matrix.release }}
+          variant: ${{ matrix.variant }}

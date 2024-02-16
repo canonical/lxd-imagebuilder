@@ -13,5 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  alpine:
+    uses: ./.github/workflows/image-alpine.yml
   debian:
     uses: ./.github/workflows/image-debian.yml
