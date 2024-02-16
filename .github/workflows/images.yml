@@ -17,6 +17,8 @@ jobs:
     uses: ./.github/workflows/image-alpine.yml
     with:
       publish: false
+  centos:
+    uses: ./.github/workflows/image-centos.yml
   debian:
     uses: ./.github/workflows/image-debian.yml
   fedora:

@@ -1,0 +1,110 @@
+name: Build CentOS Images
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      publish:
+        type: boolean
+        default: false
+        description: Publish built image
+
+jobs:
+  centos:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        release:
+          - 7
+          - 8-Stream
+          - 9-Stream
+        architecture:
+          - amd64
+          # - arm64
+        variant:
+          - default
+          - cloud
+    env:
+      type: "container"
+      distro: "${{ github.job }}"
+      target: "${HOME}/build"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/image-setup
+
+      - name: Determine image types
+        run: |
+          ARCH="${{ matrix.architecture }}"
+          if [ "${ARCH}" = "amd64" ]; then
+              echo "type=container,vm" >> $GITHUB_ENV
+          fi
+
+      - name: Build image
+        run: |
+          TIMEOUT=1800
+          YAML="${{ github.workspace }}/lxd-ci/images/${{ env.distro }}.yaml"
+          ARCH="${{ matrix.architecture }}"
+          TYPE="${{ env.type }}"
+          RELEASE="${{ matrix.release }}"
+
+          IMAGE_ARCH=${ARCH}
+          [ "${ARCH}" = "amd64" ] && IMAGE_ARCH="x86_64"
+          [ "${ARCH}" = "arm64" ] && IMAGE_ARCH="aarch64"
+
+          EXTRA_ARGS=""
+          if [ "${RELEASE}" = "7" ] && [ "${ARCH}" != "amd64" ]; then
+              EXTRA_ARGS="-o source.url=http://mirror.math.princeton.edu/pub/centos-altarch/ -o source.skip_verification=true"
+          fi
+
+          if [ "${release}" = "7" ]; then
+              EXTRA_ARGS="${EXTRA_ARGS} -o packages.manager=yum"
+          fi
+
+          if [ "${RELEASE}" = "8-Stream" ] || [ "${RELEASE}" = "9-Stream" ]; then
+              EXTRA_ARGS="${EXTRA_ARGS} -o source.variant=boot"
+          fi
+
+          if [ "${RELEASE}" = "9-Stream" ]; then
+              EXTRA_ARGS="${EXTRA_ARGS} -o source.url=https://mirror1.hs-esslingen.de/pub/Mirrors/centos-stream"
+          fi
+
+          ./bin/build-distro "${YAML}" "${ARCH}" "${TYPE}" "${TIMEOUT}" "${{ env.target }}" \
+              -o image.architecture="${IMAGE_ARCH}" \
+              -o image.release=${{ matrix.release }} \
+              -o image.variant=${{ matrix.variant }} \
+              ${EXTRA_ARGS}
+
+      - name: Print build artifacts
+        run: ls -lah "${{ env.target }}"
+
+      - name: Test container image
+        uses: ./.github/actions/image-test
+        if: contains(env.type, 'container')
+        with:
+          type: container
+          target: ${{ env.target }}
+          distro: ${{ env.distro }}
+          release: ${{ matrix.release }}
+          variant: ${{ matrix.variant }}
+
+      - name: Test VM image
+        uses: ./.github/actions/image-test
+        if: contains(env.type, 'vm')
+        with:
+          type: vm
+          target: ${{ env.target }}
+          distro: ${{ env.distro }}
+          release: ${{ matrix.release }}
+          variant: ${{ matrix.variant }}
+
+      - name: Upload image
+        uses: ./.github/actions/image-upload
+        if: inputs.publish == true
+        with:
+          name: "${{ env.distro }}-${{ matrix.release }}-${{ matrix.architecture }}-${{ matrix.variant }}"
+          target: ${{ env.target }}
+          # types: ${{ env.type }}
