@@ -12,8 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        distro:
-          - debian
         release:
           # - buster
           # - bullseye
@@ -27,6 +25,8 @@ jobs:
           # - default
           - cloud
     env:
+      type: "container"
+      distro: "${{ github.job }}"
       target: "${HOME}/build"
 
     steps:
@@ -35,16 +35,19 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/image-setup
 
+      - name: Determine image types
+        run: |
+          ARCH="${{ matrix.architecture }}"
+          if [ "${ARCH}" = "amd64" ] || [ "${ARCH}" = "arm64" ]; then
+              echo "type=container,vm" >> $GITHUB_ENV
+          fi
+
       - name: Build image
         run: |
           TIMEOUT=1800
-          YAML="${{ github.workspace }}/lxd-ci/images/${{ matrix.distro }}.yaml"
-          ARCH=${{ matrix.architecture }}
-
-          TYPE="container"
-          if [ "${ARCH}" = "amd64" ] || [ "${ARCH}" = "arm64" ]; then
-              TYPE="container,vm"
-          fi
+          YAML="${{ github.workspace }}/lxd-ci/images/${{ env.distro }}.yaml"
+          ARCH="${{ matrix.architecture }}"
+          TYPE="${{ env.type }}"
 
           ./bin/build-distro "${YAML}" "${ARCH}" "${TYPE}" "${TIMEOUT}" "${{ env.target }}" \
               -o image.architecture=${{ matrix.architecture }} \
@@ -54,3 +57,23 @@ jobs:
 
       - name: Print build artifacts
         run: ls -lah "${{ env.target }}"
+
+      - name: Test container image
+        uses: ./.github/actions/image-test
+        if: contains(env.type, 'container')
+        with:
+          type: container
+          target: ${{ env.target }}
+          distro: ${{ env.distro }}
+          release: ${{ matrix.release }}
+          variant: ${{ matrix.variant }}
+
+      - name: Test VM image
+        uses: ./.github/actions/image-test
+        if: contains(env.type, 'vm')
+        with:
+          type: vm
+          target: ${{ env.target }}
+          distro: ${{ env.distro }}
+          release: ${{ matrix.release }}
+          variant: ${{ matrix.variant }}

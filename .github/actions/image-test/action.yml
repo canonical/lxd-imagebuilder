@@ -1,0 +1,52 @@
+name: Test Image
+description: Composite action that test built image
+
+inputs:
+  target:
+    description: Directory where built image is located
+    required: true
+  distro:
+    description: Image distribution
+    required: true
+  release:
+    description: Image release
+    required: true
+  variant:
+    description: Image variant
+    required: true
+  type:
+    description: Image type [container, vm]
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Test image
+      shell: bash
+      run: |
+        TYPE=${{ inputs.type }}
+        TARGET=${{ inputs.target }}
+        DISTRO=${{ inputs.distro }}
+        RELEASE=${{ inputs.release }}
+        VARIANT=${{ inputs.variant }}
+
+        set -e
+
+        TEST_ID="${DISTRO}-${RELEASE}-${VARIANT} (${TYPE})"
+        echo "==> TEST: ${TEST_ID}"
+
+        VIRT_ENABLED=$(lxc query /1.0 | jq '.environment.driver | contains("qemu")')
+        if [ ${TYPE} = "vm" ] && [ "${VIRT_ENABLED}" != "true" ]; then
+            echo "==> SKIP: Virtualization is not supported"
+            exit 0
+        fi
+
+        ./bin/test-image "${TYPE}" "${DISTRO}" "${RELEASE}" "${VARIANT}" "${TARGET}"
+
+        if [ "$?" = "0" ]; then
+            echo "==> PASS: ${TEST_ID}"
+            exit 0
+        fi
+
+        echo "==> FAIL: ${TEST_ID}"
+        exit 0
