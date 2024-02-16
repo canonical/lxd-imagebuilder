@@ -17,3 +17,5 @@ jobs:
     uses: ./.github/workflows/image-alpine.yml
   debian:
     uses: ./.github/workflows/image-debian.yml
+  ubuntu:
+    uses: ./.github/workflows/image-ubuntu.yml
