@@ -3,6 +3,11 @@ name: Build Ubuntu Images
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      publish:
+        type: boolean
+        default: false
+        description: Publish built image
 
 jobs:
   ubuntu:
@@ -87,3 +92,10 @@ jobs:
           release: ${{ matrix.release }}
           variant: ${{ matrix.variant }}
 
+      - name: Upload image
+        uses: ./.github/actions/image-upload
+        if: inputs.publish == true
+        with:
+          name: "${{ env.distro }}-${{ matrix.release }}-${{ matrix.architecture }}-${{ matrix.variant }}"
+          target: ${{ env.target }}
+          # types: ${{ env.type }}

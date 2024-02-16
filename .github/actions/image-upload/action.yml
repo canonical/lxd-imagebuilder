@@ -1,0 +1,48 @@
+name: Upload Image
+description: Composite action for uploading built images
+
+inputs:
+  name:
+    description: Final image name
+    required: true
+  target:
+    description: Directory where built image is located
+    required: true
+  # types:
+  #   description: Image types
+  #   required: true
+
+runs:
+  using: composite
+  steps:
+      # actions/upload-artifact does not expand env vars.
+    - name: Expand target path
+      shell: bash
+      run: echo "target=${{ inputs.target }}" >> $GITHUB_ENV
+
+    - name: Print artifacts
+      shell: bash
+      run: ls -lah "${{ env.target }}"
+
+    # - name: Make tarball
+    #   id: tarball
+    #   shell: bash
+    #   run: |
+    #     files=$(cd ${{ inputs.target }} && ls *.tar.xz *.qcow2 *.squashfs image.yaml serial 2> /dev/null)
+    #     tar -czvf "${{ inputs.name }}.tar.gz" -C ${{ inputs.target }} ${files}
+
+    - name: Publish artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: "${{ inputs.name }}"
+        # path: "${{ inputs.name }}.tar.gz"
+        path: |
+          ${{ env.target }}/*.qcow2
+          ${{ env.target }}/*.squashfs
+          ${{ env.target }}/*.tar.xz
+          ${{ env.target }}/image.yaml
+          ${{ env.target }}/serial
+        if-no-files-found: "error"
+        retention-days: 1
+        compression-level: 0
+        overwrite: true
