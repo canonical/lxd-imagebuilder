@@ -27,33 +27,13 @@ jobs:
           # - default
           - cloud
     env:
-      goVersion: 1.22.x
       target: "${HOME}/build"
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "${{ env.goVersion }}"
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get -qq update
-          sudo apt-get install -y \
-              debootstrap \
-              qemu-utils \
-              git \
-              gpg \
-              rsync \
-              squashfs-tools
-
-      - name: Build LXD imagebuilder
-        run: make
-
-      - name: Clone LXD CI repository
-        run: git clone https://github.com/musicdin/lxd-ci --branch cp/images2
+      - name: Setup environment
+        uses: ./.github/actions/image-setup
 
       - name: Build image
         run: |

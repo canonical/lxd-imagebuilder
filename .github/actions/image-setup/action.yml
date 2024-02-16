@@ -1,0 +1,53 @@
+name: Setup Environment
+description: Composite action that sets up the environment for building and testing images
+
+inputs:
+  lxd-channel:
+    description: LXD snap channel to install
+    default: latest/edge
+  go-version:
+    description: Go version to install
+    default: 1.22.x
+
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: |
+        sudo apt-get -qq update
+        sudo apt-get install -y --no-install-recommends \
+            debootstrap \
+            qemu-utils \
+            git \
+            gpg \
+            rsync \
+            squashfs-tools
+
+    - name: Setup LXD ${{ inputs.lxd-channel }}
+      shell: bash
+      run: |
+        sudo snap refresh lxd --channel=${{ inputs.lxd-channel }}
+        sudo lxd waitready --timeout 60
+        sudo chmod 777 /var/snap/lxd/common/lxd/unix.socket
+        sudo lxd init --auto
+        lxc version
+
+    - name: Install Go ${{ inputs.go-version }}
+      uses: actions/setup-go@v5
+      with:
+        go-version: "${{ inputs.go-version }}"
+
+    - name: Build LXD imagebuilder
+      shell: bash
+      run: make
+
+    - name: Clone LXD CI repository (for image recipes)
+      shell: bash
+      run: git clone https://github.com/musicdin/lxd-ci --branch cp/images2 --depth 1
+
+    - name: Print supported driver
+      shell: bash
+      run: |
+        lxc query /1.0 | jq '.environment.driver'
+        sudo lxc query /1.0 | jq '.environment.driver'
