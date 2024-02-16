@@ -19,5 +19,7 @@ jobs:
       publish: false
   debian:
     uses: ./.github/workflows/image-debian.yml
+  fedora:
+    uses: ./.github/workflows/image-fedora.yml
   ubuntu:
     uses: ./.github/workflows/image-ubuntu.yml
