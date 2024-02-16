@@ -15,19 +15,18 @@ jobs:
     strategy:
       matrix:
         release:
-          # - xenial
-          # - bionic
-          # - focal
-          # - jammy
-          # - lunar
+          - xenial
+          - bionic
+          - focal
+          - jammy
           - mantic
           # - noble
         architecture:
           - amd64
           # - arm64
         variant:
-          # - default
-          # - desktop
+          - default
+          - desktop
           - cloud
     env:
       type: "container"

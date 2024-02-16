@@ -15,16 +15,16 @@ jobs:
     strategy:
       matrix:
         release:
-          # - "3.16"
-          # - "3.17"
-          # - "3.18"
+          - "3.16"
+          - "3.17"
+          - "3.18"
           - "3.19"
-          # - "edge"
+          - "edge"
         architecture:
           - amd64
           # - arm64
         variant:
-          # - default
+          - default
           - cloud
     env:
       type: "container"

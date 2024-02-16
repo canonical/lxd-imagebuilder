@@ -15,16 +15,16 @@ jobs:
     strategy:
       matrix:
         release:
-          # - buster
-          # - bullseye
-          # - sid
-          # - bookworm
+          - buster
+          - bullseye
+          - sid
+          - bookworm
           - trixie
         architecture:
           - amd64
           # - arm64
         variant:
-          # - default
+          - default
           - cloud
     env:
       type: "container"
