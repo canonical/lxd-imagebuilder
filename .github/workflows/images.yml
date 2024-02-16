@@ -1,0 +1,17 @@
+name: Build and test images
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+  # schedule:
+  #   # Run at 00:00 UTC daily.
+  #   - cron: '0 0 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  debian:
+    uses: ./.github/workflows/image-debian.yml

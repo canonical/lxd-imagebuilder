@@ -1,11 +1,8 @@
 name: Build Debian Image
 
 on:
-  push:
   workflow_dispatch:
-  # schedule:
-  #   # Run at 00:00 UTC daily.
-  #   - cron: '0 0 * * *'
+  workflow_call:
 
 jobs:
   debian:
