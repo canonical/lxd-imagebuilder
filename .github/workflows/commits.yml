@@ -31,4 +31,4 @@ jobs:
         exit 1
 
     - name: Check if CLA signed
-      uses: simondeziel/has-signed-canonical-cla@implicit-approval-from-licenses
+      uses: canonical/has-signed-canonical-cla@main
