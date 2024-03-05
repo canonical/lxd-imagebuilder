@@ -34,10 +34,11 @@ var lxdDef = shared.Definition{
 	},
 }
 
-func setupLXD(t *testing.T) *LXDImage {
-	cacheDir := filepath.Join(os.TempDir(), "lxd-imagebuilder-test-lxd")
+func setupLXD(t *testing.T) (*LXDImage, string) {
+	cacheDir, err := os.MkdirTemp(os.TempDir(), "lxd-imagebuilder-test-")
+	require.NoError(t, err)
 
-	err := os.MkdirAll(filepath.Join(cacheDir, "rootfs"), 0755)
+	err = os.MkdirAll(filepath.Join(cacheDir, "rootfs"), 0755)
 	require.NoError(t, err)
 
 	err = os.MkdirAll(filepath.Join(cacheDir, "templates"), 0755)
@@ -48,7 +49,7 @@ func setupLXD(t *testing.T) *LXDImage {
 	fail := true
 	defer func() {
 		if fail {
-			teardownLXD(t)
+			os.RemoveAll(cacheDir)
 		}
 	}()
 
@@ -62,16 +63,12 @@ func setupLXD(t *testing.T) *LXDImage {
 	require.NoError(t, err)
 
 	fail = false
-	return image
-}
-
-func teardownLXD(t *testing.T) {
-	os.RemoveAll(filepath.Join(os.TempDir(), "lxd-imagebuilder-test-lxd"))
+	return image, cacheDir
 }
 
 func TestLXDBuild(t *testing.T) {
-	image := setupLXD(t)
-	defer teardownLXD(t)
+	image, cacheDir := setupLXD(t)
+	defer os.RemoveAll(cacheDir)
 
 	testLXDBuildSplitImage(t, image)
 	testLXDBuildUnifiedImage(t, image)
@@ -124,8 +121,8 @@ func testLXDBuildUnifiedImage(t *testing.T, image *LXDImage) {
 }
 
 func TestLXDCreateMetadata(t *testing.T) {
-	image := setupLXD(t)
-	defer teardownLXD(t)
+	image, cacheDir := setupLXD(t)
+	defer os.RemoveAll(cacheDir)
 
 	err := image.createMetadata()
 	require.NoError(t, err)
