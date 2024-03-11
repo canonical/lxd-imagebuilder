@@ -2,7 +2,7 @@ VERSION=$(shell grep "var Version" shared/version/version.go | cut -d'"' -f2)
 ARCHIVE=lxd-imagebuilder-$(VERSION).tar
 GO111MODULE=on
 SPHINXENV=.sphinx/venv/bin/activate
-GO_MIN=1.21.5
+GO_MIN=1.22.0
 
 .PHONY: default
 default:
