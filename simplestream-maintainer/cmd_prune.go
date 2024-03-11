@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -13,6 +14,7 @@ import (
 )
 
 type DiscardOptions struct {
+	Dangling  bool
 	RetainNum int
 	ImageDirs []string
 }
@@ -30,6 +32,7 @@ func NewDiscardCmd() *cobra.Command {
 		},
 	}
 
+	cmd.PersistentFlags().BoolVar(&o.Dangling, "dangling", false, "Remove dangling product versions (not referenced from product catalog)")
 	cmd.PersistentFlags().IntVar(&o.RetainNum, "retain", 10, "Number of product versions to retain")
 	cmd.PersistentFlags().StringSliceVarP(&o.ImageDirs, "image-dir", "d", []string{"images"}, "Image directory (relative to path argument)")
 
@@ -46,6 +49,13 @@ func (o *DiscardOptions) Run(args []string) error {
 	}
 
 	for _, dir := range o.ImageDirs {
+		if o.Dangling {
+			err := pruneDanglingProductVersions(args[0], dir)
+			if err != nil {
+				return err
+			}
+		}
+
 		err := pruneStreamProductVersions(args[0], dir, o.RetainNum)
 		if err != nil {
 			return err
@@ -117,6 +127,63 @@ func pruneStreamProductVersions(rootDir string, streamName string, retain int) e
 	// fails, the next time we rebuild the index it will be again included in the index.
 	for _, v := range discardVersions {
 		_ = os.RemoveAll(v)
+	}
+
+	return nil
+}
+
+// pruneDanglingProductVersions traverses through the stream directory structure
+// and prunes the dangling product versions.
+func pruneDanglingProductVersions(rootDir string, streamName string) error {
+	// Get existing products (from actual directory hierarchy).
+	existingProducts, err := stream.GetProducts(rootDir, streamName, false)
+	if err != nil {
+		return err
+	}
+
+	// Get current products (from stream json file).
+	jsonPath := filepath.Join(rootDir, "streams", "v1", fmt.Sprintf("%s.json", streamName))
+	stream, err := shared.ReadJSONFile(jsonPath, &stream.ProductCatalog{})
+	if err != nil {
+		return err
+	}
+
+	// Remove product versions that are not referenced, but exists.
+	// Note: Only versions that are at least 1 day old are removed to avoid
+	// removing versions that are being currently uploaded.
+	for key, ep := range existingProducts {
+		sp, ok := stream.Products[key]
+		if !ok {
+			// TODO: If product is not found in the stream and is older than 1 day,
+			// remove entire dangling product.
+			continue
+		}
+
+		productPath := filepath.Join(rootDir, streamName, ep.RelPath())
+
+		for epv := range ep.Versions {
+			_, ok := sp.Versions[epv]
+			if ok {
+				fmt.Printf("Version %s[%s] is referenced\n", ep.ID(), epv)
+				// Version is referenced, nothing to do.
+				continue
+			}
+
+			versionPath := filepath.Join(productPath, epv)
+
+			info, err := os.Stat(versionPath)
+			if err != nil {
+				return err
+			}
+
+			// Remove the version only if the difference between the current time
+			// and last modification is more then 1 day, to avoid accidentally
+			// removing version that is just being uploaded.
+			if time.Since(info.ModTime()) > 24*time.Hour {
+				fmt.Printf("Discrading dangling product version: %s[%s]\n", ep.ID(), epv)
+				_ = os.RemoveAll(versionPath)
+			}
+		}
 	}
 
 	return nil
