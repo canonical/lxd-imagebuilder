@@ -3,6 +3,7 @@ package shared
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
@@ -433,4 +434,64 @@ func ReadYAMLFile[T any](path string, obj *T) (*T, error) {
 	}
 
 	return obj, nil
+}
+
+// ReadJSONFile opens the JSON file on the given path and tries to decode it into
+// the given structure.
+func ReadJSONFile[T any](path string, obj *T) (*T, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("Error opening file: %w", err)
+	}
+
+	defer file.Close()
+
+	err = json.NewDecoder(file).Decode(obj)
+	if err != nil {
+		return nil, fmt.Errorf("Error decoding JSON: %w", err)
+	}
+
+	return obj, nil
+}
+
+// WriteJSONTempFile encodes the given structure into JSON format and writes it to the
+// a temporary file. It returns either a path to the new file or an error.
+func WriteJSONTempFile(obj any) (string, error) {
+	file, err := os.CreateTemp(os.TempDir(), "simple-stream.*")
+	if err != nil {
+		return "", fmt.Errorf("Failed creating temporary file: %w", err)
+	}
+
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+
+	err = encoder.Encode(obj)
+	if err != nil {
+		return "", fmt.Errorf("Error encoding JSON: %w", err)
+	}
+
+	return file.Name(), nil
+}
+
+// WriteJSONFile encodes the given structure into JSON format and writes it to the
+// file on a given path.
+func WriteJSONFile(path string, obj any) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("Failed creating file: %w", err)
+	}
+
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+
+	err = encoder.Encode(obj)
+	if err != nil {
+		return fmt.Errorf("Error encoding JSON: %w", err)
+	}
+
+	return nil
 }
