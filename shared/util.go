@@ -2,8 +2,10 @@ package shared
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"os/exec"
@@ -390,4 +392,27 @@ func ParseSquashfsCompression(compression string) (string, *int, error) {
 	}
 
 	return "", nil, fmt.Errorf("Invalid squashfs compression method %q", compression)
+}
+
+// FileHash calculates the hash of the provided files.
+func FileHash(hash hash.Hash, paths ...string) (string, error) {
+	if len(paths) == 0 {
+		return "", nil
+	}
+
+	for _, path := range paths {
+		file, err := os.Open(path)
+		if err != nil {
+			return "", err
+		}
+
+		defer file.Close()
+
+		_, err = io.Copy(hash, file)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
