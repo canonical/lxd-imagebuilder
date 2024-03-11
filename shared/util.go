@@ -416,3 +416,21 @@ func FileHash(hash hash.Hash, paths ...string) (string, error) {
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
+
+// ReadYAMLFile opens the YAML file on the given path and tries to decode it into
+// the given structure.
+func ReadYAMLFile[T any](path string, obj *T) (*T, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("Error opening file: %w", err)
+	}
+
+	defer file.Close()
+
+	err = yaml.NewDecoder(file).Decode(obj)
+	if err != nil {
+		return nil, fmt.Errorf("Error decoding YAML: %w", err)
+	}
+
+	return obj, nil
+}
