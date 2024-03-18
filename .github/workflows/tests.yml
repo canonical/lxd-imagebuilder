@@ -40,7 +40,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get -qq update
-          sudo apt-get install -y squashfs-tools
+          sudo apt-get install -y --no-install-recommends squashfs-tools xdelta3
 
       - name: Update Go modules
         run: make update-gomod
