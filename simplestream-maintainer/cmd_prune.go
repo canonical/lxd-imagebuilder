@@ -60,7 +60,7 @@ func (o *DiscardOptions) Run(args []string) error {
 		}
 	}
 
-	return nil
+	return pruneEmptyDirs(args[0], true)
 }
 
 // pruneStreamProductVersions reads the product catalog and removes all product
@@ -195,6 +195,49 @@ func pruneDanglingProductVersions(rootDir string, streamVersion string, streamNa
 				}
 			}
 		}
+	}
+
+	return nil
+}
+
+// pruneEmptyDirs traverses the file structure on the given path and
+// recursively removes all empty directories. Setting keepBaseDir to
+// true, ensures the function does not remove the base directory if
+// it is empty.
+func pruneEmptyDirs(baseDir string, keepBaseDir bool) error {
+	baseDir = filepath.Clean(baseDir)
+
+	// Read directory contents.
+	files, err := os.ReadDir(baseDir)
+	if err != nil {
+		return err
+	}
+
+	// Traverse the files and prune directories if not empty.
+	if len(files) > 0 {
+		for _, f := range files {
+			if !f.IsDir() {
+				continue
+			}
+
+			child := filepath.Join(baseDir, f.Name())
+			err = pruneEmptyDirs(child, false)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Read files again, as current directory may be empty now.
+		files, err = os.ReadDir(baseDir)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Remove directory if it is empty and is not root.
+	if !keepBaseDir && len(files) == 0 {
+		// Empty, remove dir.
+		return os.Remove(baseDir)
 	}
 
 	return nil
