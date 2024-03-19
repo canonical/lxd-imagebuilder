@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -129,7 +130,11 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 	// but we fail to actually remove it, it will be reincluded in the catalog
 	// next time we rebuild the index.
 	for _, v := range discardVersions {
-		_ = os.RemoveAll(v)
+		err := os.RemoveAll(v)
+		if err != nil {
+			slog.Error("Failed pruning product version", "path", v, "error", err)
+			// return err // Do not error out.
+		}
 	}
 
 	return nil
@@ -161,7 +166,11 @@ func pruneDanglingProductVersions(rootDir string, streamVersion string, streamNa
 		}
 
 		if time.Since(info.ModTime()) > maxAge {
-			_ = os.RemoveAll(path)
+			err := os.RemoveAll(path)
+			if err != nil {
+				slog.Error("Failed to prune dangling resource", "path", path, "error", err)
+				// return err // Do not error out.
+			}
 		}
 
 		return nil

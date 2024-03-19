@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path"
@@ -182,6 +183,7 @@ func createVCDiffFiles(rootDir string, streamName string) error {
 				_, ok := version.Items[vcdiff]
 				if ok {
 					// Delta already exists. Skip..
+					slog.Debug("Delta already exists", "productId", p.ID(), "version", curName, "deltaBase", preName)
 					continue
 				}
 
@@ -204,6 +206,8 @@ func createVCDiffFiles(rootDir string, streamName string) error {
 				if err != nil {
 					return err
 				}
+
+				slog.Debug("Delta generated successfully", "productId", p.ID(), "version", curName, "deltaBase", preName)
 			}
 		}
 	}
