@@ -8,7 +8,7 @@ GO_MIN=1.22.0
 default:
 	gofmt -s -w .
 	go install -v ./...
-	@echo "lxd-imagebuilder built successfully"
+	@echo "lxd-imagebuilder and simplestream-maintainer built successfully"
 
 .PHONY: update-gomod
 update-gomod:

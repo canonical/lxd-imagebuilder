@@ -2,8 +2,11 @@ package shared
 
 import (
 	"context"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"os/exec"
@@ -390,4 +393,126 @@ func ParseSquashfsCompression(compression string) (string, *int, error) {
 	}
 
 	return "", nil, fmt.Errorf("Invalid squashfs compression method %q", compression)
+}
+
+// FileHash calculates the hash of the provided files.
+func FileHash(hash hash.Hash, paths ...string) (string, error) {
+	if len(paths) == 0 {
+		return "", nil
+	}
+
+	for _, path := range paths {
+		file, err := os.Open(path)
+		if err != nil {
+			return "", err
+		}
+
+		defer file.Close()
+
+		_, err = io.Copy(hash, file)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// ReadYAMLFile opens the YAML file on the given path and tries to decode it into
+// the given structure.
+func ReadYAMLFile[T any](path string, obj *T) (*T, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("Error opening file: %w", err)
+	}
+
+	defer file.Close()
+
+	err = yaml.NewDecoder(file).Decode(obj)
+	if err != nil {
+		return nil, fmt.Errorf("Error decoding YAML: %w", err)
+	}
+
+	return obj, nil
+}
+
+// ReadJSONFile opens the JSON file on the given path and tries to decode it into
+// the given structure.
+func ReadJSONFile[T any](path string, obj *T) (*T, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("Error opening file: %w", err)
+	}
+
+	defer file.Close()
+
+	err = json.NewDecoder(file).Decode(obj)
+	if err != nil {
+		return nil, fmt.Errorf("Error decoding JSON: %w", err)
+	}
+
+	return obj, nil
+}
+
+// WriteJSONTempFile encodes the given structure into JSON format and writes it to the
+// a temporary file. It returns either a path to the new file or an error.
+func WriteJSONTempFile(obj any) (string, error) {
+	file, err := os.CreateTemp(os.TempDir(), "simple-stream.*")
+	if err != nil {
+		return "", fmt.Errorf("Failed creating temporary file: %w", err)
+	}
+
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+
+	err = encoder.Encode(obj)
+	if err != nil {
+		return "", fmt.Errorf("Error encoding JSON: %w", err)
+	}
+
+	return file.Name(), nil
+}
+
+// WriteJSONFile encodes the given structure into JSON format and writes it to the
+// file on a given path.
+func WriteJSONFile(path string, obj any) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("Failed creating file: %w", err)
+	}
+
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+
+	err = encoder.Encode(obj)
+	if err != nil {
+		return fmt.Errorf("Error encoding JSON: %w", err)
+	}
+
+	return nil
+}
+
+// MapKeys returns map keys as a list.
+func MapKeys[K comparable, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
+
+// HasSuffix returns true if the key matches any of the given suffixes.
+func HasSuffix(key string, suffixes ...string) bool {
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(key, suffix) {
+			return true
+		}
+	}
+
+	return false
 }
