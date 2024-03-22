@@ -395,7 +395,8 @@ func ParseSquashfsCompression(compression string) (string, *int, error) {
 	return "", nil, fmt.Errorf("Invalid squashfs compression method %q", compression)
 }
 
-// FileHash calculates the hash of the provided files.
+// FileHash calculates the combined hash for the given files using the provided
+// hash function.
 func FileHash(hash hash.Hash, paths ...string) (string, error) {
 	if len(paths) == 0 {
 		return "", nil
