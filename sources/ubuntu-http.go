@@ -160,10 +160,10 @@ func getLatestRelease(baseURL, release, arch string) (string, error) {
 	return "", errors.New("Failed to find latest release")
 }
 
-func getLatestCoreBaseImage(baseURL, release, arch string) (string, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/ubuntu/%s/%s/default", baseURL, release, arch))
+func getLatestCoreBaseImage(baseURL, distro, release, arch string) (string, error) {
+	u, err := url.Parse(fmt.Sprintf("%s/%s/%s/%s/default", baseURL, distro, release, arch))
 	if err != nil {
-		return "", fmt.Errorf("Failed to parse URL %q: %w", fmt.Sprintf("%s/ubuntu/%s/%s/default", baseURL, release, arch), err)
+		return "", fmt.Errorf("Failed to parse URL %q: %w", fmt.Sprintf("%s/%s/%s/%s/default", baseURL, distro, release, arch), err)
 	}
 
 	var resp *http.Response
@@ -187,7 +187,7 @@ func getLatestCoreBaseImage(baseURL, release, arch string) (string, error) {
 		return "", fmt.Errorf("Failed to read body: %w", err)
 	}
 
-	regex := regexp.MustCompile(`\d{8}_\d{2}:\d{2}`)
+	regex := regexp.MustCompile(`\d{8}_\d{4}`)
 	releases := regex.FindAllString(string(body), -1)
 
 	if len(releases) > 1 {

@@ -7,7 +7,7 @@ Its modern design uses pre-built official images whenever available and supports
 
 `lxd-imagebuilder` can be used to create custom images that can be used as the base for LXC containers or LXD instances.
 
-`lxd-imagebuilder` is used to build the images on the [Linux containers image server](https://images.linuxcontainers.org/).
+`lxd-imagebuilder` is used to build the images on the [LXD image server](https://images.lxd.canonical.com/).
 You can also use it to build images from ISO files that require licenses and therefore cannot be distributed.
 
 ---
