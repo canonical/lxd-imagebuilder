@@ -168,14 +168,14 @@ func createVCDiffFiles(rootDir string, streamName string) error {
 
 			for _, item := range version.Items {
 				// Vcdiff should be created only for qcow2 and squashfs files.
-				if item.Ftype != stream.ItemType_DiskKVM && item.Ftype != stream.ItemType_Squshfs {
+				if item.Ftype != stream.ItemTypeDiskKVM && item.Ftype != stream.ItemTypeSquashfs {
 					continue
 				}
 
 				prefix, _ := strings.CutSuffix(item.Name, filepath.Ext(item.Name))
 				suffix := "vcdiff"
 
-				if item.Ftype == stream.ItemType_DiskKVM {
+				if item.Ftype == stream.ItemTypeDiskKVM {
 					suffix = "qcow2.vcdiff"
 				}
 
