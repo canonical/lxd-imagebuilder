@@ -132,9 +132,11 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 	for _, v := range discardVersions {
 		err := os.RemoveAll(v)
 		if err != nil {
-			slog.Error("Failed pruning product version", "path", v, "error", err)
-			// return err // Do not error out.
+			slog.Error("Failed to prune old product version", "path", v, "error", err)
+			continue // Do not error out.
 		}
+
+		slog.Info("Pruned old product version", "path", v, "error", err)
 	}
 
 	return nil
@@ -169,8 +171,10 @@ func pruneDanglingProductVersions(rootDir string, streamVersion string, streamNa
 			err := os.RemoveAll(path)
 			if err != nil {
 				slog.Error("Failed to prune dangling resource", "path", path, "error", err)
-				// return err // Do not error out.
+				return nil // Do not error out.
 			}
+
+			slog.Info("Pruned dangling resource", "path", path)
 		}
 
 		return nil
@@ -243,10 +247,14 @@ func pruneEmptyDirs(baseDir string, keepBaseDir bool) error {
 		}
 	}
 
-	// Remove directory if it is empty and is not root.
+	// Remove empty directory if it is not marked as base dir.
 	if !keepBaseDir && len(files) == 0 {
-		// Empty, remove dir.
-		return os.Remove(baseDir)
+		err := os.Remove(baseDir)
+		if err != nil {
+			return err
+		}
+
+		slog.Info("Removed empty directory", "path", baseDir)
 	}
 
 	return nil
