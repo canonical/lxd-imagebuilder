@@ -290,7 +290,7 @@ func Retry(f func() error, attempts uint) error {
 	for i := uint(0); i < attempts; i++ {
 		err = f()
 		// Stop retrying if the call succeeded or if the context has been cancelled.
-		if err == nil || err != nil && errors.Is(err, context.Canceled) {
+		if err == nil || errors.Is(err, context.Canceled) {
 			break
 		}
 
