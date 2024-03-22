@@ -159,6 +159,14 @@ func pruneDanglingProductVersions(rootDir string, streamVersion string, streamNa
 		return err
 	}
 
+	// If product catalog is empty, skip removal of dangling resources, because this
+	// may result in wiping everything out if, for example, product catalog was build
+	// inproperly or was accidentally deleted.
+	if len(catalog.Products) == 0 {
+		slog.Info("Skipping removal of dangling resources, because product catalog is empty")
+		return nil
+	}
+
 	// removeIfOlder gets info of the file on the given path and removes it
 	// if it's modification time is older then maxAge.
 	removeIfOlder := func(path string, maxAge time.Duration) error {

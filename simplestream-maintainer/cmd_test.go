@@ -330,8 +330,23 @@ func TestPruneDanglingResources(t *testing.T) {
 		{
 			Name: "Ensure fresh unreferenced product version is not removed",
 			Mock: testutils.MockProduct(t, tmpDir, "test_030/ubuntu/noble/amd64/cloud").
+				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
 				BuildProductCatalog().
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+			WantProducts: map[string][]string{
+				"ubuntu:noble:amd64:cloud": {
+					"2024_01_01",
+					"2024_01_02",
+				},
+			},
+		},
+		{
+			Name: "Ensure unreferenced old product is removed",
+			Mock: testutils.MockProduct(t, tmpDir, "test_040/ubuntu/noble/amd64/cloud").
+				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
+				BuildProductCatalog().
+				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
+				SetFilesAge(24 * time.Hour),
 			WantProducts: map[string][]string{
 				"ubuntu:noble:amd64:cloud": {
 					"2024_01_01",
@@ -339,16 +354,20 @@ func TestPruneDanglingResources(t *testing.T) {
 			},
 		},
 		{
-			Name: "Ensure unreferenced product older then 1 is removed",
-			Mock: testutils.MockProduct(t, tmpDir, "test_040/ubuntu/noble/amd64/cloud").
+			Name: "Ensure unreferenced old product is not removed when product catalog is not empty",
+			Mock: testutils.MockProduct(t, tmpDir, "test_050/ubuntu/noble/amd64/cloud").
 				BuildProductCatalog().
 				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
 				SetFilesAge(24 * time.Hour),
-			WantProducts: map[string][]string{},
+			WantProducts: map[string][]string{
+				"ubuntu:noble:amd64:cloud": {
+					"2024_01_01",
+				},
+			},
 		},
 		{
 			Name: "Ensure only unreferenced project versions are removed",
-			Mock: testutils.MockProduct(t, tmpDir, "test_050/ubuntu/noble/amd64/cloud").
+			Mock: testutils.MockProduct(t, tmpDir, "test_060/ubuntu/noble/amd64/cloud").
 				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
 				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs").
 				BuildProductCatalog().
