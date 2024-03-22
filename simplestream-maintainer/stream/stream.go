@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -173,6 +174,9 @@ func (p Product) RelPath() string {
 
 // ProductConfig contains additional data for all product versions (if found).
 type ProductConfig struct {
+	// A comma delimited release aliases that are used to construct final product aliases.
+	ReleaseAliases string `json:"release_aliases"`
+
 	// Map of the image requirements.
 	Requirements map[string]string `json:"requirements"`
 }
@@ -288,13 +292,11 @@ func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Produc
 		Requirements: make(map[string]string, 0),
 	}
 
-	// Evaluate aliases.
-	aliases := []string{fmt.Sprintf("%s/%s/%s", p.Distro, p.Release, p.Variant)}
+	// Create default aliases.
+	aliases := []string{path.Join(p.Distro, p.Release, p.Variant)}
 	if p.Variant == "default" {
-		aliases = append(aliases, fmt.Sprintf("%s/%s", p.Distro, p.Release))
+		aliases = append(aliases, path.Join(p.Distro, p.Release))
 	}
-
-	p.Aliases = strings.Join(aliases, ",")
 
 	// Check product content.
 	files, err := os.ReadDir(productPath)
@@ -331,10 +333,30 @@ func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Produc
 				return nil, fmt.Errorf("product %q: %w: %w", productRelPath, ErrProductInvalidConfig, err)
 			}
 
+			// Evaluate extra aliases.
+			releaseAliases := strings.Split(config.ReleaseAliases, ",")
+			for _, release := range releaseAliases {
+				// Remove all spaces, as they are not allowed.
+				release = strings.ReplaceAll(release, " ", "")
+				if release == "" {
+					continue
+				}
+
+				alias := path.Join(p.Distro, release, p.Variant)
+				aliases = append(aliases, alias)
+
+				// Add shorter alias if variant is default.
+				if p.Variant == "default" {
+					aliases = append(aliases, path.Join(p.Distro, p.Release))
+				}
+			}
+
 			// Apply config to product.
 			p.Requirements = config.Requirements
 		}
 	}
+
+	p.Aliases = strings.Join(aliases, ",")
 
 	return &p, nil
 }
