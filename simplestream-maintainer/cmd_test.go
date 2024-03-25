@@ -147,7 +147,7 @@ func TestRebuildIndex(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			p := test.Mock
 
-			err := rebuildIndex(p.RootDir(), "v1", []string{p.StreamName()}, true)
+			err := buildIndex(p.RootDir(), "v1", []string{p.StreamName()})
 			require.NoError(t, err, "Failed building index and catalog files!")
 
 			// Convert expected catalog and index files to json.
