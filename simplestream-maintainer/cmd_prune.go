@@ -125,10 +125,6 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 	}
 
 	// Remove old versions.
-	//
-	// TODO: How to handle errors? If an image is removed from the catalog,
-	// but we fail to actually remove it, it will be reincluded in the catalog
-	// next time we rebuild the index.
 	for _, v := range discardVersions {
 		err := os.RemoveAll(v)
 		if err != nil {
