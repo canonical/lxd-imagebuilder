@@ -212,7 +212,7 @@ func NewCatalog(products map[string]Product) *ProductCatalog {
 
 // GetProducts traverses through the directories on the given path and retrieves
 // a map of found products.
-func GetProducts(rootDir string, streamRelPath string, calcHashes bool) (map[string]Product, error) {
+func GetProducts(rootDir string, streamRelPath string) (map[string]Product, error) {
 	streamPath := filepath.Join(rootDir, streamRelPath)
 
 	products := make(map[string]Product)
@@ -230,7 +230,7 @@ func GetProducts(rootDir string, streamRelPath string, calcHashes bool) (map[str
 		}
 
 		// Get product on the given path.
-		product, err := GetProduct(rootDir, relPath, calcHashes)
+		product, err := GetProduct(rootDir, relPath)
 		if err != nil {
 			if errors.Is(err, ErrProductInvalidPath) {
 				// Ignore invalid product paths.
@@ -258,7 +258,7 @@ func GetProducts(rootDir string, streamRelPath string, calcHashes bool) (map[str
 // GetProduct reads the product on the given path including all of its versions.
 // Product's relative path must match the predetermined format, otherwise, an error
 // is returned.
-func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Product, error) {
+func GetProduct(rootDir string, productRelPath string) (*Product, error) {
 	productPath := filepath.Join(rootDir, productRelPath)
 	productPathFormat := "stream/distribution/release/architecture/variant"
 	productPathLength := len(strings.Split(productPathFormat, string(os.PathSeparator)))
@@ -305,7 +305,7 @@ func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Produc
 			versionRelPath := filepath.Join(productRelPath, f.Name())
 
 			// Parse product version.
-			version, err := GetVersion(rootDir, versionRelPath, calcHashes)
+			version, err := GetVersion(rootDir, versionRelPath, false)
 			if err != nil {
 				if errors.Is(err, ErrVersionIncomplete) {
 					// Ignore incomplete versions.

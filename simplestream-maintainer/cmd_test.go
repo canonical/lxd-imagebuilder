@@ -280,7 +280,7 @@ func TestPruneOldVersions(t *testing.T) {
 				return
 			}
 
-			product, err := stream.GetProduct(p.RootDir(), p.RelPath(), false)
+			product, err := stream.GetProduct(p.RootDir(), p.RelPath())
 			require.NoError(t, err)
 
 			// Ensure expected product versions are found.
@@ -389,7 +389,7 @@ func TestPruneDanglingResources(t *testing.T) {
 			err := pruneDanglingProductVersions(p.RootDir(), "v1", p.StreamName())
 			require.NoError(t, err)
 
-			products, err := stream.GetProducts(p.RootDir(), p.StreamName(), false)
+			products, err := stream.GetProducts(p.RootDir(), p.StreamName())
 			require.NoError(t, err)
 
 			// Ensure all expected products are found.

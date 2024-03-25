@@ -72,9 +72,10 @@ func (p ProductMock) AddVersion(version string, files ...string) ProductMock {
 // BuildProductCatalog creates product catalog from the current directory structure.
 // Catalog is written to a file on path streams/v1 within rootDir directory.
 func (p ProductMock) BuildProductCatalog() ProductMock {
-	catalog, err := stream.GetProductCatalog(p.rootDir, p.StreamName())
+	products, err := stream.GetProducts(p.rootDir, p.StreamName())
 	require.NoError(p.t, err)
 
+	catalog := stream.NewCatalog(products)
 	catalogPath := filepath.Join(p.rootDir, "streams", "v1", fmt.Sprintf("%s.json", p.StreamName()))
 
 	err = os.MkdirAll(filepath.Dir(catalogPath), os.ModePerm)

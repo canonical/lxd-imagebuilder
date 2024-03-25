@@ -72,10 +72,12 @@ func rebuildIndex(rootDir string, streamVersion string, streamNames []string, di
 		}
 
 		// Create product catalog from directory structure.
-		catalog, err := stream.GetProductCatalog(rootDir, streamName)
+		products, err := stream.GetProducts(rootDir, streamName)
 		if err != nil {
 			return err
 		}
+
+		catalog := stream.NewCatalog(products)
 
 		// Create temporary catalog json file.
 		catalogPath := filepath.Join(metaDir, fmt.Sprintf("%s.json", streamName))
@@ -143,7 +145,7 @@ func rebuildIndex(rootDir string, streamVersion string, streamNames []string, di
 // creates missing VCDiff (.vcdiff) files for any subsequent versions.
 func createVCDiffFiles(rootDir string, streamName string) error {
 	// Get existing products (from actual directory hierarchy).
-	products, err := stream.GetProducts(rootDir, streamName, false)
+	products, err := stream.GetProducts(rootDir, streamName)
 	if err != nil {
 		return err
 	}

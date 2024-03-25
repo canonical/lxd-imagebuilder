@@ -143,7 +143,7 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 // product catalog.
 func pruneDanglingProductVersions(rootDir string, streamVersion string, streamName string) error {
 	// Get raw products (from actual directory hierarchy).
-	products, err := stream.GetProducts(rootDir, streamName, false)
+	products, err := stream.GetProducts(rootDir, streamName)
 	if err != nil {
 		return err
 	}
