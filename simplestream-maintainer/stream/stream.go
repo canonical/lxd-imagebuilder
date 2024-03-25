@@ -196,21 +196,18 @@ type ProductCatalog struct {
 	Products map[string]Product `json:"products"`
 }
 
-// GetProductCatalog generates a catalog of products located on the given path.
-func GetProductCatalog(rootDir string, streamName string) (*ProductCatalog, error) {
-	products, err := GetProducts(rootDir, streamName, true)
-	if err != nil {
-		return nil, err
+// NewCatalog creates a new product catalog.
+func NewCatalog(products map[string]Product) *ProductCatalog {
+	if products == nil {
+		products = make(map[string]Product)
 	}
 
-	imageStream := ProductCatalog{
+	return &ProductCatalog{
 		ContentID: "images",
 		DataType:  "image-downloads",
 		Format:    "products:1.0",
 		Products:  products,
 	}
-
-	return &imageStream, nil
 }
 
 // GetProducts traverses through the directories on the given path and retrieves
