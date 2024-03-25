@@ -342,6 +342,8 @@ func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Produc
 					continue
 				}
 
+				// Use path.Join for aliases to ignore OS specific
+				// filepath separator.
 				alias := path.Join(p.Distro, release, p.Variant)
 				aliases = append(aliases, alias)
 
@@ -363,7 +365,8 @@ func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Produc
 
 // GetVersion retrieves metadata for a single version, by reading directory
 // files and converting those that should be incuded in the product catalog
-// into items.
+// into items. For the relevant items, the file hashes are calculated, if
+// calcHashes is set to true.
 func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Version, error) {
 	versionPath := filepath.Join(rootDir, versionRelPath)
 
@@ -377,12 +380,14 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 		return nil, err
 	}
 
+	// Extract relevant items from the version directory.
 	for _, file := range files {
 		if file.IsDir() || !shared.HasSuffix(file.Name(), allowedItemExtensions...) {
 			// Skip directories and disallowed items.
 			continue
 		}
 
+		// Get an item and calculate its hash if necessary.
 		itemPath := filepath.Join(versionRelPath, file.Name())
 		item, err := GetItem(rootDir, itemPath, calcHashes)
 		if err != nil {
@@ -395,12 +400,17 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 	// Ensure version has at metadata and at least one rootfs (container, vm).
 	isVersionComplete := false
 
-	// Calculate combined hashes.
+	// Check whether version is complete, and calculate combined hashes if necessary.
 	metaItem, ok := version.Items[ItemTypeMetadata]
 	if ok {
 		metaItemPath := filepath.Join(versionPath, metaItem.Name)
 
 		for _, i := range version.Items {
+			if i.Ftype == ItemTypeMetadata {
+				// Skip metadata item.
+				continue
+			}
+
 			itemHash := ""
 			itemPath := filepath.Join(versionPath, i.Name)
 
@@ -429,7 +439,7 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 	}
 
 	// At least metadata and one of squashfs or qcow2 files must exist
-	// for the version to be considered valid.
+	// for the version to be considered complete.
 	if !isVersionComplete {
 		return nil, fmt.Errorf("%w: %q", ErrVersionIncomplete, versionRelPath)
 	}
@@ -437,7 +447,8 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 	return &version, nil
 }
 
-// GetItem retrieves item metadata for the file on a given path.
+// GetItem retrieves item metadata for the file on a given path. If calcHash is
+// set to true, the file's hash is calculated.
 func GetItem(rootDir string, itemRelPath string, calcHash bool) (*Item, error) {
 	itemPath := filepath.Join(rootDir, itemRelPath)
 
