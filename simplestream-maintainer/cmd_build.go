@@ -62,6 +62,12 @@ func rebuildIndex(rootDir string, streamVersion string, streamNames []string, di
 	var replaces []replace
 	index := stream.NewStreamIndex()
 
+	// Ensure meta directory exists.
+	err := os.MkdirAll(metaDir, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("Create metadata directory: %w", err)
+	}
+
 	// Create product catalogs by reading image directories.
 	for _, streamName := range streamNames {
 		if diffProducts {
@@ -81,7 +87,9 @@ func rebuildIndex(rootDir string, streamVersion string, streamNames []string, di
 
 		// Create temporary catalog json file.
 		catalogPath := filepath.Join(metaDir, fmt.Sprintf("%s.json", streamName))
-		catalogPathTemp, err := shared.WriteJSONTempFile(catalog)
+		catalogPathTemp := filepath.Join(metaDir, fmt.Sprintf(".%s.json.tmp", streamName))
+
+		err = shared.WriteJSONFile(catalogPathTemp, catalog)
 		if err != nil {
 			return err
 		}
@@ -103,8 +111,13 @@ func rebuildIndex(rootDir string, streamVersion string, streamNames []string, di
 		index.AddEntry(streamName, catalogRelPath, *catalog)
 	}
 
+	// Write index to a temporary file that is located next to the
+	// final file to ensure atomic replace. Temporary file is
+	// prefixed with a dot to hide it.
 	indexPath := filepath.Join(metaDir, "index.json")
-	indexPathTemp, err := shared.WriteJSONTempFile(index)
+	indexPathTemp := filepath.Join(metaDir, ".index.json.tmp")
+
+	err = shared.WriteJSONFile(indexPathTemp, index)
 	if err != nil {
 		return err
 	}
@@ -117,12 +130,6 @@ func rebuildIndex(rootDir string, streamVersion string, streamNames []string, di
 		OldPath: indexPathTemp,
 		NewPath: indexPath,
 	})
-
-	// Ensure meta directory exists.
-	err = os.MkdirAll(metaDir, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("Create metadata directory: %w", err)
-	}
 
 	// Replace all files.
 	for _, r := range replaces {
