@@ -103,17 +103,19 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 		}
 	}
 
-	// Update catalog removing existing versions to ensure
-	// a non-existing version is never listed for download.
-	tmpFile, err := shared.WriteJSONTempFile(catalog)
+	// Write product catalog to a temporary file that is located next
+	// to the final file to ensure atomic replace. Temporary file is
+	// prefixed with a dot to hide it.
+	catalogPathTemp := filepath.Join(rootDir, "streams", streamVersion, fmt.Sprintf(".%s.json.tmp", streamName))
+	err = shared.WriteJSONFile(catalogPathTemp, catalog)
 	if err != nil {
 		return err
 	}
 
-	defer os.Remove(tmpFile)
+	defer os.Remove(catalogPathTemp)
 
 	// Replace existing stream json file.
-	err = os.Rename(tmpFile, catalogPath)
+	err = os.Rename(catalogPathTemp, catalogPath)
 	if err != nil {
 		return err
 	}
