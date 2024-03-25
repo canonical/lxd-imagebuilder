@@ -75,7 +75,7 @@ doc-lint:
 .PHONY: static-analysis
 static-analysis:
 ifeq ($(shell command -v golangci-lint 2> /dev/null),)
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.0
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.1
 endif
 	golangci-lint run --timeout 5m
 	run-parts --exit-on-error --regex '.sh' test/lint
