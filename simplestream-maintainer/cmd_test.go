@@ -16,7 +16,7 @@ import (
 	"github.com/canonical/lxd-imagebuilder/simplestream-maintainer/testutils"
 )
 
-func TestRebuildIndex(t *testing.T) {
+func TestBuildIndex(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
@@ -147,7 +147,7 @@ func TestRebuildIndex(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			p := test.Mock
 
-			err := buildIndex(p.RootDir(), "v1", []string{p.StreamName()})
+			err := buildIndex(tmpDir, "v1", []string{p.StreamName()}, 2)
 			require.NoError(t, err, "Failed building index and catalog files!")
 
 			// Convert expected catalog and index files to json.
@@ -179,6 +179,22 @@ func TestRebuildIndex(t *testing.T) {
 				"Expected index does not match the built one!")
 		})
 	}
+}
+
+// GenFile generates a temporary file of the given size.
+func GenFile(t *testing.T, sizeInMB int) string {
+	t.Helper()
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), fmt.Sprint("testfile-", sizeInMB, "MB-"))
+	require.NoError(t, err)
+
+	_, err = tmpFile.Write(make([]byte, sizeInMB*1024*1024))
+	require.NoError(t, err)
+
+	err = tmpFile.Close()
+	require.NoError(t, err)
+
+	return tmpFile.Name()
 }
 
 func TestPruneOldVersions(t *testing.T) {

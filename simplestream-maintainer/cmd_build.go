@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -20,6 +21,7 @@ import (
 type BuildOptions struct {
 	StreamVersion string
 	ImageDirs     []string
+	Workers       int
 }
 
 func NewBuildCmd() *cobra.Command {
@@ -36,6 +38,7 @@ func NewBuildCmd() *cobra.Command {
 
 	cmd.PersistentFlags().StringVar(&o.StreamVersion, "stream-version", "v1", "Stream version")
 	cmd.PersistentFlags().StringSliceVarP(&o.ImageDirs, "image-dir", "d", []string{"images"}, "Image directory (relative to path argument)")
+	cmd.PersistentFlags().IntVar(&o.Workers, "workers", 1, "Maximum number of concurrent operations")
 
 	return cmd
 }
@@ -51,10 +54,10 @@ func (o *BuildOptions) Run(args []string) error {
 		return fmt.Errorf("Argument %q is required and cannot be empty", "path")
 	}
 
-	return buildIndex(args[0], o.StreamVersion, o.ImageDirs)
+	return buildIndex(args[0], o.StreamVersion, o.ImageDirs, o.Workers)
 }
 
-func buildIndex(rootDir string, streamVersion string, streamNames []string) error {
+func buildIndex(rootDir string, streamVersion string, streamNames []string, workers int) error {
 	metaDir := path.Join(rootDir, "streams", streamVersion)
 
 	var replaces []replace
@@ -69,7 +72,7 @@ func buildIndex(rootDir string, streamVersion string, streamNames []string) erro
 	// Create product catalogs by reading image directories.
 	for _, streamName := range streamNames {
 		// Create product catalog from directory structure.
-		catalog, err := buildProductCatalog(rootDir, streamVersion, streamName)
+		catalog, err := buildProductCatalog(rootDir, streamVersion, streamName, workers)
 		if err != nil {
 			return err
 		}
@@ -139,9 +142,11 @@ func buildIndex(rootDir string, streamVersion string, streamNames []string) erro
 	return nil
 }
 
-// buildProductCatalog fetches the corresponding product catalog and inserts
-// missing products by traversing through the directory of the given stream.
-func buildProductCatalog(rootDir string, streamVersion string, streamName string) (*stream.ProductCatalog, error) {
+// buildProductCatalog compares the existing product catalog and actual products on
+// the disk. For missing products, first the delta files and hashes are calculated
+// and only then the products are inserted into the catalog. Workers are used to
+// limit maximum concurent tasks when calulcating hashes and delta files.
+func buildProductCatalog(rootDir string, streamVersion string, streamName string, workers int) (*stream.ProductCatalog, error) {
 	// Get current product catalog (from json file).
 	catalogPath := filepath.Join(rootDir, "streams", streamVersion, fmt.Sprintf("%s.json", streamName))
 	catalog, err := shared.ReadJSONFile(catalogPath, &stream.ProductCatalog{})
@@ -157,6 +162,27 @@ func buildProductCatalog(rootDir string, streamVersion string, streamName string
 	products, err := stream.GetProducts(rootDir, streamName)
 	if err != nil {
 		return nil, err
+	}
+
+	var wg sync.WaitGroup
+	var mutex sync.Mutex // To safely update the catalog.Products map
+
+	// Ensure at least 1 worker is spawned.
+	if workers < 1 {
+		workers = 1
+	}
+
+	// Job queue.
+	jobs := make(chan func(), workers)
+	defer close(jobs)
+
+	// Spawn workers.
+	for i := 0; i < workers; i++ {
+		go func() {
+			for job := range jobs {
+				job()
+			}
+		}()
 	}
 
 	_, newProducts := diffProducts(catalog.Products, products)
@@ -179,26 +205,38 @@ func buildProductCatalog(rootDir string, streamVersion string, streamName string
 		}
 
 		for versionName := range p.Versions {
+			// Add a job for processing a new version.
+			wg.Add(1)
+			jobs <- func() {
+				defer wg.Done()
 
-			// Create delta files before retrieving the version,
-			// so that hashes are also calculated for delta files.
-			err = createVCDiffFiles(rootDir, productPath, versionName)
-			if err != nil {
-				slog.Error("Failed to create delta file", "streamName", streamName, "product", id, "version", versionName, "error", err)
-				continue
+				// Create delta files before retrieving the version,
+				// so that hashes are also calculated for delta files.
+				err = createVCDiffFiles(rootDir, productPath, versionName)
+				if err != nil {
+					slog.Error("Failed to create delta file", "streamName", streamName, "product", id, "version", versionName, "error", err)
+					return
+				}
+
+				// Read the version and generate the file hashes.
+				versionPath := filepath.Join(productPath, versionName)
+				version, err := stream.GetVersion(rootDir, versionPath, true)
+				if err != nil {
+					slog.Error("Failed to get version", "streamName", streamName, "product", id, "version", versionName, "error", err)
+					return
+				}
+
+				mutex.Lock()
+				catalog.Products[id].Versions[versionName] = *version
+				mutex.Unlock()
+
+				slog.Info("New version added to the product catalog", "streamName", streamName, "product", id, "version", versionName)
 			}
-
-			// Read the version and generate the file hashes.
-			versionPath := filepath.Join(productPath, versionName)
-			version, err := stream.GetVersion(rootDir, versionPath, true)
-			if err != nil {
-				slog.Error("Failed to get version", "streamName", streamName, "product", id, "version", versionName, "error", err)
-				return nil, err
-			}
-
-			catalog.Products[id].Versions[versionName] = *version
 		}
 	}
+
+	// Wait for all goroutines to finish.
+	wg.Wait()
 
 	return catalog, nil
 }
