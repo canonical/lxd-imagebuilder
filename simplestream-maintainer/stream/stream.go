@@ -269,8 +269,7 @@ func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Produc
 	// Ensure product relative path matches the required format.
 	parts := strings.Split(productRelPath, string(os.PathSeparator))
 	if len(parts) < productPathLength || len(parts) > productPathLength {
-		return nil, fmt.Errorf("%w: path %q does not match the required format %q",
-			ErrProductInvalidPath, productRelPath, productPathFormat)
+		return nil, fmt.Errorf("%w: path %q does not match the required format %q", ErrProductInvalidPath, productRelPath, productPathFormat)
 	}
 
 	// Ensure product path is a directory.
