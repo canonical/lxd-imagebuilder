@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -38,7 +39,7 @@ func NewBuildCmd() *cobra.Command {
 
 	cmd.PersistentFlags().StringVar(&o.StreamVersion, "stream-version", "v1", "Stream version")
 	cmd.PersistentFlags().StringSliceVarP(&o.ImageDirs, "image-dir", "d", []string{"images"}, "Image directory (relative to path argument)")
-	cmd.PersistentFlags().IntVar(&o.Workers, "workers", 1, "Maximum number of concurrent operations")
+	cmd.PersistentFlags().IntVar(&o.Workers, "workers", max(runtime.NumCPU()/2, 1), "Maximum number of concurrent operations")
 
 	return cmd
 }
