@@ -74,6 +74,7 @@ func TestBuildIndex(t *testing.T) {
 						Requirements: map[string]string{},
 						Versions: map[string]stream.Version{
 							"2024_01_01": {
+								Checksums: map[string]string{},
 								Items: map[string]stream.Item{
 									"lxd.tar.xz": {
 										Ftype:                    "lxd.tar.xz",
@@ -91,6 +92,7 @@ func TestBuildIndex(t *testing.T) {
 								},
 							},
 							"2024_01_03": {
+								Checksums: map[string]string{},
 								Items: map[string]stream.Item{
 									"lxd.tar.xz": {
 										Ftype:                    "lxd.tar.xz",
@@ -178,6 +180,91 @@ func TestBuildIndex(t *testing.T) {
 				strings.TrimSpace(string(jsonIndexExpect)),
 				strings.TrimSpace(string(jsonIndexActual)),
 				"Expected index does not match the built one!")
+		})
+	}
+}
+
+func TestBuildProductCatalog_ChecksumVerification(t *testing.T) {
+	t.Parallel()
+
+	checksums := []string{
+		fmt.Sprintf("%s  lxd.tar.xz", testutils.ItemDefaultContentSHA), // Valid
+		fmt.Sprintf("%s  disk.qcow2", testutils.ItemDefaultContentSHA), // Valid
+		fmt.Sprintf("%s  r.squashfs", testutils.ItemDefaultContentSHA), // Valid
+		"invalid-sha256-checksum  invalid.squashfs",                    // Invalid
+		"invalid-sha256-checksum  invalid.qcow2",                       // Invalid
+	}
+
+	tests := []struct {
+		Name         string
+		Mock         testutils.ProductMock
+		WantVersions []string // List of expected versions in the final product catalog.
+	}{
+		{
+			Name: "Ensure checksum validation is ignored when checksum file is missing",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+				testutils.MockVersion("v2").WithFiles("lxd.tar.xz", "root.squashfs"),
+				testutils.MockVersion("v3").WithFiles("lxd.tar.xz", "disk.qcow2")),
+			WantVersions: []string{
+				"v1",
+				"v2",
+				"v3",
+			},
+		},
+		{
+			Name: "Ensure versions with mismatched checksums are excluded from the product catalog",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "invalid.qcow2"),
+				testutils.MockVersion("v2").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "invalid.squashfs")),
+			WantVersions: []string{},
+		},
+		{
+			Name: "Ensure version is excluded if checksum file exists, but checksum for a certain item is missing",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "no-sha.qcow2"),
+				testutils.MockVersion("v2").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "no-sha.squashfs")),
+			WantVersions: []string{},
+		},
+		{
+			Name: "Ensure version with mismatched checksums is excluded but product catalog is still created",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "r.squashfs"),
+				testutils.MockVersion("v2").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "r.squashfs", "invalid.qcow2"),
+				testutils.MockVersion("v3").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "disk.qcow2")),
+			WantVersions: []string{
+				"v1",
+				"v3",
+			},
+		},
+		{
+			Name: "Ensure only valid versions are included in the product catalog.",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "disk.qcow2", "r.squashfs"), // Valid: All checksums match
+				testutils.MockVersion("v2").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "missing.squashfs"),         // Invalid: Missing checksum
+				testutils.MockVersion("v3").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "invalid.qcow2")),           // Invalid: Invalid checksum
+			WantVersions: []string{
+				"v1",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			p := test.Mock
+			p.Create(t, t.TempDir())
+
+			// Build product catalog.
+			catalog, err := buildProductCatalog(context.Background(), p.RootDir(), "v1", p.StreamName(), 2)
+			require.NoError(t, err, "Failed building index and catalog files!")
+
+			// Fetch the product from catalog by its id.
+			productID := strings.Join(strings.Split(p.RelPath(), "/")[1:], ":")
+			product, ok := catalog.Products[productID]
+
+			// Ensure product and all expected product versions are found.
+			require.True(t, ok, "Product not found in the catalog!")
+			require.ElementsMatch(t, test.WantVersions, shared.MapKeys(product.Versions))
 		})
 	}
 }
