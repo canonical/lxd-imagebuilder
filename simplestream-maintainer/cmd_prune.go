@@ -14,24 +14,22 @@ import (
 	"github.com/canonical/lxd-imagebuilder/simplestream-maintainer/stream"
 )
 
-type DiscardOptions struct {
+type pruneOptions struct {
+	global *globalOptions
+
 	Dangling      bool
 	RetainNum     int
 	StreamVersion string
 	ImageDirs     []string
 }
 
-func NewDiscardCmd() *cobra.Command {
-	var o DiscardOptions
-
+func (o *pruneOptions) NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "prune <path> [flags]",
 		Short:   "Prune product versions",
 		Long:    "Prune product versions except for latest retaining only the specific number of latest ones.",
 		GroupID: "main",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return o.Run(args)
-		},
+		RunE:    o.Run,
 	}
 
 	cmd.PersistentFlags().BoolVar(&o.Dangling, "dangling", false, "Remove dangling product versions (not referenced from any product catalog)")
@@ -42,7 +40,7 @@ func NewDiscardCmd() *cobra.Command {
 	return cmd
 }
 
-func (o *DiscardOptions) Run(args []string) error {
+func (o *pruneOptions) Run(_ *cobra.Command, args []string) error {
 	if len(args) < 1 || args[0] == "" {
 		return fmt.Errorf("Argument %q is required and cannot be empty", "path")
 	}

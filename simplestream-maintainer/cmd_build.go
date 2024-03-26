@@ -19,22 +19,20 @@ import (
 	"github.com/canonical/lxd-imagebuilder/simplestream-maintainer/stream"
 )
 
-type BuildOptions struct {
+type buildOptions struct {
+	global *globalOptions
+
 	StreamVersion string
 	ImageDirs     []string
 	Workers       int
 }
 
-func NewBuildCmd() *cobra.Command {
-	var o BuildOptions
-
+func (o *buildOptions) NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "build <path> [flags]",
 		Short:   "Build simplestream index on the given path",
 		GroupID: "main",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return o.Run(args)
-		},
+		RunE:    o.Run,
 	}
 
 	cmd.PersistentFlags().StringVar(&o.StreamVersion, "stream-version", "v1", "Stream version")
@@ -44,18 +42,18 @@ func NewBuildCmd() *cobra.Command {
 	return cmd
 }
 
-// replace struct holds old and new path for a file replace.
-type replace struct {
-	OldPath string
-	NewPath string
-}
-
-func (o *BuildOptions) Run(args []string) error {
+func (o *buildOptions) Run(_ *cobra.Command, args []string) error {
 	if len(args) < 1 || args[0] == "" {
 		return fmt.Errorf("Argument %q is required and cannot be empty", "path")
 	}
 
 	return buildIndex(args[0], o.StreamVersion, o.ImageDirs, o.Workers)
+}
+
+// replace struct holds old and new path for a file replace.
+type replace struct {
+	OldPath string
+	NewPath string
 }
 
 func buildIndex(rootDir string, streamVersion string, streamNames []string, workers int) error {
