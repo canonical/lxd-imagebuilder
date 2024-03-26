@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -47,7 +48,7 @@ func (o *buildOptions) Run(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("Argument %q is required and cannot be empty", "path")
 	}
 
-	return buildIndex(args[0], o.StreamVersion, o.ImageDirs, o.Workers)
+	return buildIndex(o.global.ctx, args[0], o.StreamVersion, o.ImageDirs, o.Workers)
 }
 
 // replace struct holds old and new path for a file replace.
@@ -56,7 +57,7 @@ type replace struct {
 	NewPath string
 }
 
-func buildIndex(rootDir string, streamVersion string, streamNames []string, workers int) error {
+func buildIndex(ctx context.Context, rootDir string, streamVersion string, streamNames []string, workers int) error {
 	metaDir := path.Join(rootDir, "streams", streamVersion)
 
 	var replaces []replace
@@ -71,7 +72,7 @@ func buildIndex(rootDir string, streamVersion string, streamNames []string, work
 	// Create product catalogs by reading image directories.
 	for _, streamName := range streamNames {
 		// Create product catalog from directory structure.
-		catalog, err := buildProductCatalog(rootDir, streamVersion, streamName, workers)
+		catalog, err := buildProductCatalog(ctx, rootDir, streamVersion, streamName, workers)
 		if err != nil {
 			return err
 		}
@@ -145,7 +146,7 @@ func buildIndex(rootDir string, streamVersion string, streamNames []string, work
 // the disk. For missing products, first the delta files and hashes are calculated
 // and only then the products are inserted into the catalog. Workers are used to
 // limit maximum concurent tasks when calulcating hashes and delta files.
-func buildProductCatalog(rootDir string, streamVersion string, streamName string, workers int) (*stream.ProductCatalog, error) {
+func buildProductCatalog(ctx context.Context, rootDir string, streamVersion string, streamName string, workers int) (*stream.ProductCatalog, error) {
 	// Get current product catalog (from json file).
 	catalogPath := filepath.Join(rootDir, "streams", streamVersion, fmt.Sprintf("%s.json", streamName))
 	catalog, err := shared.ReadJSONFile(catalogPath, &stream.ProductCatalog{})
@@ -175,15 +176,26 @@ func buildProductCatalog(rootDir string, streamVersion string, streamName string
 	jobs := make(chan func(), workers)
 	defer close(jobs)
 
-	// Spawn workers.
+	// Create new pool of workers.
 	for i := 0; i < workers; i++ {
 		go func() {
-			for job := range jobs {
-				job()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case job, ok := <-jobs:
+					if !ok {
+						return
+					}
+
+					job()
+				}
 			}
 		}()
 	}
 
+	// Extract new (unreferenced products and product versions) and add them
+	// to the catalog.
 	_, newProducts := diffProducts(catalog.Products, products)
 	for id, p := range newProducts {
 		if len(p.Versions) == 0 {
@@ -211,7 +223,7 @@ func buildProductCatalog(rootDir string, streamVersion string, streamName string
 
 				// Create delta files before retrieving the version,
 				// so that hashes are also calculated for delta files.
-				err = createVCDiffFiles(rootDir, productPath, versionName)
+				err = createDeltaFiles(ctx, rootDir, productPath, versionName)
 				if err != nil {
 					slog.Error("Failed to create delta file", "streamName", streamName, "product", id, "version", versionName, "error", err)
 					return
@@ -240,9 +252,9 @@ func buildProductCatalog(rootDir string, streamVersion string, streamName string
 	return catalog, nil
 }
 
-// createVCDiffFiles traverses through the directory of the given stream and
+// createDeltaFiles traverses through the directory of the given stream and
 // creates missing delta (.vcdiff) files for any subsequent complete versions.
-func createVCDiffFiles(rootDir string, productRelPath string, versionName string) error {
+func createDeltaFiles(ctx context.Context, rootDir string, productRelPath string, versionName string) error {
 	productPath := filepath.Join(rootDir, productRelPath)
 
 	// Get existing products (from actual directory hierarchy).
@@ -307,7 +319,7 @@ func createVCDiffFiles(rootDir string, productRelPath string, versionName string
 				return err
 			}
 
-			err = calcVCDiff(sourcePath, targetPath, outputPath)
+			err = calcVCDiff(ctx, sourcePath, targetPath, outputPath)
 			if err != nil {
 				return err
 			}
@@ -319,7 +331,9 @@ func createVCDiffFiles(rootDir string, productRelPath string, versionName string
 	return nil
 }
 
-func calcVCDiff(sourcePath string, targetPath string, outputPath string) error {
+// calcVCDiff calculates the delta file (.vcdiff) between the source and target
+// files. The output file is written to the outputPath.
+func calcVCDiff(ctx context.Context, sourcePath string, targetPath string, outputPath string) error {
 	bin, err := exec.LookPath("xdelta3")
 	if err != nil {
 		return err
@@ -327,7 +341,7 @@ func calcVCDiff(sourcePath string, targetPath string, outputPath string) error {
 
 	// -e compress
 	// -f force
-	cmd := exec.Command(bin, "-e", "-s", sourcePath, targetPath, outputPath)
+	cmd := exec.CommandContext(ctx, bin, "-e", "-s", sourcePath, targetPath, outputPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

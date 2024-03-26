@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -147,7 +148,7 @@ func TestBuildIndex(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			p := test.Mock
 
-			err := buildIndex(tmpDir, "v1", []string{p.StreamName()}, 2)
+			err := buildIndex(context.Background(), tmpDir, "v1", []string{p.StreamName()}, 2)
 			require.NoError(t, err, "Failed building index and catalog files!")
 
 			// Convert expected catalog and index files to json.
