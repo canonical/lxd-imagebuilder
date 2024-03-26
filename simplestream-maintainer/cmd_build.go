@@ -212,7 +212,11 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 			// remove existing versions, as they will be repopulated below.
 			product := products[id]
 			product.Versions = make(map[string]stream.Version, len(p.Versions))
+
+			// Lock before updating, as another gorotine may be accessing it.
+			mutex.Lock()
 			catalog.Products[id] = product
+			mutex.Unlock()
 		}
 
 		for versionName := range p.Versions {
@@ -235,6 +239,36 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 				if err != nil {
 					slog.Error("Failed to get version", "streamName", streamName, "product", id, "version", versionName, "error", err)
 					return
+				}
+
+				// Verify items checksums if checksum file is present
+				// within the version. If verification succeeds, update
+				// the checksums file to include potential delta files.
+				if version.Checksums != nil {
+					checksumFile := filepath.Join(rootDir, versionPath, stream.FileChecksumSHA256)
+
+					for _, item := range version.Items {
+						checksum, ok := version.Checksums[item.Name]
+
+						// If checksums for delta files do not exist,
+						// append them to the checksums file because
+						// they were just generated.
+						if !ok && (item.Ftype == stream.ItemTypeDiskKVMDelta || item.Ftype == stream.ItemTypeSquashfsDelta) {
+							err := shared.AppendToFile(checksumFile, fmt.Sprintf("%s  %s\n", checksum, item.Name))
+							if err != nil {
+								slog.Error("Failed to update checksums file", "streamName", streamName, "product", id, "version", versionName, "error", err)
+								return
+							}
+
+							continue
+						}
+
+						// Verify checksum.
+						if checksum != item.SHA256 {
+							slog.Error("Checksum mismatch", "streamName", streamName, "product", id, "version", versionName, "item", item.Name)
+							return
+						}
+					}
 				}
 
 				mutex.Lock()
