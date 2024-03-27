@@ -264,22 +264,145 @@ func TestGetProduct(t *testing.T) {
 		},
 		{
 			Name: "Product with invalid config",
-			Mock: testutils.MockProduct("images-minimal/d/r/a/v").
-				AddProductConfig("invalid::config"),
-			WantErr: stream.ErrProductInvalidConfig,
+			Mock: testutils.MockProduct("stream/distro/release/arch/variant").AddVersions(
+				testutils.MockVersion("2024_01_01").
+					WithFiles("lxd.tar.xz", "root.squashfs").
+					SetImageConfig("invalid::config")),
+			WantErr: stream.ErrVersionInvalidImageConfig,
 		},
 		{
-			Name: "Product with valid config",
-			Mock: testutils.MockProduct("stream/distro/release/arch/variant").
-				AddProductConfig("requirements:\n  secure_boot: true"),
+			Name: "Product with valid config (requirements)",
+			Mock: testutils.MockProduct("stream/distro/release/arch/config").AddVersions(
+				testutils.MockVersion("2024_01_01").
+					WithFiles("lxd.tar.xz", "root.squashfs").
+					SetImageConfig(
+						"simplestream:",
+						"  requirements:",
+						"  - requirements:",
+						"      secure_boot: false",
+					)),
+			IgnoreItems: true,
+			WantProduct: stream.Product{
+				Aliases:      "distro/release/config",
+				Distro:       "distro",
+				Release:      "release",
+				Architecture: "arch",
+				Variant:      "config",
+				Requirements: map[string]string{
+					"secure_boot": "false",
+				},
+				Versions: map[string]stream.Version{
+					"2024_01_01": {},
+				},
+			},
+		},
+		{
+			Name: "Product version with valid config (requirements and release aliases)",
+			Mock: testutils.MockProduct("stream/distro/myrel/arch/default").AddVersions(
+				testutils.MockVersion("2024_01_01").
+					WithFiles("lxd.tar.xz", "root.squashfs").
+					SetImageConfig(
+						"simplestream:",
+						"  release_aliases:",
+						"    myrel: test,test2", // Note 2 aliases.
+						"    myrel2: invalid",   // Aliases for different release.
+						"  requirements:",
+						"  - requirements:",
+						"      secure_boot: true",
+					)),
+			IgnoreItems: true,
+			WantProduct: stream.Product{
+				Aliases:      "distro/myrel/default,distro/myrel,distro/test/default,distro/test,distro/test2/default,distro/test2",
+				Distro:       "distro",
+				Release:      "myrel",
+				Architecture: "arch",
+				Variant:      "default",
+				Requirements: map[string]string{
+					"secure_boot": "true",
+				},
+				Versions: map[string]stream.Version{
+					"2024_01_01": {},
+				},
+			},
+		},
+		{
+			Name: "Product version with a valid config (no simplestreams section)",
+			Mock: testutils.MockProduct("stream/distro/release/arch/variant").AddVersions(
+				testutils.MockVersion("1").
+					WithFiles("lxd.tar.xz", "disk.qcow2").
+					SetImageConfig(
+						"requirements:",
+						"  secure_boot: false",
+						"simplestream:",
+						"  requirements:",
+					)),
+			IgnoreItems: true,
 			WantProduct: stream.Product{
 				Aliases:      "distro/release/variant",
 				Distro:       "distro",
 				Release:      "release",
 				Architecture: "arch",
 				Variant:      "variant",
+				Requirements: map[string]string{},
+				Versions: map[string]stream.Version{
+					"1": {},
+				},
+			},
+		},
+		{
+			Name: "Product containing multiple versions with a valid config",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("1").
+					WithFiles("lxd.tar.xz", "disk.qcow2").
+					SetImageConfig(
+						"simplestream:",
+						"  release_aliases:",
+						"    noble: 24",
+						"  requirements:",
+						"  - requirements:",
+						"      secure_boot: true",
+						"      nesting: true",
+					),
+				testutils.MockVersion("2").
+					WithFiles("lxd.tar.xz", "disk.qcow2").
+					SetImageConfig(
+						"simplestream:",
+						"  release_aliases:",
+						"    noble: 24.04",
+						"  requirements:",
+						"  - requirements:",
+						"      secure_boot: false",
+						"  - requirements:",
+						"      nesting: false",
+						"    variants:",
+						"    - default",
+						"    - desktop",
+						"  - requirements:",
+						"      custom1: false",
+						"    architectures:",
+						"    - amd64",
+						"  - requirements:",
+						"      custom2: false",
+						"    architectures:",
+						"    - arm64",
+					),
+			),
+			IgnoreItems: true,
+			WantProduct: stream.Product{
+				// Aliases are collected from all versions.
+				Aliases:      "ubuntu/noble/cloud,ubuntu/24/cloud,ubuntu/24.04/cloud",
+				Distro:       "ubuntu",
+				Release:      "noble",
+				Architecture: "amd64",
+				Variant:      "cloud",
 				Requirements: map[string]string{
-					"secure_boot": "true",
+					// Requirements only from the last version.
+					"secure_boot": "false",
+					"custom1":     "false",
+				},
+				Versions: map[string]stream.Version{
+					"1": {},
+					"2": {},
 				},
 			},
 		},
@@ -425,6 +548,8 @@ func TestGetProduct(t *testing.T) {
 				return
 			}
 
+			require.NoError(t, err)
+
 			if test.IgnoreItems {
 				// Remove all items from the resulting product.
 				for id := range product.Versions {
@@ -432,7 +557,6 @@ func TestGetProduct(t *testing.T) {
 				}
 			}
 
-			require.NoError(t, err)
 			assert.Equal(t, &test.WantProduct, product)
 		})
 	}
