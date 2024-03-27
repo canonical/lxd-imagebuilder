@@ -362,36 +362,38 @@ func diffProducts(oldProducts map[string]stream.Product, newProducts map[string]
 
 	// Extract new products and versions.
 	for id, p := range newProducts {
+		new[id] = p
+
 		_, ok := oldProducts[id]
 		if !ok {
 			// Product is missing in the old catalog.
-			new[id] = p
 			continue
 		}
 
-		for name, v := range p.Versions {
+		for name := range p.Versions {
 			_, ok := oldProducts[id].Versions[name]
-			if !ok {
-				// Version is missing in the old catalog.
-				new[id].Versions[name] = v
+			if ok {
+				// Version exists in the old catalog.
+				delete(new[id].Versions, name)
 			}
 		}
 	}
 
 	// Extract old products and versions.
 	for id, p := range oldProducts {
+		new[id] = p
+
 		_, ok := newProducts[id]
 		if !ok {
 			// Product is missing in the new catalog.
-			old[id] = p
 			continue
 		}
 
-		for name, v := range p.Versions {
+		for name := range p.Versions {
 			_, ok := newProducts[id].Versions[name]
-			if !ok {
-				// Version is missing in the new catalog.
-				old[id].Versions[name] = v
+			if ok {
+				// Version exists in the new catalog.
+				delete(new[id].Versions, name)
 			}
 		}
 	}
