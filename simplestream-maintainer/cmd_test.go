@@ -20,8 +20,6 @@ import (
 func TestBuildIndex(t *testing.T) {
 	t.Parallel()
 
-	tmpDir := t.TempDir()
-
 	tests := []struct {
 		Name          string
 		Mock          testutils.ProductMock
@@ -31,7 +29,7 @@ func TestBuildIndex(t *testing.T) {
 	}{
 		{
 			Name: "Ensure empty index and catalog are created",
-			Mock: testutils.MockProduct(t, tmpDir, "images/ubuntu/lunar/amd64/cloud"),
+			Mock: testutils.MockProduct("images/ubuntu/lunar/amd64/cloud"),
 			WantCatalog: stream.ProductCatalog{
 				ContentID: "images",
 				Format:    "products:1.0",
@@ -57,10 +55,11 @@ func TestBuildIndex(t *testing.T) {
 			// - Delta is calculated for the previous complete version.
 			// - Missing source file for calculating delta does not break index building.
 			Name: "Ensure incomplete versions are ignored, and vcdiffs are calculated only for complete versions",
-			Mock: testutils.MockProduct(t, tmpDir, "images-daily/ubuntu/focal/amd64/cloud").
-				AddVersion("2024_01_01", "lxd.tar.xz", "disk.qcow2"). // Missing rootfs.squashfs
-				AddVersion("2024_01_02", "lxd.tar.xz").               // Incomplete version
-				AddVersion("2024_01_03", "lxd.tar.xz", "disk.qcow2", "rootfs.squashfs"),
+			Mock: testutils.MockProduct("images-daily/ubuntu/focal/amd64/cloud").AddVersions(
+				testutils.MockVersion("2024_01_01").WithFiles("lxd.tar.xz", "disk.qcow2"), // Missing rootfs.squashfs
+				testutils.MockVersion("2024_01_02").WithFiles("lxd.tar.xz"),               // Incomplete version
+				testutils.MockVersion("2024_01_03").WithFiles("lxd.tar.xz", "disk.qcow2", "rootfs.squashfs"),
+			),
 			WantCatalog: stream.ProductCatalog{
 				ContentID: "images",
 				Format:    "products:1.0",
@@ -147,8 +146,9 @@ func TestBuildIndex(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			p := test.Mock
+			p.Create(t, t.TempDir())
 
-			err := buildIndex(context.Background(), tmpDir, "v1", []string{p.StreamName()}, 2)
+			err := buildIndex(context.Background(), p.RootDir(), "v1", []string{p.StreamName()}, 2)
 			require.NoError(t, err, "Failed building index and catalog files!")
 
 			// Convert expected catalog and index files to json.
@@ -159,8 +159,8 @@ func TestBuildIndex(t *testing.T) {
 			require.NoError(t, err)
 
 			// Read actual catalog and index files.
-			catalogPath := filepath.Join(tmpDir, "streams", "v1", fmt.Sprintf("%s.json", p.StreamName()))
-			indexPath := filepath.Join(tmpDir, "streams", "v1", "index.json")
+			catalogPath := filepath.Join(p.RootDir(), "streams", "v1", fmt.Sprintf("%s.json", p.StreamName()))
+			indexPath := filepath.Join(p.RootDir(), "streams", "v1", "index.json")
 
 			jsonCatalogActual, err := os.ReadFile(catalogPath)
 			require.NoError(t, err)
@@ -182,25 +182,8 @@ func TestBuildIndex(t *testing.T) {
 	}
 }
 
-// GenFile generates a temporary file of the given size.
-func GenFile(t *testing.T, sizeInMB int) string {
-	t.Helper()
-
-	tmpFile, err := os.CreateTemp(t.TempDir(), fmt.Sprint("testfile-", sizeInMB, "MB-"))
-	require.NoError(t, err)
-
-	_, err = tmpFile.Write(make([]byte, sizeInMB*1024*1024))
-	require.NoError(t, err)
-
-	err = tmpFile.Close()
-	require.NoError(t, err)
-
-	return tmpFile.Name()
-}
-
 func TestPruneOldVersions(t *testing.T) {
 	t.Parallel()
-	tmpDir := t.TempDir()
 
 	tests := []struct {
 		Name          string
@@ -216,33 +199,35 @@ func TestPruneOldVersions(t *testing.T) {
 		},
 		{
 			Name: "Ensure no error on empty product catalog",
-			Mock: testutils.MockProduct(t, tmpDir, "test_000/ubuntu/noble/amd64/cloud").
-				BuildProductCatalog(),
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddProductCatalog(),
 			KeepVersions: 1,
 			WantVersions: []string{},
 		},
 		{
 			Name: "Ensure exact number of versions is kept",
-			Mock: testutils.MockProduct(t, tmpDir, "test_010/ubuntu/noble/amd64/cloud").
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				AddVersion("2024_01_03", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				BuildProductCatalog(),
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddVersions(
+					testutils.MockVersion("01").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+					testutils.MockVersion("02").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+					testutils.MockVersion("03").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2")).
+				AddProductCatalog(),
 			KeepVersions: 3,
 			WantVersions: []string{
-				"2024_01_01",
-				"2024_01_02",
-				"2024_01_03",
+				"01",
+				"02",
+				"03",
 			},
 		},
 		{
 			Name: "Ensure the given number of product versions is retained",
-			Mock: testutils.MockProduct(t, tmpDir, "test_020/ubuntu/noble/amd64/cloud").
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				AddVersion("2024_01_05", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				AddVersion("2024_05_01", "lxd.tar.xz", "root.squashfs").
-				AddVersion("2025_01_01", "lxd.tar.xz", "disk.qcow2").
-				BuildProductCatalog(),
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddVersions(
+					testutils.MockVersion("2024_01_01").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+					testutils.MockVersion("2024_01_05").WithFiles("lxd.tar.xz", "root.squashfs"),
+					testutils.MockVersion("2024_05_01").WithFiles("lxd.tar.xz", "disk.squashfs"),
+					testutils.MockVersion("2025_01_01").WithFiles("lxd.tar.xz", "disk.qcow2")).
+				AddProductCatalog(),
 			KeepVersions: 3,
 			WantVersions: []string{
 				"2024_01_05",
@@ -252,14 +237,15 @@ func TestPruneOldVersions(t *testing.T) {
 		},
 		{
 			Name: "Ensure only complete versions are retained",
-			Mock: testutils.MockProduct(t, tmpDir, "test_030/ubuntu/noble/amd64/cloud").
-				AddVersion("2024_01_01", "lxd.tar.xz").
-				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs").
-				AddVersion("2024_01_03", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				AddVersion("2024_01_04", "root.squashfs").
-				AddVersion("2024_01_05", "lxd.tar.xz", "disk.qcow2").
-				AddVersion("2024_01_06", "disk.qcow2").
-				BuildProductCatalog(),
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddVersions(
+					testutils.MockVersion("2024_01_01").WithFiles("lxd.tar.xz"),                                // Incomplete
+					testutils.MockVersion("2024_01_02").WithFiles("lxd.tar.xz", "root.squashfs"),               // Complete
+					testutils.MockVersion("2024_01_03").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"), // Complete
+					testutils.MockVersion("2024_01_04").WithFiles("root.squashfs"),                             // Incomplete
+					testutils.MockVersion("2024_01_05").WithFiles("lxd.tar.xz", "disk.qcow2"),                  // Complete
+					testutils.MockVersion("2024_01_06").WithFiles("disk.qcow2")).                               // Incomplete
+				AddProductCatalog(),
 			KeepVersions: 2,
 			WantVersions: []string{
 				"2024_01_03",
@@ -268,19 +254,22 @@ func TestPruneOldVersions(t *testing.T) {
 		},
 		{
 			Name: "Ensure only referenced versions are prunned",
-			Mock: testutils.MockProduct(t, tmpDir, "test_040/ubuntu/noble/amd64/cloud").
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				AddVersion("2024_01_03", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				BuildProductCatalog().
-				AddVersion("2024_01_04", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				AddVersion("2024_01_05", "lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddVersions(
+					testutils.MockVersion("2023").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					testutils.MockVersion("2024").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					testutils.MockVersion("2025").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					testutils.MockVersion("2026").WithFiles("lxd.tar.xz", "disk.qcow2")).
+				AddProductCatalog().
+				AddVersions(
+					testutils.MockVersion("2027").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					testutils.MockVersion("2028").WithFiles("lxd.tar.xz", "disk.qcow2")),
 			KeepVersions: 2,
 			WantVersions: []string{
-				"2024_01_02",
-				"2024_01_03",
-				"2024_01_04",
-				"2024_01_05",
+				"2025",
+				"2026",
+				"2027",
+				"2028",
 			},
 		},
 	}
@@ -288,6 +277,7 @@ func TestPruneOldVersions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			p := test.Mock
+			p.Create(t, t.TempDir())
 
 			err := pruneStreamProductVersions(p.RootDir(), "v1", p.StreamName(), test.KeepVersions)
 			if test.WantErrString == "" {
@@ -308,7 +298,6 @@ func TestPruneOldVersions(t *testing.T) {
 
 func TestPruneDanglingResources(t *testing.T) {
 	t.Parallel()
-	tmpDir := t.TempDir()
 
 	tests := []struct {
 		Name         string
@@ -317,64 +306,64 @@ func TestPruneDanglingResources(t *testing.T) {
 	}{
 		{
 			Name: "Ensure no error on empty product catalog",
-			Mock: testutils.MockProduct(t, tmpDir, "test_000/ubuntu/noble/amd64/cloud").
-				BuildProductCatalog(),
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddProductCatalog(),
 			WantProducts: map[string][]string{},
 		},
 		{
 			Name: "Ensure referenced product version is not removed",
-			Mock: testutils.MockProduct(t, tmpDir, "test_010/ubuntu/noble/amd64/cloud").
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				BuildProductCatalog(),
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddVersions(testutils.MockVersion("1.0").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2")).
+				AddProductCatalog(),
 			WantProducts: map[string][]string{
 				"ubuntu:noble:amd64:cloud": {
-					"2024_01_01",
+					"1.0",
 				},
 			},
 		},
 		{
 			Name: "Ensure referenced product version older then 1 day is not removed",
-			Mock: testutils.MockProduct(t, tmpDir, "test_020/ubuntu/noble/amd64/cloud").
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				BuildProductCatalog().
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddVersions(testutils.MockVersion("1.0").WithFiles("lxd.tar.xz", "disk.qcow2")).
+				AddProductCatalog().
 				SetFilesAge(24 * time.Hour),
 			WantProducts: map[string][]string{
 				"ubuntu:noble:amd64:cloud": {
-					"2024_01_01",
+					"1.0",
 				},
 			},
 		},
 		{
 			Name: "Ensure fresh unreferenced product version is not removed",
-			Mock: testutils.MockProduct(t, tmpDir, "test_030/ubuntu/noble/amd64/cloud").
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				BuildProductCatalog().
-				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddVersions(testutils.MockVersion("1.0").WithFiles("lxd.tar.xz", "disk.qcow2")).
+				AddProductCatalog().
+				AddVersions(testutils.MockVersion("2.0").WithFiles("lxd.tar.xz", "root.squashfs")),
 			WantProducts: map[string][]string{
 				"ubuntu:noble:amd64:cloud": {
-					"2024_01_01",
-					"2024_01_02",
+					"1.0",
+					"2.0",
 				},
 			},
 		},
 		{
 			Name: "Ensure unreferenced old product is removed",
-			Mock: testutils.MockProduct(t, tmpDir, "test_040/ubuntu/noble/amd64/cloud").
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				BuildProductCatalog().
-				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddVersions(testutils.MockVersion("1.0").WithFiles("lxd.tar.xz", "disk.qcow2")).
+				AddProductCatalog().
+				AddVersions(testutils.MockVersion("2.0").WithFiles("lxd.tar.xz", "root.squashfs")).
 				SetFilesAge(24 * time.Hour),
 			WantProducts: map[string][]string{
 				"ubuntu:noble:amd64:cloud": {
-					"2024_01_01",
+					"1.0",
 				},
 			},
 		},
 		{
 			Name: "Ensure unreferenced old product is not removed when product catalog is not empty",
-			Mock: testutils.MockProduct(t, tmpDir, "test_050/ubuntu/noble/amd64/cloud").
-				BuildProductCatalog().
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddProductCatalog().
+				AddVersions(testutils.MockVersion("2024_01_01").WithFiles("lxd.tar.xz", "root.squashfs")).
 				SetFilesAge(24 * time.Hour),
 			WantProducts: map[string][]string{
 				"ubuntu:noble:amd64:cloud": {
@@ -384,11 +373,14 @@ func TestPruneDanglingResources(t *testing.T) {
 		},
 		{
 			Name: "Ensure only unreferenced project versions are removed",
-			Mock: testutils.MockProduct(t, tmpDir, "test_060/ubuntu/noble/amd64/cloud").
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs").
-				BuildProductCatalog().
-				AddVersion("2024_01_03", "lxd.tar.xz", "disk.qcow2").
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddVersions(
+					testutils.MockVersion("2024_01_01").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					testutils.MockVersion("2024_01_02").WithFiles("lxd.tar.xz", "root.squashfs")).
+				AddProductCatalog().
+				AddVersions(
+					testutils.MockVersion("2024_01_03").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					testutils.MockVersion("2024_01_04").WithFiles("lxd.tar.xz", "root.squashfs")).
 				SetFilesAge(48 * time.Hour),
 			WantProducts: map[string][]string{
 				"ubuntu:noble:amd64:cloud": {
@@ -402,6 +394,7 @@ func TestPruneDanglingResources(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			p := test.Mock
+			p.Create(t, t.TempDir())
 
 			err := pruneDanglingProductVersions(p.RootDir(), "v1", p.StreamName())
 			require.NoError(t, err)

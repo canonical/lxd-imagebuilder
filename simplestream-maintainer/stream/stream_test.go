@@ -2,7 +2,6 @@ package stream_test
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -16,7 +15,6 @@ import (
 
 func TestGetItem(t *testing.T) {
 	t.Parallel()
-	tmpDir := t.TempDir()
 
 	tests := []struct {
 		Name     string
@@ -26,17 +24,8 @@ func TestGetItem(t *testing.T) {
 		WantItem stream.Item
 	}{
 		{
-			Name: "Item does not exist",
-			Mock: func() testutils.ItemMock {
-				mock := testutils.MockItem(t, tmpDir, "nonexistent.txt", "")
-				_ = os.RemoveAll(mock.AbsPath())
-				return mock
-			}(),
-			WantErr: fs.ErrNotExist,
-		},
-		{
 			Name: "Item LXD metadata",
-			Mock: testutils.MockItem(t, tmpDir, "lxd.tar.xz", "test-content"),
+			Mock: testutils.MockItem("lxd.tar.xz").WithContent("test-content"),
 			WantItem: stream.Item{
 				Size:   12,
 				Name:   "lxd.tar.xz",
@@ -47,7 +36,7 @@ func TestGetItem(t *testing.T) {
 		},
 		{
 			Name:     "Item qcow2 with hash",
-			Mock:     testutils.MockItem(t, tmpDir, "disk.qcow2", "VM"),
+			Mock:     testutils.MockItem("disk.qcow2").WithContent("VM"),
 			CalcHash: true,
 			WantItem: stream.Item{
 				Size:   2,
@@ -59,7 +48,7 @@ func TestGetItem(t *testing.T) {
 		},
 		{
 			Name:     "Item squashfs with hash",
-			Mock:     testutils.MockItem(t, tmpDir, "root.squashfs", "container"),
+			Mock:     testutils.MockItem("root.squashfs").WithContent("container"),
 			CalcHash: true,
 			WantItem: stream.Item{
 				Size:   9,
@@ -71,7 +60,7 @@ func TestGetItem(t *testing.T) {
 		},
 		{
 			Name: "Item squashfs vcdiff",
-			Mock: testutils.MockItem(t, tmpDir, "test/delta.123123.vcdiff", "vcdiff"),
+			Mock: testutils.MockItem("test/delta.123123.vcdiff").WithContent("vcdiff"),
 			WantItem: stream.Item{
 				Size:      6,
 				Name:      "delta.123123.vcdiff",
@@ -83,7 +72,7 @@ func TestGetItem(t *testing.T) {
 		},
 		{
 			Name: "Item qcow2 vcdiff",
-			Mock: testutils.MockItem(t, tmpDir, "test/delta-123.qcow2.vcdiff", ""),
+			Mock: testutils.MockItem("test/delta-123.qcow2.vcdiff").WithContent(""),
 			WantItem: stream.Item{
 				Size:      0,
 				Name:      "delta-123.qcow2.vcdiff",
@@ -97,7 +86,9 @@ func TestGetItem(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			item, err := stream.GetItem(tmpDir, test.Mock.RelPath(), test.CalcHash)
+			test.Mock.Create(t, t.TempDir())
+
+			item, err := stream.GetItem(test.Mock.RootDir(), test.Mock.RelPath(), test.CalcHash)
 			if test.WantErr != nil {
 				assert.ErrorIs(t, err, test.WantErr)
 			} else {
@@ -110,7 +101,6 @@ func TestGetItem(t *testing.T) {
 
 func TestGetVersion(t *testing.T) {
 	t.Parallel()
-	tmpDir := t.TempDir()
 
 	tests := []struct {
 		Name        string
@@ -120,27 +110,27 @@ func TestGetVersion(t *testing.T) {
 		WantVersion stream.Version
 	}{
 		{
-			Name: "Version does not exist",
-			Mock: func() testutils.VersionMock {
-				mock := testutils.MockVersion(t, tmpDir, "non-existent-version", "")
-				_ = os.RemoveAll(mock.AbsPath())
-				return mock
-			}(),
-			WantErr: fs.ErrNotExist,
-		},
-		{
-			Name:    "Version is incomplete: missing rootfs",
-			Mock:    testutils.MockVersion(t, tmpDir, "20141010_1212", "lxd.tar.xz"),
+			Name: "Version is incomplete: missing rootfs",
+			Mock: testutils.MockVersion("20141010_1212").AddItems(
+				testutils.MockItem("lxd.tar.xz"),
+			),
 			WantErr: stream.ErrVersionIncomplete,
 		},
 		{
-			Name:    "Version is incomplete: missing metadata",
-			Mock:    testutils.MockVersion(t, tmpDir, "20241010_1212", "disk.qcow2", "rootfs.squashfs"),
+			Name: "Version is incomplete: missing metadata",
+			Mock: testutils.MockVersion("20241010_1212").AddItems(
+				testutils.MockItem("rootfs.squashfs"),
+				testutils.MockItem("disk.qcow2"),
+			),
 			WantErr: stream.ErrVersionIncomplete,
 		},
 		{
 			Name: "Valid version without item hashes",
-			Mock: testutils.MockVersion(t, tmpDir, "v10", "lxd.tar.xz", "disk.qcow2", "rootfs.squashfs"),
+			Mock: testutils.MockVersion("v10").AddItems(
+				testutils.MockItem("lxd.tar.xz"),
+				testutils.MockItem("disk.qcow2"),
+				testutils.MockItem("rootfs.squashfs"),
+			),
 			WantVersion: stream.Version{
 				Items: map[string]stream.Item{
 					"lxd.tar.xz": {
@@ -164,7 +154,11 @@ func TestGetVersion(t *testing.T) {
 		{
 			Name:       "Valid version with item hashes: Container and VM",
 			CalcHashes: true,
-			Mock:       testutils.MockVersion(t, tmpDir, "v20", "lxd.tar.xz", "disk.qcow2", "rootfs.squashfs"),
+			Mock: testutils.MockVersion("v10").AddItems(
+				testutils.MockItem("lxd.tar.xz"),
+				testutils.MockItem("disk.qcow2"),
+				testutils.MockItem("rootfs.squashfs"),
+			),
 			WantVersion: stream.Version{
 				Items: map[string]stream.Item{
 					"lxd.tar.xz": {
@@ -193,7 +187,13 @@ func TestGetVersion(t *testing.T) {
 		{
 			Name:       "Valid version with item hashes: Container and VM including delta files",
 			CalcHashes: true,
-			Mock:       testutils.MockVersion(t, tmpDir, "v30", "lxd.tar.xz", "disk.qcow2", "rootfs.squashfs", "delta.2013_12_31.vcdiff", "delta.2024_12_31.qcow2.vcdiff"),
+			Mock: testutils.MockVersion("v10").AddItems(
+				testutils.MockItem("lxd.tar.xz"),
+				testutils.MockItem("disk.qcow2"),
+				testutils.MockItem("rootfs.squashfs"),
+				testutils.MockItem("delta.2013_12_31.vcdiff"),
+				testutils.MockItem("delta.2024_12_31.qcow2.vcdiff"),
+			),
 			WantVersion: stream.Version{
 				Items: map[string]stream.Item{
 					"lxd.tar.xz": {
@@ -237,7 +237,9 @@ func TestGetVersion(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			version, err := stream.GetVersion(tmpDir, test.Mock.RelPath(), test.CalcHashes)
+			test.Mock.Create(t, t.TempDir())
+
+			version, err := stream.GetVersion(test.Mock.RootDir(), test.Mock.RelPath(), test.CalcHashes)
 			if test.WantErr != nil {
 				assert.ErrorIs(t, err, test.WantErr)
 			} else {
@@ -248,7 +250,7 @@ func TestGetVersion(t *testing.T) {
 				}
 
 				require.NoError(t, err)
-				require.Equal(t, &test.WantVersion, version)
+				assert.Equal(t, &test.WantVersion, version)
 			}
 		})
 	}
@@ -256,7 +258,6 @@ func TestGetVersion(t *testing.T) {
 
 func TestGetProduct(t *testing.T) {
 	t.Parallel()
-	tmpDir := t.TempDir()
 
 	tests := []struct {
 		Name        string
@@ -266,34 +267,25 @@ func TestGetProduct(t *testing.T) {
 		WantProduct stream.Product
 	}{
 		{
-			Name: "Product does not exist",
-			Mock: func() testutils.ProductMock {
-				mock := testutils.MockProduct(t, tmpDir, "images/ubuntu/noble/amd64/not-exist")
-				_ = os.RemoveAll(mock.AbsPath())
-				return mock
-			}(),
-			WantErr: fs.ErrNotExist,
-		},
-		{
 			Name:    "Product path is invalid: too long",
-			Mock:    testutils.MockProduct(t, tmpDir, "images/ubuntu/noble/amd64/desktop/2024.04.01"),
+			Mock:    testutils.MockProduct("images/ubuntu/noble/amd64/desktop/2024.04.01"),
 			WantErr: stream.ErrProductInvalidPath,
 		},
 		{
 			Name:    "Product path is invalid: too short",
-			Mock:    testutils.MockProduct(t, tmpDir, "images/ubuntu/noble/amd64"),
+			Mock:    testutils.MockProduct("images/ubuntu/noble/amd64"),
 			WantErr: stream.ErrProductInvalidPath,
 		},
 		{
 			Name: "Product with invalid config",
-			Mock: testutils.MockProduct(t, tmpDir, "images-minimal/d/r/a/v").
-				SetProductConfig("invalid::config"),
+			Mock: testutils.MockProduct("images-minimal/d/r/a/v").
+				AddProductConfig("invalid::config"),
 			WantErr: stream.ErrProductInvalidConfig,
 		},
 		{
 			Name: "Product with valid config",
-			Mock: testutils.MockProduct(t, tmpDir, "stream/distro/release/arch/variant").
-				SetProductConfig("requirements:\n  secure_boot: true"),
+			Mock: testutils.MockProduct("stream/distro/release/arch/variant").
+				AddProductConfig("requirements:\n  secure_boot: true"),
 			WantProduct: stream.Product{
 				Aliases:      "distro/release/variant",
 				Distro:       "distro",
@@ -307,7 +299,7 @@ func TestGetProduct(t *testing.T) {
 		},
 		{
 			Name: "Product with no versions (empty)",
-			Mock: testutils.MockProduct(t, tmpDir, "images/ubuntu/focal/arm64/cloud"),
+			Mock: testutils.MockProduct("images/ubuntu/focal/arm64/cloud"),
 			WantProduct: stream.Product{
 				Aliases:      "ubuntu/focal/cloud",
 				Distro:       "ubuntu",
@@ -319,9 +311,9 @@ func TestGetProduct(t *testing.T) {
 		},
 		{
 			Name: "Product with default variant",
-			Mock: testutils.MockProduct(t, tmpDir, "images/ubuntu/focal/arm64/default"),
+			Mock: testutils.MockProduct("images/ubuntu/focal/arm64/default"),
 			WantProduct: stream.Product{
-				Aliases:      "ubuntu/focal/default,ubuntu/focal",
+				Aliases:      "ubuntu/focal/default,ubuntu/focal", // Note 2 aliases.
 				Distro:       "ubuntu",
 				Release:      "focal",
 				Architecture: "arm64",
@@ -330,12 +322,23 @@ func TestGetProduct(t *testing.T) {
 			},
 		},
 		{
-			Name:        "Product with with multiple version",
+			Name: "Product with multiple complete versions",
+			Mock: testutils.MockProduct("images/ubuntu/focal/amd64/cloud").AddVersions(
+				testutils.MockVersion("2024_01_01").AddItems(
+					testutils.MockItem("lxd.tar.xz"),
+					testutils.MockItem("root.squashfs"),
+					testutils.MockItem("disk.qcow2"),
+				),
+				testutils.MockVersion("2024_01_02").AddItems(
+					testutils.MockItem("lxd.tar.xz"),
+					testutils.MockItem("disk.qcow2"),
+				),
+				testutils.MockVersion("2024_01_03").AddItems(
+					testutils.MockItem("lxd.tar.xz"),
+					testutils.MockItem("root.squashfs"),
+				),
+			),
 			IgnoreItems: true,
-			Mock: testutils.MockProduct(t, tmpDir, "images/ubuntu/focal/amd64/cloud").
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				AddVersion("2024_01_03", "lxd.tar.xz", "root.squashfs", "disk.qcow2"),
 			WantProduct: stream.Product{
 				Aliases:      "ubuntu/focal/cloud",
 				Distro:       "ubuntu",
@@ -353,10 +356,24 @@ func TestGetProduct(t *testing.T) {
 		{
 			Name:        "Product with incomplete versions",
 			IgnoreItems: true,
-			Mock: testutils.MockProduct(t, tmpDir, "images/ubuntu/lunar/amd64/cloud").
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-				AddVersion("2024_01_02", "lxd.tar.xz").
-				AddVersion("2024_01_03", "root.squashfs", "disk.qcow2"),
+			Mock: testutils.MockProduct("images/ubuntu/lunar/amd64/cloud").AddVersions(
+				testutils.MockVersion("2024_01_01").AddItems( // Complete version.
+					testutils.MockItem("lxd.tar.xz"),
+					testutils.MockItem("root.squashfs"),
+					testutils.MockItem("disk.qcow2"),
+				),
+				testutils.MockVersion("2024_01_02").AddItems( // Missing metadata file (incorrect name).
+					testutils.MockItem("lxd2.tar.xz"),
+					testutils.MockItem("root.squashfs"),
+				),
+				testutils.MockVersion("2024_01_03").AddItems( // Missing metadata file.
+					testutils.MockItem("root.squashfs"),
+					testutils.MockItem("disk.qcow2"),
+				),
+				testutils.MockVersion("2024_01_04").AddItems( // Missing rootfs.
+					testutils.MockItem("lxd.tar.xz"),
+				),
+			),
 			WantProduct: stream.Product{
 				Aliases:      "ubuntu/lunar/cloud",
 				Distro:       "ubuntu",
@@ -372,13 +389,18 @@ func TestGetProduct(t *testing.T) {
 		{
 			Name:        "Product with with one complete version to test item paths",
 			IgnoreItems: false,
-			Mock: testutils.MockProduct(t, tmpDir, "images/ubuntu/xenial/amd64/default").
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+			Mock: testutils.MockProduct("images/ubuntu/xenial/arm64/default").AddVersions(
+				testutils.MockVersion("2024_01_01").AddItems(
+					testutils.MockItem("lxd.tar.xz"),
+					testutils.MockItem("container.squashfs"),
+					testutils.MockItem("vm.qcow2"),
+				),
+			),
 			WantProduct: stream.Product{
 				Aliases:      "ubuntu/xenial/default,ubuntu/xenial",
 				Distro:       "ubuntu",
 				Release:      "xenial",
-				Architecture: "amd64",
+				Architecture: "arm64",
 				Variant:      "default",
 				Requirements: map[string]string{},
 				Versions: map[string]stream.Version{
@@ -387,19 +409,19 @@ func TestGetProduct(t *testing.T) {
 							"lxd.tar.xz": {
 								Size:  12,
 								Name:  "lxd.tar.xz",
-								Path:  "images/ubuntu/xenial/amd64/default/2024_01_01/lxd.tar.xz",
+								Path:  "images/ubuntu/xenial/arm64/default/2024_01_01/lxd.tar.xz",
 								Ftype: "lxd.tar.xz",
 							},
-							"root.squashfs": {
+							"container.squashfs": {
 								Size:  12,
-								Name:  "root.squashfs",
-								Path:  "images/ubuntu/xenial/amd64/default/2024_01_01/root.squashfs",
+								Name:  "container.squashfs",
+								Path:  "images/ubuntu/xenial/arm64/default/2024_01_01/container.squashfs",
 								Ftype: "squashfs",
 							},
-							"disk.qcow2": {
+							"vm.qcow2": {
 								Size:  12,
-								Name:  "disk.qcow2",
-								Path:  "images/ubuntu/xenial/amd64/default/2024_01_01/disk.qcow2",
+								Name:  "vm.qcow2",
+								Path:  "images/ubuntu/xenial/arm64/default/2024_01_01/vm.qcow2",
 								Ftype: "disk-kvm.img",
 							},
 						},
@@ -412,10 +434,11 @@ func TestGetProduct(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			p := test.Mock
+			p.Create(t, t.TempDir())
 
-			product, err := stream.GetProduct(tmpDir, p.RelPath())
+			product, err := stream.GetProduct(p.RootDir(), p.RelPath())
 			if test.WantErr != nil {
-				require.ErrorIs(t, err, test.WantErr)
+				assert.ErrorIs(t, err, test.WantErr)
 				return
 			}
 
@@ -427,14 +450,13 @@ func TestGetProduct(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, &test.WantProduct, product)
+			assert.Equal(t, &test.WantProduct, product)
 		})
 	}
 }
 
 func TestGetProducts(t *testing.T) {
 	t.Parallel()
-	tmpDir := t.TempDir()
 
 	tests := []struct {
 		Name         string
@@ -447,35 +469,41 @@ func TestGetProducts(t *testing.T) {
 			Name: "Test multiple products",
 			Mock: []testutils.ProductMock{
 				// Ensure products with single valid version are included.
-				testutils.MockProduct(t, tmpDir, "images-daily/ubuntu/jammy/amd64/cloud").
-					AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+				testutils.MockProduct("images-daily/ubuntu/jammy/amd64/cloud").AddVersions(
+					testutils.MockVersion("2024_01_01").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+				),
 
 				// Ensure products with multiple valid version are included.
-				testutils.MockProduct(t, tmpDir, "images-daily/ubuntu/jammy/arm64/desktop").
-					AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-					AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs").
-					AddVersion("2024_01_03", "lxd.tar.xz", "disk.qcow2"),
+				testutils.MockProduct("images-daily/ubuntu/jammy/arm64/desktop").AddVersions(
+					testutils.MockVersion("2023").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+					testutils.MockVersion("2024").WithFiles("lxd.tar.xz", "root.squashfs"),
+					testutils.MockVersion("2025").WithFiles("lxd.tar.xz", "disk.qcow2"),
+				),
 
 				// Ensure incomplete versions are ignored.
-				testutils.MockProduct(t, tmpDir, "images-daily/alpine/edge/amd64/cloud").
-					AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
-					AddVersion("2024_01_02", "lxd.tar.xz"). // Incomplete version
-					AddVersion("2024_01_03"),               // Incomplete version
+				testutils.MockProduct("images-daily/alpine/edge/amd64/cloud").AddVersions(
+					testutils.MockVersion("v1").WithFiles("lxd.tar.xz"),               // Incomplete
+					testutils.MockVersion("v2").WithFiles("disk.qcow2"),               // Incomplete
+					testutils.MockVersion("v3").WithFiles("lxd.tar.xz", "disk.qcow2"), // Complete
+					testutils.MockVersion("v4"),                                       // Incomplete
+				),
 
 				// Ensure products with all incomplete versions are not included.
-				testutils.MockProduct(t, tmpDir, "images-daily/alpine/edge/amd64/cloud").
-					AddVersion("2024_01_01", "disk.qcow2"). // Incomplete version
-					AddVersion("2024_01_02", "lxd.tar.xz"). // Incomplete version
-					AddVersion("2024_01_03"),               // Incomplete version
+				testutils.MockProduct("images-daily/alpine/edge/amd64/cloud").AddVersions(
+					testutils.MockVersion("01").WithFiles("lxd.tar.xz"),
+					testutils.MockVersion("02").WithFiles("disk.qcow2"),
+					testutils.MockVersion("03").WithFiles(),
+				),
 
 				// Ensure empty products (products with no versions) are not included.
-				testutils.MockProduct(t, tmpDir, "images-daily/alpine/3.19/amd64/cloud"),
+				testutils.MockProduct("images-daily/alpine/3.19/amd64/cloud"),
 
-				// Ensure invalid product paths are ignored.
-				testutils.MockProduct(t, tmpDir, "images-daily/invalid/product").
-					AddVersion("2024_01_01", "disk.qcow2"). // Incomplete version
-					AddVersion("2024_01_02", "lxd.tar.xz"). // Incomplete version
-					AddVersion("2024_01_03"),               // Incomplete version
+				// Ensure products on invalid path are not included.
+				testutils.MockProduct("images-daily/invalid/product").AddVersions(
+					testutils.MockVersion("one").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					testutils.MockVersion("two").WithFiles("lxd.tar.xz", "root.squashfs"),
+					testutils.MockVersion("three"),
+				),
 			},
 			WantProducts: map[string]stream.Product{
 				"ubuntu:jammy:amd64:cloud": {
@@ -497,9 +525,9 @@ func TestGetProducts(t *testing.T) {
 					Variant:      "desktop",
 					Requirements: map[string]string{},
 					Versions: map[string]stream.Version{
-						"2024_01_01": {},
-						"2024_01_02": {},
-						"2024_01_03": {},
+						"2023": {},
+						"2024": {},
+						"2025": {},
 					},
 				},
 				"alpine:edge:amd64:cloud": {
@@ -510,7 +538,7 @@ func TestGetProducts(t *testing.T) {
 					Variant:      "cloud",
 					Requirements: map[string]string{},
 					Versions: map[string]stream.Version{
-						"2024_01_01": {},
+						"v3": {},
 					},
 				},
 			},
@@ -518,7 +546,13 @@ func TestGetProducts(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		tmpDir := t.TempDir()
+
 		ps := test.Mock
+
+		for _, p := range ps {
+			p.Create(t, tmpDir)
+		}
 
 		if len(ps) == 0 {
 			require.Fail(t, "Test must include at least one mocked product!")
@@ -540,5 +574,50 @@ func TestGetProducts(t *testing.T) {
 				shared.MapKeys(products[id].Versions),
 				"Versions do not match for product %q", id)
 		}
+	}
+}
+
+func TestDoesNotExist(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		Name    string
+		Mock    testutils.Mock
+		WantErr error
+	}{
+		{
+			Name:    "Item does not exist",
+			Mock:    testutils.MockItem("lxd.tar.xz"),
+			WantErr: fs.ErrNotExist,
+		},
+		{
+			Name:    "Version does not exist",
+			Mock:    testutils.MockVersion("20230211_1212"),
+			WantErr: fs.ErrNotExist,
+		},
+		{
+			Name:    "Product does not exist",
+			Mock:    testutils.MockProduct("images/ubuntu/noble/amd64/desktop"),
+			WantErr: fs.ErrNotExist,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			var err error
+
+			switch test.Mock.(type) {
+			case testutils.ItemMock:
+				_, err = stream.GetItem(test.Mock.RootDir(), test.Mock.RelPath(), false)
+			case testutils.VersionMock:
+				_, err = stream.GetVersion(test.Mock.RootDir(), test.Mock.RelPath(), false)
+			case testutils.ProductMock:
+				_, err = stream.GetProduct(test.Mock.RootDir(), test.Mock.RelPath())
+			default:
+				require.Fail(t, "Unknown mock type")
+			}
+
+			assert.ErrorIs(t, err, test.WantErr)
+		})
 	}
 }
