@@ -14,24 +14,22 @@ import (
 	"github.com/canonical/lxd-imagebuilder/simplestream-maintainer/stream"
 )
 
-type DiscardOptions struct {
+type pruneOptions struct {
+	global *globalOptions
+
 	Dangling      bool
 	RetainNum     int
 	StreamVersion string
 	ImageDirs     []string
 }
 
-func NewDiscardCmd() *cobra.Command {
-	var o DiscardOptions
-
+func (o *pruneOptions) NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "prune <path> [flags]",
 		Short:   "Prune product versions",
 		Long:    "Prune product versions except for latest retaining only the specific number of latest ones.",
 		GroupID: "main",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return o.Run(args)
-		},
+		RunE:    o.Run,
 	}
 
 	cmd.PersistentFlags().BoolVar(&o.Dangling, "dangling", false, "Remove dangling product versions (not referenced from any product catalog)")
@@ -42,7 +40,7 @@ func NewDiscardCmd() *cobra.Command {
 	return cmd
 }
 
-func (o *DiscardOptions) Run(args []string) error {
+func (o *pruneOptions) Run(_ *cobra.Command, args []string) error {
 	if len(args) < 1 || args[0] == "" {
 		return fmt.Errorf("Argument %q is required and cannot be empty", "path")
 	}
@@ -103,17 +101,19 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 		}
 	}
 
-	// Update catalog removing existing versions to ensure
-	// a non-existing version is never listed for download.
-	tmpFile, err := shared.WriteJSONTempFile(catalog)
+	// Write product catalog to a temporary file that is located next
+	// to the final file to ensure atomic replace. Temporary file is
+	// prefixed with a dot to hide it.
+	catalogPathTemp := filepath.Join(rootDir, "streams", streamVersion, fmt.Sprintf(".%s.json.tmp", streamName))
+	err = shared.WriteJSONFile(catalogPathTemp, catalog)
 	if err != nil {
 		return err
 	}
 
-	defer os.Remove(tmpFile)
+	defer os.Remove(catalogPathTemp)
 
 	// Replace existing stream json file.
-	err = os.Rename(tmpFile, catalogPath)
+	err = os.Rename(catalogPathTemp, catalogPath)
 	if err != nil {
 		return err
 	}
@@ -125,16 +125,14 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 	}
 
 	// Remove old versions.
-	//
-	// TODO: How to handle errors? If an image is removed from the catalog,
-	// but we fail to actually remove it, it will be reincluded in the catalog
-	// next time we rebuild the index.
 	for _, v := range discardVersions {
 		err := os.RemoveAll(v)
 		if err != nil {
-			slog.Error("Failed pruning product version", "path", v, "error", err)
-			// return err // Do not error out.
+			slog.Error("Failed to prune old product version", "path", v, "error", err)
+			continue // Do not error out.
 		}
+
+		slog.Info("Pruned old product version", "path", v, "error", err)
 	}
 
 	return nil
@@ -145,7 +143,7 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 // product catalog.
 func pruneDanglingProductVersions(rootDir string, streamVersion string, streamName string) error {
 	// Get raw products (from actual directory hierarchy).
-	products, err := stream.GetProducts(rootDir, streamName, false)
+	products, err := stream.GetProducts(rootDir, streamName)
 	if err != nil {
 		return err
 	}
@@ -155,6 +153,14 @@ func pruneDanglingProductVersions(rootDir string, streamVersion string, streamNa
 	catalog, err := shared.ReadJSONFile(catalogPath, &stream.ProductCatalog{})
 	if err != nil {
 		return err
+	}
+
+	// If product catalog is empty, skip removal of dangling resources, because this
+	// may result in wiping everything out if, for example, product catalog was build
+	// inproperly or was accidentally deleted.
+	if len(catalog.Products) == 0 {
+		slog.Info("Skipping removal of dangling resources, because product catalog is empty")
+		return nil
 	}
 
 	// removeIfOlder gets info of the file on the given path and removes it
@@ -169,8 +175,10 @@ func pruneDanglingProductVersions(rootDir string, streamVersion string, streamNa
 			err := os.RemoveAll(path)
 			if err != nil {
 				slog.Error("Failed to prune dangling resource", "path", path, "error", err)
-				// return err // Do not error out.
+				return nil // Do not error out.
 			}
+
+			slog.Info("Pruned dangling resource", "path", path)
 		}
 
 		return nil
@@ -243,10 +251,14 @@ func pruneEmptyDirs(baseDir string, keepBaseDir bool) error {
 		}
 	}
 
-	// Remove directory if it is empty and is not root.
+	// Remove empty directory if it is not marked as base dir.
 	if !keepBaseDir && len(files) == 0 {
-		// Empty, remove dir.
-		return os.Remove(baseDir)
+		err := os.Remove(baseDir)
+		if err != nil {
+			return err
+		}
+
+		slog.Info("Removed empty directory", "path", baseDir)
 	}
 
 	return nil

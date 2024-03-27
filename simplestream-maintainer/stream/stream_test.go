@@ -413,7 +413,7 @@ func TestGetProduct(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			p := test.Mock
 
-			product, err := stream.GetProduct(tmpDir, p.RelPath(), false)
+			product, err := stream.GetProduct(tmpDir, p.RelPath())
 			if test.WantErr != nil {
 				require.ErrorIs(t, err, test.WantErr)
 				return
@@ -524,7 +524,7 @@ func TestGetProducts(t *testing.T) {
 			require.Fail(t, "Test must include at least one mocked product!")
 		}
 
-		products, err := stream.GetProducts(tmpDir, ps[0].StreamName(), false)
+		products, err := stream.GetProducts(tmpDir, ps[0].StreamName())
 		require.NoError(t, err)
 
 		// Ensure expected products are found.

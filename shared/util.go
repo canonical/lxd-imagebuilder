@@ -395,7 +395,8 @@ func ParseSquashfsCompression(compression string) (string, *int, error) {
 	return "", nil, fmt.Errorf("Invalid squashfs compression method %q", compression)
 }
 
-// FileHash calculates the hash of the provided files.
+// FileHash calculates the combined hash for the given files using the provided
+// hash function.
 func FileHash(hash hash.Hash, paths ...string) (string, error) {
 	if len(paths) == 0 {
 		return "", nil
@@ -452,27 +453,6 @@ func ReadJSONFile[T any](path string, obj *T) (*T, error) {
 	}
 
 	return obj, nil
-}
-
-// WriteJSONTempFile encodes the given structure into JSON format and writes it to the
-// a temporary file. It returns either a path to the new file or an error.
-func WriteJSONTempFile(obj any) (string, error) {
-	file, err := os.CreateTemp(os.TempDir(), "simple-stream.*")
-	if err != nil {
-		return "", fmt.Errorf("Failed creating temporary file: %w", err)
-	}
-
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-
-	err = encoder.Encode(obj)
-	if err != nil {
-		return "", fmt.Errorf("Error encoding JSON: %w", err)
-	}
-
-	return file.Name(), nil
 }
 
 // WriteJSONFile encodes the given structure into JSON format and writes it to the

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -16,7 +17,7 @@ import (
 	"github.com/canonical/lxd-imagebuilder/simplestream-maintainer/testutils"
 )
 
-func TestRebuildIndex(t *testing.T) {
+func TestBuildIndex(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
@@ -147,7 +148,7 @@ func TestRebuildIndex(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			p := test.Mock
 
-			err := rebuildIndex(p.RootDir(), "v1", []string{p.StreamName()}, true)
+			err := buildIndex(context.Background(), tmpDir, "v1", []string{p.StreamName()}, 2)
 			require.NoError(t, err, "Failed building index and catalog files!")
 
 			// Convert expected catalog and index files to json.
@@ -179,6 +180,22 @@ func TestRebuildIndex(t *testing.T) {
 				"Expected index does not match the built one!")
 		})
 	}
+}
+
+// GenFile generates a temporary file of the given size.
+func GenFile(t *testing.T, sizeInMB int) string {
+	t.Helper()
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), fmt.Sprint("testfile-", sizeInMB, "MB-"))
+	require.NoError(t, err)
+
+	_, err = tmpFile.Write(make([]byte, sizeInMB*1024*1024))
+	require.NoError(t, err)
+
+	err = tmpFile.Close()
+	require.NoError(t, err)
+
+	return tmpFile.Name()
 }
 
 func TestPruneOldVersions(t *testing.T) {
@@ -280,7 +297,7 @@ func TestPruneOldVersions(t *testing.T) {
 				return
 			}
 
-			product, err := stream.GetProduct(p.RootDir(), p.RelPath(), false)
+			product, err := stream.GetProduct(p.RootDir(), p.RelPath())
 			require.NoError(t, err)
 
 			// Ensure expected product versions are found.
@@ -330,8 +347,23 @@ func TestPruneDanglingResources(t *testing.T) {
 		{
 			Name: "Ensure fresh unreferenced product version is not removed",
 			Mock: testutils.MockProduct(t, tmpDir, "test_030/ubuntu/noble/amd64/cloud").
+				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
 				BuildProductCatalog().
-				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+			WantProducts: map[string][]string{
+				"ubuntu:noble:amd64:cloud": {
+					"2024_01_01",
+					"2024_01_02",
+				},
+			},
+		},
+		{
+			Name: "Ensure unreferenced old product is removed",
+			Mock: testutils.MockProduct(t, tmpDir, "test_040/ubuntu/noble/amd64/cloud").
+				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
+				BuildProductCatalog().
+				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
+				SetFilesAge(24 * time.Hour),
 			WantProducts: map[string][]string{
 				"ubuntu:noble:amd64:cloud": {
 					"2024_01_01",
@@ -339,16 +371,20 @@ func TestPruneDanglingResources(t *testing.T) {
 			},
 		},
 		{
-			Name: "Ensure unreferenced product older then 1 is removed",
-			Mock: testutils.MockProduct(t, tmpDir, "test_040/ubuntu/noble/amd64/cloud").
+			Name: "Ensure unreferenced old product is not removed when product catalog is not empty",
+			Mock: testutils.MockProduct(t, tmpDir, "test_050/ubuntu/noble/amd64/cloud").
 				BuildProductCatalog().
 				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
 				SetFilesAge(24 * time.Hour),
-			WantProducts: map[string][]string{},
+			WantProducts: map[string][]string{
+				"ubuntu:noble:amd64:cloud": {
+					"2024_01_01",
+				},
+			},
 		},
 		{
 			Name: "Ensure only unreferenced project versions are removed",
-			Mock: testutils.MockProduct(t, tmpDir, "test_050/ubuntu/noble/amd64/cloud").
+			Mock: testutils.MockProduct(t, tmpDir, "test_060/ubuntu/noble/amd64/cloud").
 				AddVersion("2024_01_01", "lxd.tar.xz", "root.squashfs", "disk.qcow2").
 				AddVersion("2024_01_02", "lxd.tar.xz", "root.squashfs").
 				BuildProductCatalog().
@@ -370,7 +406,7 @@ func TestPruneDanglingResources(t *testing.T) {
 			err := pruneDanglingProductVersions(p.RootDir(), "v1", p.StreamName())
 			require.NoError(t, err)
 
-			products, err := stream.GetProducts(p.RootDir(), p.StreamName(), false)
+			products, err := stream.GetProducts(p.RootDir(), p.StreamName())
 			require.NoError(t, err)
 
 			// Ensure all expected products are found.

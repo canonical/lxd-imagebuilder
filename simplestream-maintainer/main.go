@@ -1,35 +1,39 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
+	"time"
 
 	"github.com/spf13/cobra"
 )
 
 var version = "0.0.1"
 
+type globalOptions struct {
+	flagTimeout   uint
+	flagLogLevel  string
+	flagLogFormat string
+
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+
+// NewRootCmd initializes a CLI tool.
 func NewRootCmd() *cobra.Command {
-	var flagLogLevel string
-	var flagLogFormat string
+	o := globalOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "simplestream-maintainer",
-		Short:   "Simplestream server maintainer",
-		Version: version,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			err := setDefaultLogger(flagLogLevel, flagLogFormat)
-			if err != nil {
-				// Error out, so we don't use the default logger.
-				fmt.Fprintln(os.Stderr, "Error:", err)
-				os.Exit(1)
-			}
-		},
+		Use:              "simplestream-maintainer",
+		Short:            "Simplestream server maintainer",
+		Version:          version,
+		SilenceUsage:     true,
+		SilenceErrors:    true,
+		PersistentPreRun: o.PreRun,
 	}
-
-	cmd.SilenceUsage = true
-	cmd.SilenceErrors = true
 
 	cmd.AddGroup(
 		&cobra.Group{ID: "main", Title: "Commands:"},
@@ -40,14 +44,48 @@ func NewRootCmd() *cobra.Command {
 	cmd.SetHelpCommandGroupID("other")
 
 	// Global flags.
-	cmd.PersistentFlags().StringVar(&flagLogLevel, "loglevel", "info", "Log level")
-	cmd.PersistentFlags().StringVar(&flagLogFormat, "logformat", "text", "Log format")
+	cmd.PersistentFlags().UintVar(&o.flagTimeout, "timeout", 0, "Timeout in seconds")
+	cmd.PersistentFlags().StringVar(&o.flagLogLevel, "loglevel", "info", "Log level")
+	cmd.PersistentFlags().StringVar(&o.flagLogFormat, "logformat", "text", "Log format")
 
 	// Commands.
-	cmd.AddCommand(NewBuildCmd())
-	cmd.AddCommand(NewDiscardCmd())
+	buildOpts := buildOptions{global: &o}
+	cmd.AddCommand(buildOpts.NewCommand())
+
+	pruneOpts := pruneOptions{global: &o}
+	cmd.AddCommand(pruneOpts.NewCommand())
 
 	return cmd
+}
+
+func (o *globalOptions) PreRun(cmd *cobra.Command, args []string) {
+	// Configure global context.
+	if o.flagTimeout == 0 {
+		o.ctx, o.cancel = context.WithCancel(context.Background())
+	} else {
+		o.ctx, o.cancel = context.WithTimeout(context.Background(), time.Duration(o.flagTimeout)*time.Second)
+	}
+
+	// Configure interrupt signal handler.
+	chSingal := make(chan os.Signal, 1)
+	signal.Notify(chSingal, os.Interrupt)
+
+	go func() {
+		select {
+		case <-chSingal:
+			o.cancel()
+			slog.Error("Interrupted by signal")
+		case <-o.ctx.Done():
+			slog.Error("Interrupted by context", "error", o.ctx.Err())
+		}
+	}()
+
+	err := setDefaultLogger(o.flagLogLevel, o.flagLogFormat)
+	if err != nil {
+		// Error out, so we don't use the default logger.
+		fmt.Fprintln(os.Stderr, "Error:", err)
+		os.Exit(1)
+	}
 }
 
 func setDefaultLogger(level string, format string) error {

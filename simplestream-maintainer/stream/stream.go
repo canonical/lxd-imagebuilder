@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -15,116 +16,203 @@ import (
 )
 
 var (
-	ErrVersionIncomplete    = errors.New("product version is incomplete")
-	ErrProductInvalidPath   = errors.New("invalid product path")
-	ErrProductInvalidConfig = errors.New("invalid product config")
+	// ErrVersionIncomplete indicates that version is missing some files.
+	// For a version to be complete, a metadata and at least one root
+	// filesystem (qcow2/squashfs) must be present.
+	ErrVersionIncomplete = errors.New("Product version is incomplete")
+
+	// ErrProductInvalidPath indicates that product's path is invalid because
+	// either the directory on the given path does not exist, or it's path
+	// does not match the expected format.
+	ErrProductInvalidPath = errors.New("Invalid product path")
+
+	// ErrProductInvalidConfig indicating product's configuration file is invalid.
+	ErrProductInvalidConfig = errors.New("Invalid product config")
 )
 
+// ItemType is a type of the file that item holds.
 type ItemType string
 
 const (
-	ItemType_Unknown        = ""
-	ItemType_Squshfs        = "squashfs"
-	ItemType_Squshfs_VCDiff = "squashfs.vcdiff"
-	ItemType_DiskKVM        = "disk-kvm.img"
-	ItemType_DiskKVM_VCDiff = "disk-kvm.img.vcdiff"
+	// ItemTypeMetadata represents the LXD metadata file.
+	ItemTypeMetadata = "lxd.tar.xz"
+
+	// ItemTypeSquashfs represents container's root file system (squashfs).
+	ItemTypeSquashfs = "squashfs"
+
+	// ItemTypeSquashfsDelta represents container's root file system delta (VCDiff).
+	ItemTypeSquashfsDelta = "squashfs.vcdiff"
+
+	// ItemTypeDiskKVM represents VM's root file system (qcow2).
+	ItemTypeDiskKVM = "disk-kvm.img"
+
+	// ItemTypeDiskKVMDelta represents VM's root file system delta (VCDiff).
+	ItemTypeDiskKVMDelta = "disk-kvm.img.vcdiff"
+
+	// ItemTypeRootTarXz represents root file system as a tarball.
+	ItemTypeRootTarXz = "root.tar.xz"
 )
 
-var allowedItemSuffixes = []string{
-	".tar.xz",
-	".squashfs",
-	".qcow2",
-	".vcdiff",
+// ItemExt is file extension of the the file that item holds.
+type ItemExt string
+
+const (
+	// ItemExtMetadata is a file extension of LXD metadata file.
+	ItemExtMetadata = ".tar.xz"
+
+	// ItemExtSquashfs is a file extension of container's root file system.
+	ItemExtSquashfs = ".squashfs"
+
+	// ItemExtSquashfsDelta is a file extension of container's root file system delta (VCDiff).
+	ItemExtSquashfsDelta = ".vcdiff"
+
+	// ItemExtDiskKVM is a file extension of VM's root file system.
+	ItemExtDiskKVM = ".qcow2"
+
+	// ItemExtDiskKVMDelta is a file extension of VM's root file system delta (VCDiff).
+	ItemExtDiskKVMDelta = ".qcow2.vcdiff"
+)
+
+// List of item extensions that will be included in a product version.
+var allowedItemExtensions = []string{
+	ItemExtMetadata,
+	ItemExtSquashfs,
+	ItemExtSquashfsDelta,
+	ItemExtDiskKVM,
+	ItemExtDiskKVMDelta,
 }
 
-var imageConfigNames = []string{
+// List of valid product config names.
+var productConfigNames = []string{
 	"config.yaml",
 }
 
 // Item represents a file within a product version.
 type Item struct {
-	Name                     string `json:"-"`
-	Ftype                    string `json:"ftype"`
-	Path                     string `json:"path"`
-	Size                     int64  `json:"size"`
-	SHA256                   string `json:"sha256,omitempty"`
-	CombinedSHA256           string `json:"combined_sha256,omitempty"`
+	// Name of the file.
+	Name string `json:"-"`
+
+	// Type of the file. A known ItemType is used if possible, otherwise,
+	// this field is equal to the file's name.
+	Ftype string `json:"ftype"`
+
+	// Path of the file relative to the root directory (the directory where
+	// the simplestream content is hosted from).
+	Path string `json:"path"`
+
+	// Size of file.
+	Size int64 `json:"size"`
+
+	// SHA256 hash of the file.
+	SHA256 string `json:"sha256,omitempty"`
+
+	// CombinedSHA256DiskKvmImg stores the combined SHA256 hash of the metadata
+	// and VM file system (qcow2) files. This field is set only for the metadata
+	// item when both files exist in the same product version.
 	CombinedSHA256DiskKvmImg string `json:"combined_disk-kvm-img_sha256,omitempty"`
-	CombinedSHA256SquashFs   string `json:"combined_squashfs_sha256,omitempty"`
-	CombinedSHA256RootXz     string `json:"combined_rootxz_sha256,omitempty"`
-	DeltaBase                string `json:"delta_base,omitempty"`
+
+	// CombinedSHA256DiskKvmImg stores the combined SHA256 hash of the metadata
+	// and container file system (squashfs) files. This field is set only for
+	// the metadata item when both files exist in the same product version.
+	CombinedSHA256SquashFs string `json:"combined_squashfs_sha256,omitempty"`
+
+	// CombinedSHA256RootXz stores the combined SHA256 hash of the metadata and
+	// root file system tarball files. This field is set only for the metadata
+	// item when both files exist in the same product version.
+	CombinedSHA256RootXz string `json:"combined_rootxz_sha256,omitempty"`
+
+	// DeltaBase indicates the version from which the delta (.vcdiff) file was
+	// calculated from. This field is set only for the delta items.
+	DeltaBase string `json:"delta_base,omitempty"`
 }
 
 // Version represents a list of items available for the given image version.
 type Version struct {
+	// Map of items found within the version, where the map key
+	// represents file name.
 	Items map[string]Item `json:"items,omitempty"`
 }
 
-func (v Version) ItemsOfType(fType string) []Item {
-	var items []Item
-	for _, item := range v.Items {
-		if item.Ftype == fType {
-			items = append(items, item)
-		}
-	}
-
-	return items
-}
-
-// Product represents a singe image with all its available versions.
+// Product represents a single image with all its available versions.
 type Product struct {
-	Aliases      string             `json:"aliases"`
-	Architecture string             `json:"arch"`
-	Distro       string             `json:"os"`
-	Release      string             `json:"release"`
-	ReleaseTitle string             `json:"release_title"`
-	Variant      string             `json:"variant"`
-	Versions     map[string]Version `json:"versions,omitempty"`
-	Requirements map[string]string  `json:"requirements"`
+	// List of aliases using which the product (image) can be referenced.
+	Aliases string `json:"aliases"`
+
+	// Architecture the image was built for. For example amd64.
+	Architecture string `json:"arch"`
+
+	// Name of the image distribution.
+	Distro string `json:"os"`
+
+	// Name of the image release.
+	Release string `json:"release"`
+
+	// Release title or in other words pretty display name.
+	ReleaseTitle string `json:"release_title"`
+
+	// Name of the image variant.
+	Variant string `json:"variant"`
+
+	// Map of image versions, where the map key represents the version name.
+	Versions map[string]Version `json:"versions,omitempty"`
+
+	// Map of the requirements that need to be satisfied in order for the
+	// image to work. Map key represents the configuration key and map
+	// value the expected configuration value.
+	Requirements map[string]string `json:"requirements"`
 }
 
+// ID returns the ID of the product.
 func (p Product) ID() string {
 	return fmt.Sprintf("%s:%s:%s:%s", p.Distro, p.Release, p.Architecture, p.Variant)
 }
 
+// RelPath returns the product's path relative to the stream's root directory.
 func (p Product) RelPath() string {
 	return filepath.Join(p.Distro, p.Release, p.Architecture, p.Variant)
 }
 
 // ProductConfig contains additional data for all product versions (if found).
 type ProductConfig struct {
-	// Image requirements.
+	// A comma delimited release aliases that are used to construct final product aliases.
+	ReleaseAliases string `json:"release_aliases"`
+
+	// Map of the image requirements.
 	Requirements map[string]string `json:"requirements"`
 }
 
 // ProductCatalog contains all products.
 type ProductCatalog struct {
-	ContentID string             `json:"content_id"`
-	Format    string             `json:"format"`
-	DataType  string             `json:"datatype"`
-	Products  map[string]Product `json:"products"`
+	// ContentID (e.g. images).
+	ContentID string `json:"content_id"`
+
+	// Format of the product catalog (e.g. products:1.0).
+	Format string `json:"format"`
+
+	// Data type of the product catalog (e.g. image-downloads).
+	DataType string `json:"datatype"`
+
+	// Map of products, where the map key represents a product ID.
+	Products map[string]Product `json:"products"`
 }
 
-// GetProductCatalog generates a catalog of products located on the given path.
-func GetProductCatalog(rootDir string, streamName string) (*ProductCatalog, error) {
-	products, err := GetProducts(rootDir, streamName, true)
-	if err != nil {
-		return nil, err
+// NewCatalog creates a new product catalog.
+func NewCatalog(products map[string]Product) *ProductCatalog {
+	if products == nil {
+		products = make(map[string]Product)
 	}
 
-	imageStream := ProductCatalog{
+	return &ProductCatalog{
 		ContentID: "images",
 		DataType:  "image-downloads",
 		Format:    "products:1.0",
 		Products:  products,
 	}
-
-	return &imageStream, nil
 }
 
 // GetProducts traverses through the directories on the given path and retrieves
 // a map of found products.
-func GetProducts(rootDir string, streamRelPath string, calcHashes bool) (map[string]Product, error) {
+func GetProducts(rootDir string, streamRelPath string) (map[string]Product, error) {
 	streamPath := filepath.Join(rootDir, streamRelPath)
 
 	products := make(map[string]Product)
@@ -142,7 +230,7 @@ func GetProducts(rootDir string, streamRelPath string, calcHashes bool) (map[str
 		}
 
 		// Get product on the given path.
-		product, err := GetProduct(rootDir, relPath, calcHashes)
+		product, err := GetProduct(rootDir, relPath)
 		if err != nil {
 			if errors.Is(err, ErrProductInvalidPath) {
 				// Ignore invalid product paths.
@@ -170,7 +258,7 @@ func GetProducts(rootDir string, streamRelPath string, calcHashes bool) (map[str
 // GetProduct reads the product on the given path including all of its versions.
 // Product's relative path must match the predetermined format, otherwise, an error
 // is returned.
-func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Product, error) {
+func GetProduct(rootDir string, productRelPath string) (*Product, error) {
 	productPath := filepath.Join(rootDir, productRelPath)
 	productPathFormat := "stream/distribution/release/architecture/variant"
 	productPathLength := len(strings.Split(productPathFormat, string(os.PathSeparator)))
@@ -178,8 +266,7 @@ func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Produc
 	// Ensure product relative path matches the required format.
 	parts := strings.Split(productRelPath, string(os.PathSeparator))
 	if len(parts) < productPathLength || len(parts) > productPathLength {
-		return nil, fmt.Errorf("%w: path %q does not match the required format %q",
-			ErrProductInvalidPath, productRelPath, productPathFormat)
+		return nil, fmt.Errorf("%w: path %q does not match the required format %q", ErrProductInvalidPath, productRelPath, productPathFormat)
 	}
 
 	// Ensure product path is a directory.
@@ -201,13 +288,11 @@ func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Produc
 		Requirements: make(map[string]string, 0),
 	}
 
-	// Evaluate aliases.
-	aliases := []string{fmt.Sprintf("%s/%s/%s", p.Distro, p.Release, p.Variant)}
+	// Create default aliases.
+	aliases := []string{path.Join(p.Distro, p.Release, p.Variant)}
 	if p.Variant == "default" {
-		aliases = append(aliases, fmt.Sprintf("%s/%s", p.Distro, p.Release))
+		aliases = append(aliases, path.Join(p.Distro, p.Release))
 	}
-
-	p.Aliases = strings.Join(aliases, ",")
 
 	// Check product content.
 	files, err := os.ReadDir(productPath)
@@ -220,7 +305,7 @@ func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Produc
 			versionRelPath := filepath.Join(productRelPath, f.Name())
 
 			// Parse product version.
-			version, err := GetVersion(rootDir, versionRelPath, calcHashes)
+			version, err := GetVersion(rootDir, versionRelPath, false)
 			if err != nil {
 				if errors.Is(err, ErrVersionIncomplete) {
 					// Ignore incomplete versions.
@@ -235,7 +320,7 @@ func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Produc
 			}
 
 			p.Versions[f.Name()] = *version
-		} else if lxdShared.ValueInSlice(f.Name(), imageConfigNames) {
+		} else if lxdShared.ValueInSlice(f.Name(), productConfigNames) {
 			configPath := filepath.Join(productPath, f.Name())
 
 			// Parse product config.
@@ -244,17 +329,40 @@ func GetProduct(rootDir string, productRelPath string, calcHashes bool) (*Produc
 				return nil, fmt.Errorf("product %q: %w: %w", productRelPath, ErrProductInvalidConfig, err)
 			}
 
+			// Evaluate extra aliases.
+			releaseAliases := strings.Split(config.ReleaseAliases, ",")
+			for _, release := range releaseAliases {
+				// Remove all spaces, as they are not allowed.
+				release = strings.ReplaceAll(release, " ", "")
+				if release == "" {
+					continue
+				}
+
+				// Use path.Join for aliases to ignore OS specific
+				// filepath separator.
+				alias := path.Join(p.Distro, release, p.Variant)
+				aliases = append(aliases, alias)
+
+				// Add shorter alias if variant is default.
+				if p.Variant == "default" {
+					aliases = append(aliases, path.Join(p.Distro, p.Release))
+				}
+			}
+
 			// Apply config to product.
 			p.Requirements = config.Requirements
 		}
 	}
+
+	p.Aliases = strings.Join(aliases, ",")
 
 	return &p, nil
 }
 
 // GetVersion retrieves metadata for a single version, by reading directory
 // files and converting those that should be incuded in the product catalog
-// into items.
+// into items. For the relevant items, the file hashes are calculated, if
+// calcHashes is set to true.
 func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Version, error) {
 	versionPath := filepath.Join(rootDir, versionRelPath)
 
@@ -268,12 +376,14 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 		return nil, err
 	}
 
+	// Extract relevant items from the version directory.
 	for _, file := range files {
-		if file.IsDir() || !shared.HasSuffix(file.Name(), allowedItemSuffixes...) {
+		if file.IsDir() || !shared.HasSuffix(file.Name(), allowedItemExtensions...) {
 			// Skip directories and disallowed items.
 			continue
 		}
 
+		// Get an item and calculate its hash if necessary.
 		itemPath := filepath.Join(versionRelPath, file.Name())
 		item, err := GetItem(rootDir, itemPath, calcHashes)
 		if err != nil {
@@ -286,12 +396,17 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 	// Ensure version has at metadata and at least one rootfs (container, vm).
 	isVersionComplete := false
 
-	// Calculate combined hashes.
-	metaItem, ok := version.Items["lxd.tar.xz"]
+	// Check whether version is complete, and calculate combined hashes if necessary.
+	metaItem, ok := version.Items[ItemTypeMetadata]
 	if ok {
 		metaItemPath := filepath.Join(versionPath, metaItem.Name)
 
 		for _, i := range version.Items {
+			if i.Ftype == ItemTypeMetadata {
+				// Skip metadata item.
+				continue
+			}
+
 			itemHash := ""
 			itemPath := filepath.Join(versionPath, i.Name)
 
@@ -303,24 +418,24 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 			}
 
 			switch i.Ftype {
-			case "disk-kvm.img":
+			case ItemTypeDiskKVM:
 				metaItem.CombinedSHA256DiskKvmImg = itemHash
 				isVersionComplete = true
 
-			case "squashfs":
+			case ItemTypeSquashfs:
 				metaItem.CombinedSHA256SquashFs = itemHash
 				isVersionComplete = true
 
-			case "root.tar.xz":
+			case ItemTypeRootTarXz:
 				metaItem.CombinedSHA256RootXz = itemHash
 			}
 		}
 
-		version.Items["lxd.tar.xz"] = metaItem
+		version.Items[ItemTypeMetadata] = metaItem
 	}
 
 	// At least metadata and one of squashfs or qcow2 files must exist
-	// for the version to be considered valid.
+	// for the version to be considered complete.
 	if !isVersionComplete {
 		return nil, fmt.Errorf("%w: %q", ErrVersionIncomplete, versionRelPath)
 	}
@@ -328,7 +443,8 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 	return &version, nil
 }
 
-// GetItem retrieves item metadata for the file on a given path.
+// GetItem retrieves item metadata for the file on a given path. If calcHash is
+// set to true, the file's hash is calculated.
 func GetItem(rootDir string, itemRelPath string, calcHash bool) (*Item, error) {
 	itemPath := filepath.Join(rootDir, itemRelPath)
 
@@ -352,17 +468,19 @@ func GetItem(rootDir string, itemRelPath string, calcHash bool) (*Item, error) {
 	}
 
 	switch filepath.Ext(itemPath) {
-	case ".squashfs":
-		item.Ftype = ItemType_Squshfs
-	case ".qcow2":
-		item.Ftype = ItemType_DiskKVM
+	case ItemExtSquashfs:
+		item.Ftype = ItemTypeSquashfs
+
+	case ItemExtDiskKVM:
+		item.Ftype = ItemTypeDiskKVM
+
 	case ".vcdiff":
 		parts := strings.Split(item.Name, ".")
-		if strings.HasSuffix(item.Name, ".qcow2.vcdiff") {
-			item.Ftype = ItemType_DiskKVM_VCDiff
+		if strings.HasSuffix(item.Name, ItemExtDiskKVMDelta) {
+			item.Ftype = ItemTypeDiskKVMDelta
 			item.DeltaBase = parts[len(parts)-3]
 		} else {
-			item.Ftype = ItemType_Squshfs_VCDiff
+			item.Ftype = ItemTypeSquashfsDelta
 			item.DeltaBase = parts[len(parts)-2]
 		}
 
