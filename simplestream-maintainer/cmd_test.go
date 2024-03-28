@@ -56,9 +56,10 @@ func TestBuildIndex(t *testing.T) {
 			// - Missing source file for calculating delta does not break index building.
 			Name: "Ensure incomplete versions are ignored, and vcdiffs are calculated only for complete versions",
 			Mock: testutils.MockProduct("images-daily/ubuntu/focal/amd64/cloud").AddVersions(
-				testutils.MockVersion("2024_01_01").WithFiles("lxd.tar.xz", "disk.qcow2"), // Missing rootfs.squashfs
-				testutils.MockVersion("2024_01_02").WithFiles("lxd.tar.xz"),               // Incomplete version
-				testutils.MockVersion("2024_01_03").WithFiles("lxd.tar.xz", "disk.qcow2", "rootfs.squashfs"),
+				testutils.MockVersion("2024_01_01").WithFiles("lxd.tar.xz", "disk.qcow2"),                                     // Missing rootfs.squashfs
+				testutils.MockVersion("2024_01_02").WithFiles("lxd.tar.xz"),                                                   // Incomplete version
+				testutils.MockVersion("2024_01_03").WithFiles("lxd.tar.xz", "disk.qcow2").SetChecksums("invalid  disk.qcow2"), // Invalid checksums
+				testutils.MockVersion("2024_01_04").WithFiles("lxd.tar.xz", "disk.qcow2", "rootfs.squashfs"),
 			),
 			WantCatalog: stream.ProductCatalog{
 				ContentID: "images",
@@ -74,7 +75,6 @@ func TestBuildIndex(t *testing.T) {
 						Requirements: map[string]string{},
 						Versions: map[string]stream.Version{
 							"2024_01_01": {
-								Checksums: map[string]string{},
 								Items: map[string]stream.Item{
 									"lxd.tar.xz": {
 										Ftype:                    "lxd.tar.xz",
@@ -91,13 +91,12 @@ func TestBuildIndex(t *testing.T) {
 									},
 								},
 							},
-							"2024_01_03": {
-								Checksums: map[string]string{},
+							"2024_01_04": {
 								Items: map[string]stream.Item{
 									"lxd.tar.xz": {
 										Ftype:                    "lxd.tar.xz",
 										Size:                     12,
-										Path:                     "images-daily/ubuntu/focal/amd64/cloud/2024_01_03/lxd.tar.xz",
+										Path:                     "images-daily/ubuntu/focal/amd64/cloud/2024_01_04/lxd.tar.xz",
 										SHA256:                   "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 										CombinedSHA256DiskKvmImg: "d9da2d2151ce5c89dfb8e1c329b286a02bd8464deb38f0f4d858486a27b796bf",
 										CombinedSHA256SquashFs:   "d9da2d2151ce5c89dfb8e1c329b286a02bd8464deb38f0f4d858486a27b796bf",
@@ -105,21 +104,21 @@ func TestBuildIndex(t *testing.T) {
 									"disk.qcow2": {
 										Ftype:  "disk-kvm.img",
 										Size:   12,
-										Path:   "images-daily/ubuntu/focal/amd64/cloud/2024_01_03/disk.qcow2",
+										Path:   "images-daily/ubuntu/focal/amd64/cloud/2024_01_04/disk.qcow2",
 										SHA256: "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 									},
 									// Ensure vcdiff is calculated for disk.qcow2 with delta base 2024_01_01.
 									"disk.2024_01_01.qcow2.vcdiff": {
 										Ftype:     "disk-kvm.img.vcdiff",
 										Size:      45,
-										Path:      "images-daily/ubuntu/focal/amd64/cloud/2024_01_03/disk.2024_01_01.qcow2.vcdiff",
+										Path:      "images-daily/ubuntu/focal/amd64/cloud/2024_01_04/disk.2024_01_01.qcow2.vcdiff",
 										SHA256:    "db7efd312bacbb1a8ca8d52f4da37052081ac86f63f93f8f62b52ae455079db2",
 										DeltaBase: "2024_01_01",
 									},
 									"rootfs.squashfs": {
 										Ftype:  "squashfs",
 										Size:   12,
-										Path:   "images-daily/ubuntu/focal/amd64/cloud/2024_01_03/rootfs.squashfs",
+										Path:   "images-daily/ubuntu/focal/amd64/cloud/2024_01_04/rootfs.squashfs",
 										SHA256: "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 									},
 								},

@@ -143,9 +143,12 @@ func buildIndex(ctx context.Context, rootDir string, streamVersion string, strea
 }
 
 // buildProductCatalog compares the existing product catalog and actual products on
-// the disk. For missing products, first the delta files and hashes are calculated
-// and only then the products are inserted into the catalog. Workers are used to
-// limit maximum concurent tasks when calulcating hashes and delta files.
+// the disk. For missing any new version, hashes are calculated and compared against
+// the checksums file. Based on the final catalog (that contains only valid version)
+// missing delta files are generated. Finally the catalog is returned.
+//
+// Note: Workers limit the maximum number of concurent tasks when calulcating hashes
+// and delta files.
 func buildProductCatalog(ctx context.Context, rootDir string, streamVersion string, streamName string, workers int) (*stream.ProductCatalog, error) {
 	// Get current product catalog (from json file).
 	catalogPath := filepath.Join(rootDir, "streams", streamVersion, fmt.Sprintf("%s.json", streamName))
@@ -225,14 +228,6 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 			jobs <- func() {
 				defer wg.Done()
 
-				// Create delta files before retrieving the version,
-				// so that hashes are also calculated for delta files.
-				err = createDeltaFiles(ctx, rootDir, productPath, versionName)
-				if err != nil {
-					slog.Error("Failed to create delta file", "streamName", streamName, "product", id, "version", versionName, "error", err)
-					return
-				}
-
 				// Read the version and generate the file hashes.
 				versionPath := filepath.Join(productPath, versionName)
 				version, err := stream.GetVersion(rootDir, versionPath, true)
@@ -242,24 +237,15 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 				}
 
 				// Verify items checksums if checksum file is present
-				// within the version. If verification succeeds, update
-				// the checksums file to include potential delta files.
+				// within the version.
 				if version.Checksums != nil {
-					checksumFile := filepath.Join(rootDir, versionPath, stream.FileChecksumSHA256)
-
 					for _, item := range version.Items {
-						checksum, ok := version.Checksums[item.Name]
+						checksum := version.Checksums[item.Name]
 
-						// If checksums for delta files do not exist,
-						// append them to the checksums file because
-						// they were just generated.
+						// Ignore verification, if the checksum for the delta
+						// file does not exist. This is because the delta file
+						// is generated after the checksums file is created.
 						if !ok && (item.Ftype == stream.ItemTypeDiskKVMDelta || item.Ftype == stream.ItemTypeSquashfsDelta) {
-							err := shared.AppendToFile(checksumFile, fmt.Sprintf("%s  %s\n", checksum, item.Name))
-							if err != nil {
-								slog.Error("Failed to update checksums file", "streamName", streamName, "product", id, "version", versionName, "error", err)
-								return
-							}
-
 							continue
 						}
 
@@ -280,112 +266,133 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 		}
 	}
 
+	// Wait for all workers to finish to ensure the final catalog contains
+	// all valid product versions.
+	wg.Wait()
+
+	// Build delta files after all new versions are added to the catalog.
+	// This way we can determine which versions are valid for delta files.
+	//
+	// Traverse through the products. For each product iterate over versions
+	// and find items that are valid for delta files. If a delta file already
+	// exists, ensure that the catalog contains its file hash. If a delta file
+	// does not exist, create it and update the catalog with the new file hash.
+	for id, product := range catalog.Products {
+		productRelPath := filepath.Join(streamName, product.RelPath())
+
+		versions := shared.MapKeys(product.Versions)
+		slices.Sort(versions)
+
+		if len(versions) < 2 {
+			// At least 2 versions must be available for delta.
+			continue
+		}
+
+		// Skip the oldest version because even if the .vcdiff does
+		// not exist, we cannot generate it.
+		for i := 1; i < len(versions); i++ {
+			sourceVerName := versions[i-1]
+			targetVerName := versions[i]
+			targetVersion := product.Versions[targetVerName]
+
+			for _, item := range targetVersion.Items {
+				// Delta should be created only for qcow2 and squashfs files.
+				if item.Ftype != stream.ItemTypeDiskKVM && item.Ftype != stream.ItemTypeSquashfs {
+					continue
+				}
+
+				wg.Add(1)
+				jobs <- func() {
+					defer wg.Done()
+
+					// Evaluate delta file name.
+					prefix, _ := strings.CutSuffix(item.Name, filepath.Ext(item.Name))
+					suffix := "vcdiff"
+
+					if item.Ftype == stream.ItemTypeDiskKVM {
+						suffix = "qcow2.vcdiff"
+					}
+
+					deltaName := fmt.Sprintf("%s.%s.%s", prefix, sourceVerName, suffix)
+					deltaItem, deltaExists := targetVersion.Items[deltaName]
+
+					// Generate delta file if it does not already exist.
+					if !deltaExists {
+						sourcePath := filepath.Join(rootDir, productRelPath, sourceVerName, item.Name)
+						targetPath := filepath.Join(rootDir, productRelPath, targetVerName, item.Name)
+						outputPath := filepath.Join(rootDir, productRelPath, targetVerName, deltaName)
+
+						// Ensure source path exists.
+						_, err := os.Stat(sourcePath)
+						if err != nil {
+							if errors.Is(err, os.ErrNotExist) {
+								// Source does not exist. Skip..
+								return
+							}
+
+							slog.Error("Failed to read base delta file", "product", id, "version", targetVerName, "item", item.Name, "deltaBase", sourceVerName, "error", err)
+							return
+						}
+
+						// -e compress
+						// -f force
+						cmd := exec.CommandContext(ctx, "xdelta3", "-e", "-s", sourcePath, targetPath, outputPath)
+						cmd.Stdout = os.Stdout
+						cmd.Stderr = os.Stderr
+
+						err = cmd.Run()
+						if err != nil {
+							slog.Error("Failed creating delta file", "product", id, "version", targetVerName, "item", deltaName, "deltaBase", sourceVerName, "error", err)
+							_ = os.Remove(outputPath)
+							return
+						}
+
+						slog.Info("Delta generated successfully", "product", id, "version", targetVerName, "item", deltaName, "deltaBase", sourceVerName)
+					}
+
+					// If delta file exists but is missing a hash in the catalog,
+					// or was just generated, calculate it's hash and add it to
+					// the catalog.
+					if !deltaExists || deltaItem.SHA256 == "" {
+						deltaRelPath := filepath.Join(productRelPath, targetVerName, deltaName)
+						deltaItem, err := stream.GetItem(rootDir, deltaRelPath, true)
+						if err != nil {
+							slog.Error("Failed to get existing delta item", "product", id, "version", targetVerName, "item", deltaName, "error", err)
+							return
+						}
+
+						// Append delta file hash to the version checksums
+						// file if it exists.
+						_, ok := targetVersion.Checksums[deltaName]
+						if !ok && len(targetVersion.Checksums) > 0 {
+							// Append new item to the checksums file.
+							checksumFile := filepath.Join(rootDir, productRelPath, targetVerName, stream.FileChecksumSHA256)
+							err := shared.AppendToFile(checksumFile, fmt.Sprintf("%s  %s\n", deltaItem.SHA256, deltaName))
+							if err != nil {
+								slog.Error("Failed to update checksums file", "product", id, "version", targetVerName, "error", err)
+								return
+							}
+
+							// Update version checksums map.
+							mutex.Lock()
+							catalog.Products[id].Versions[targetVerName].Checksums[deltaName] = deltaItem.SHA256
+							mutex.Unlock()
+						}
+
+						// Include delta item with hashes in the catalog.
+						mutex.Lock()
+						catalog.Products[id].Versions[targetVerName].Items[deltaName] = *deltaItem
+						mutex.Unlock()
+					}
+				}
+			}
+		}
+	}
+
 	// Wait for all goroutines to finish.
 	wg.Wait()
 
 	return catalog, nil
-}
-
-// createDeltaFiles traverses through the directory of the given stream and
-// creates missing delta (.vcdiff) files for any subsequent complete versions.
-func createDeltaFiles(ctx context.Context, rootDir string, productRelPath string, versionName string) error {
-	productPath := filepath.Join(rootDir, productRelPath)
-
-	// Get existing products (from actual directory hierarchy).
-	product, err := stream.GetProduct(rootDir, productRelPath)
-	if err != nil {
-		return err
-	}
-
-	versions := shared.MapKeys(product.Versions)
-	slices.Sort(versions)
-
-	if len(versions) < 2 {
-		// At least 2 versions must be available for diff.
-		return nil
-	}
-
-	// Skip the oldest version because even if the .vcdiff does
-	// not exist, we cannot generate it.
-	for i := 1; i < len(versions); i++ {
-		if versionName != "" && versions[i] != versionName {
-			continue
-		}
-
-		preName := versions[i-1]
-		curName := versions[i]
-
-		version := product.Versions[curName]
-
-		for _, item := range version.Items {
-			// Vcdiff should be created only for qcow2 and squashfs files.
-			if item.Ftype != stream.ItemTypeDiskKVM && item.Ftype != stream.ItemTypeSquashfs {
-				continue
-			}
-
-			prefix, _ := strings.CutSuffix(item.Name, filepath.Ext(item.Name))
-			suffix := "vcdiff"
-
-			if item.Ftype == stream.ItemTypeDiskKVM {
-				suffix = "qcow2.vcdiff"
-			}
-
-			vcdiff := fmt.Sprintf("%s.%s.%s", prefix, preName, suffix)
-			_, ok := version.Items[vcdiff]
-			if ok {
-				// Delta already exists. Skip..
-				slog.Debug("Delta already exists", "version", curName, "deltaBase", preName)
-				continue
-			}
-
-			sourcePath := filepath.Join(productPath, preName, item.Name)
-			targetPath := filepath.Join(productPath, curName, item.Name)
-			outputPath := filepath.Join(productPath, curName, vcdiff)
-
-			// Ensure source path exists.
-			_, err := os.Stat(sourcePath)
-			if err != nil {
-				if errors.Is(err, os.ErrNotExist) {
-					// Source does not exist. Skip..
-					continue
-				}
-
-				return err
-			}
-
-			err = calcVCDiff(ctx, sourcePath, targetPath, outputPath)
-			if err != nil {
-				return err
-			}
-
-			slog.Info("Delta generated successfully", "version", curName, "deltaBase", preName)
-		}
-	}
-
-	return nil
-}
-
-// calcVCDiff calculates the delta file (.vcdiff) between the source and target
-// files. The output file is written to the outputPath.
-func calcVCDiff(ctx context.Context, sourcePath string, targetPath string, outputPath string) error {
-	bin, err := exec.LookPath("xdelta3")
-	if err != nil {
-		return err
-	}
-
-	// -e compress
-	// -f force
-	cmd := exec.CommandContext(ctx, bin, "-e", "-s", sourcePath, targetPath, outputPath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	err = cmd.Run()
-	if err != nil {
-		_ = os.Remove(outputPath)
-		return err
-	}
-
-	return nil
 }
 
 // DiffProducts is a helper function that compares two product maps and returns
