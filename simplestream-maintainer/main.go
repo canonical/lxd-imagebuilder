@@ -69,11 +69,7 @@ func (o *globalOptions) PreRun(cmd *cobra.Command, args []string) {
 	// Set signals that cancel the context.
 	o.ctx, o.cancel = signal.NotifyContext(o.ctx, os.Interrupt)
 
-	go func() {
-		<-o.ctx.Done()
-		slog.Error("Context canceled", "error", o.ctx.Err())
-	}()
-
+	// Configure default logger.
 	err := setDefaultLogger(o.flagLogLevel, o.flagLogFormat)
 	if err != nil {
 		// Error out, so we don't use the default logger.

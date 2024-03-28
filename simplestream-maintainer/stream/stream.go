@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -28,6 +29,12 @@ var (
 
 	// ErrProductInvalidConfig indicating product's configuration file is invalid.
 	ErrProductInvalidConfig = errors.New("Invalid product config")
+)
+
+// Static list of file names.
+const (
+	// FileChecksumSHA256 is the name of the checksum file containing SHA256 hashes.
+	FileChecksumSHA256 = "SHA256SUMS"
 )
 
 // ItemType is a type of the file that item holds.
@@ -128,6 +135,9 @@ type Item struct {
 
 // Version represents a list of items available for the given image version.
 type Version struct {
+	// Checksums of files within the version.
+	Checksums map[string]string `json:"-"`
+
 	// Map of items found within the version, where the map key
 	// represents file name.
 	Items map[string]Item `json:"items,omitempty"`
@@ -297,7 +307,7 @@ func GetProduct(rootDir string, productRelPath string) (*Product, error) {
 	// Check product content.
 	files, err := os.ReadDir(productPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read product contents: %w", err)
+		return nil, fmt.Errorf("Failed to read product contents: %w", err)
 	}
 
 	for _, f := range files {
@@ -378,14 +388,31 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 
 	// Extract relevant items from the version directory.
 	for _, file := range files {
-		if file.IsDir() || !shared.HasSuffix(file.Name(), allowedItemExtensions...) {
-			// Skip directories and disallowed items.
+		if file.IsDir() {
+			// Skip directories.
+			continue
+		}
+
+		if file.Name() == FileChecksumSHA256 {
+			// Read the checksum file and convert it to a map
+			// of filename and checksum pairs.
+			checksumPath := filepath.Join(versionPath, file.Name())
+			version.Checksums, err = ReadChecksumFile(checksumPath)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to read checksums file: %w", err)
+			}
+
+			continue
+		}
+
+		if !shared.HasSuffix(file.Name(), allowedItemExtensions...) {
+			// Skip disallowed items.
 			continue
 		}
 
 		// Get an item and calculate its hash if necessary.
-		itemPath := filepath.Join(versionRelPath, file.Name())
-		item, err := GetItem(rootDir, itemPath, calcHashes)
+		itemRelPath := filepath.Join(versionRelPath, file.Name())
+		item, err := GetItem(rootDir, itemRelPath, calcHashes)
 		if err != nil {
 			return nil, err
 		}
@@ -402,15 +429,16 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 		metaItemPath := filepath.Join(versionPath, metaItem.Name)
 
 		for _, i := range version.Items {
-			if i.Ftype == ItemTypeMetadata {
-				// Skip metadata item.
+			if !lxdShared.ValueInSlice(i.Ftype, []string{ItemTypeSquashfs, ItemTypeDiskKVM, ItemTypeRootTarXz}) {
+				// Skip files that are not required for combined checksum.
 				continue
 			}
 
 			itemHash := ""
-			itemPath := filepath.Join(versionPath, i.Name)
 
 			if calcHashes {
+				// Calculate combined hash for the item.
+				itemPath := filepath.Join(versionPath, i.Name)
 				itemHash, err = shared.FileHash(sha256.New(), metaItemPath, itemPath)
 				if err != nil {
 					return nil, err
@@ -489,4 +517,36 @@ func GetItem(rootDir string, itemRelPath string, calcHash bool) (*Item, error) {
 	}
 
 	return &item, nil
+}
+
+// ReadChecksumFile reads a checksum file and returns a map of filename
+// checksum pairs.
+func ReadChecksumFile(path string) (map[string]string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	defer file.Close()
+
+	checksums := make(map[string]string)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		// Trim all leading and trailing whitespace.
+		line := strings.TrimSpace(scanner.Text())
+
+		// Split the line into checksum and filename.
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		checksum := parts[0]
+		filename := strings.TrimSpace(parts[1])
+
+		checksums[filename] = checksum
+	}
+
+	return checksums, nil
 }

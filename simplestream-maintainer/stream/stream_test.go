@@ -2,7 +2,9 @@ package stream_test
 
 import (
 	"io/fs"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -618,6 +620,85 @@ func TestDoesNotExist(t *testing.T) {
 			}
 
 			assert.ErrorIs(t, err, test.WantErr)
+		})
+	}
+}
+
+func TestReadChecksumFile(t *testing.T) {
+	tests := []struct {
+		Name    string
+		Entries []string          // Checksum file lines/entries.
+		Expect  map[string]string // Expected checksums map.
+	}{
+		{
+			Name:    "Empty checksum file",
+			Entries: []string{},
+			Expect:  map[string]string{},
+		},
+		{
+			Name: "Valid checksum file",
+			Entries: []string{
+				"SHA  file1",
+				"SHA  file2",
+				"SHA  file3",
+			},
+			Expect: map[string]string{
+				"file1": "SHA",
+				"file2": "SHA",
+				"file3": "SHA",
+			},
+		},
+		{
+			Name: "Valid checksum file with empty lines",
+			Entries: []string{
+				"SHA  file1",
+				"",
+				"SHA  file2",
+				"",
+			},
+			Expect: map[string]string{
+				"file1": "SHA",
+				"file2": "SHA",
+			},
+		},
+		{
+			Name: "Invalid checksum entry",
+			Entries: []string{
+				"file1",
+				"SHA  file2",
+			},
+			Expect: map[string]string{
+				"file2": "SHA",
+			},
+		},
+		{
+			Name: "Spaces in checksum entry",
+			Entries: []string{
+				"SHA file1",
+				"MD5  file2 ",
+				"MD5  file3 with spaces",
+				"   MD5   file4   ",
+			},
+			Expect: map[string]string{
+				"file1":             "SHA",
+				"file2":             "MD5",
+				"file3 with spaces": "MD5",
+				"file4":             "MD5",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			// Write lines to a temporary file.
+			filePath := filepath.Join(t.TempDir(), "checksums")
+			err := os.WriteFile(filePath, []byte(strings.Join(test.Entries, "\n")), 0644)
+			require.NoError(t, err)
+
+			// Ensure checksums are read correctly.
+			checksums, err := stream.ReadChecksumFile(filePath)
+			require.NoError(t, err)
+			require.Equal(t, test.Expect, checksums)
 		})
 	}
 }

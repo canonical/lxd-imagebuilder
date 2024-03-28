@@ -56,9 +56,10 @@ func TestBuildIndex(t *testing.T) {
 			// - Missing source file for calculating delta does not break index building.
 			Name: "Ensure incomplete versions are ignored, and vcdiffs are calculated only for complete versions",
 			Mock: testutils.MockProduct("images-daily/ubuntu/focal/amd64/cloud").AddVersions(
-				testutils.MockVersion("2024_01_01").WithFiles("lxd.tar.xz", "disk.qcow2"), // Missing rootfs.squashfs
-				testutils.MockVersion("2024_01_02").WithFiles("lxd.tar.xz"),               // Incomplete version
-				testutils.MockVersion("2024_01_03").WithFiles("lxd.tar.xz", "disk.qcow2", "rootfs.squashfs"),
+				testutils.MockVersion("2024_01_01").WithFiles("lxd.tar.xz", "disk.qcow2"),                                     // Missing rootfs.squashfs
+				testutils.MockVersion("2024_01_02").WithFiles("lxd.tar.xz"),                                                   // Incomplete version
+				testutils.MockVersion("2024_01_03").WithFiles("lxd.tar.xz", "disk.qcow2").SetChecksums("invalid  disk.qcow2"), // Invalid checksums
+				testutils.MockVersion("2024_01_04").WithFiles("lxd.tar.xz", "disk.qcow2", "rootfs.squashfs"),
 			),
 			WantCatalog: stream.ProductCatalog{
 				ContentID: "images",
@@ -90,12 +91,12 @@ func TestBuildIndex(t *testing.T) {
 									},
 								},
 							},
-							"2024_01_03": {
+							"2024_01_04": {
 								Items: map[string]stream.Item{
 									"lxd.tar.xz": {
 										Ftype:                    "lxd.tar.xz",
 										Size:                     12,
-										Path:                     "images-daily/ubuntu/focal/amd64/cloud/2024_01_03/lxd.tar.xz",
+										Path:                     "images-daily/ubuntu/focal/amd64/cloud/2024_01_04/lxd.tar.xz",
 										SHA256:                   "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 										CombinedSHA256DiskKvmImg: "d9da2d2151ce5c89dfb8e1c329b286a02bd8464deb38f0f4d858486a27b796bf",
 										CombinedSHA256SquashFs:   "d9da2d2151ce5c89dfb8e1c329b286a02bd8464deb38f0f4d858486a27b796bf",
@@ -103,21 +104,21 @@ func TestBuildIndex(t *testing.T) {
 									"disk.qcow2": {
 										Ftype:  "disk-kvm.img",
 										Size:   12,
-										Path:   "images-daily/ubuntu/focal/amd64/cloud/2024_01_03/disk.qcow2",
+										Path:   "images-daily/ubuntu/focal/amd64/cloud/2024_01_04/disk.qcow2",
 										SHA256: "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 									},
 									// Ensure vcdiff is calculated for disk.qcow2 with delta base 2024_01_01.
 									"disk.2024_01_01.qcow2.vcdiff": {
 										Ftype:     "disk-kvm.img.vcdiff",
 										Size:      45,
-										Path:      "images-daily/ubuntu/focal/amd64/cloud/2024_01_03/disk.2024_01_01.qcow2.vcdiff",
+										Path:      "images-daily/ubuntu/focal/amd64/cloud/2024_01_04/disk.2024_01_01.qcow2.vcdiff",
 										SHA256:    "db7efd312bacbb1a8ca8d52f4da37052081ac86f63f93f8f62b52ae455079db2",
 										DeltaBase: "2024_01_01",
 									},
 									"rootfs.squashfs": {
 										Ftype:  "squashfs",
 										Size:   12,
-										Path:   "images-daily/ubuntu/focal/amd64/cloud/2024_01_03/rootfs.squashfs",
+										Path:   "images-daily/ubuntu/focal/amd64/cloud/2024_01_04/rootfs.squashfs",
 										SHA256: "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 									},
 								},
@@ -178,6 +179,202 @@ func TestBuildIndex(t *testing.T) {
 				strings.TrimSpace(string(jsonIndexExpect)),
 				strings.TrimSpace(string(jsonIndexActual)),
 				"Expected index does not match the built one!")
+		})
+	}
+}
+
+func TestBuildProductCatalog_ChecksumVerification(t *testing.T) {
+	t.Parallel()
+
+	// Some preset checksums to avoid long strings in the test.
+	checksums := []string{
+		fmt.Sprintf("%s  lxd.tar.xz", testutils.ItemDefaultContentSHA), // Valid
+		fmt.Sprintf("%s  disk.qcow2", testutils.ItemDefaultContentSHA), // Valid
+		fmt.Sprintf("%s  r.squashfs", testutils.ItemDefaultContentSHA), // Valid
+		"invalid-sha256-checksum  invalid.squashfs",                    // Invalid
+		"invalid-sha256-checksum  invalid.qcow2",                       // Invalid
+	}
+
+	tests := []struct {
+		Name         string
+		Mock         testutils.ProductMock
+		WantVersions []string // List of expected versions and checksums content.
+	}{
+		{
+			Name: "Ensure checksum validation is ignored when checksum file is missing",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+				testutils.MockVersion("v2").WithFiles("lxd.tar.xz", "root.squashfs"),
+				testutils.MockVersion("v3").WithFiles("lxd.tar.xz", "disk.qcow2")),
+			WantVersions: []string{
+				"v1",
+				"v2",
+				"v3",
+			},
+		},
+		{
+			Name: "Ensure versions with mismatched checksums are excluded from the product catalog",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "invalid.qcow2"),
+				testutils.MockVersion("v2").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "invalid.squashfs")),
+			WantVersions: []string{},
+		},
+		{
+			Name: "Ensure version is excluded if checksum file exists, but checksum for a certain item is missing",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "no-sha.qcow2"),
+				testutils.MockVersion("v2").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "no-sha.squashfs")),
+			WantVersions: []string{},
+		},
+		{
+			Name: "Ensure version with mismatched checksums is excluded but product catalog is still created",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "r.squashfs"),
+				testutils.MockVersion("v2").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "r.squashfs", "invalid.qcow2"),
+				testutils.MockVersion("v3").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "disk.qcow2")),
+			WantVersions: []string{
+				"v1",
+				"v3",
+			},
+		},
+		{
+			Name: "Ensure only valid versions are included in the product catalog.",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "disk.qcow2", "r.squashfs"), // Valid: All checksums match
+				testutils.MockVersion("v2").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "missing.squashfs"),         // Invalid: Missing checksum
+				testutils.MockVersion("v3").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "invalid.qcow2")),           // Invalid: Invalid checksum
+			WantVersions: []string{
+				"v1",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			p := test.Mock
+			p.Create(t, t.TempDir())
+
+			// Build product catalog.
+			catalog, err := buildProductCatalog(context.Background(), p.RootDir(), "v1", p.StreamName(), 2)
+			require.NoError(t, err, "Failed building product catalog!")
+
+			// Fetch the product from catalog by its id.
+			productID := strings.Join(strings.Split(p.RelPath(), "/")[1:], ":")
+			product, ok := catalog.Products[productID]
+
+			// Ensure product and all expected product versions are found.
+			require.True(t, ok, "Product not found in the catalog!")
+			require.ElementsMatch(t, test.WantVersions, shared.MapKeys(product.Versions))
+		})
+	}
+}
+
+func TestBuildProductCatalog_FinalChecksumFile(t *testing.T) {
+	t.Parallel()
+
+	// Some preset checksums to avoid long strings in the mocks.
+	checksums := []string{
+		fmt.Sprintf("%s  lxd.tar.xz", testutils.ItemDefaultContentSHA), // Valid
+		fmt.Sprintf("%s  disk.qcow2", testutils.ItemDefaultContentSHA), // Valid
+	}
+
+	tests := []struct {
+		Name         string
+		Mock         testutils.ProductMock
+		WantVersions map[string]map[string]string // Map of versions and final version checksums.
+	}{
+		{
+			Name: "Ignore checksums if checksum file is missing",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+				testutils.MockVersion("v2").WithFiles("lxd.tar.xz", "root.squashfs"),
+				testutils.MockVersion("v3").WithFiles("lxd.tar.xz", "disk.qcow2")),
+			WantVersions: map[string]map[string]string{
+				"v1": nil,
+				"v2": nil,
+				"v3": nil,
+			},
+		},
+		{
+			Name: "Ensure now new checksums are added if checksums are invalid",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "invalid.qcow2"),
+				testutils.MockVersion("v2").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "invalid.squashfs")),
+			WantVersions: map[string]map[string]string{
+				"v1": {
+					"lxd.tar.xz": testutils.ItemDefaultContentSHA,
+					"disk.qcow2": testutils.ItemDefaultContentSHA,
+				},
+				"v2": {
+					"lxd.tar.xz": testutils.ItemDefaultContentSHA,
+					"disk.qcow2": testutils.ItemDefaultContentSHA,
+				},
+			},
+		},
+		{
+			Name: "Ensure checksums for delta files are appended",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "disk.qcow2"),
+				testutils.MockVersion("v2").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "disk.qcow2")),
+			WantVersions: map[string]map[string]string{
+				"v1": {
+					"lxd.tar.xz": testutils.ItemDefaultContentSHA,
+					"disk.qcow2": testutils.ItemDefaultContentSHA,
+				},
+				"v2": {
+					"lxd.tar.xz":           testutils.ItemDefaultContentSHA,
+					"disk.qcow2":           testutils.ItemDefaultContentSHA,
+					"disk.v1.qcow2.vcdiff": "db7efd312bacbb1a8ca8d52f4da37052081ac86f63f93f8f62b52ae455079db2",
+				},
+			},
+		},
+		{
+			Name: "Ensure checksums for delta files are appended only for valid versions",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "disk.qcow2"),
+				testutils.MockVersion("v2").SetChecksums("sha  notOk").WithFiles("lxd.tar.xz", "disk.qcow2"), // Missing checksum
+				testutils.MockVersion("v3").SetChecksums(checksums...).WithFiles("non.tar.xz", "disk.qcow2"), // Incomplete
+				testutils.MockVersion("v4").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "disk.qcow2")),
+			WantVersions: map[string]map[string]string{
+				"v1": {
+					"lxd.tar.xz": testutils.ItemDefaultContentSHA,
+					"disk.qcow2": testutils.ItemDefaultContentSHA,
+				},
+				"v2": {
+					// Version is complete, but not valid, so deltas
+					// should not be calculated.
+					"notOk": "sha",
+				},
+				"v4": {
+					"lxd.tar.xz":           testutils.ItemDefaultContentSHA,
+					"disk.qcow2":           testutils.ItemDefaultContentSHA,
+					"disk.v1.qcow2.vcdiff": "db7efd312bacbb1a8ca8d52f4da37052081ac86f63f93f8f62b52ae455079db2",
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			p := test.Mock
+			p.Create(t, t.TempDir())
+
+			// Build product catalog.
+			_, err := buildProductCatalog(context.Background(), p.RootDir(), "v1", p.StreamName(), 2)
+			require.NoError(t, err, "Failed building product catalog!")
+
+			// Get products from directory structure and ensure it matches the
+			// expected versions.
+			product, err := stream.GetProduct(p.RootDir(), p.RelPath())
+			require.NoError(t, err)
+			require.ElementsMatch(t, shared.MapKeys(test.WantVersions), shared.MapKeys(product.Versions))
+
+			// Ensure expected checksums are present for each version.
+			for versionName, wantChecksums := range test.WantVersions {
+				checksumsPath := filepath.Join(p.RootDir(), p.RelPath(), versionName, stream.FileChecksumSHA256)
+				checksums, _ := stream.ReadChecksumFile(checksumsPath)
+				require.Equal(t, wantChecksums, checksums, "Final checksums do not match the expected ones!")
+			}
 		})
 	}
 }

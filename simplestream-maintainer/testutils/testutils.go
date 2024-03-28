@@ -178,6 +178,9 @@ type VersionMock struct {
 
 	// Items of the version.
 	items []ItemMock
+
+	// Version checksums file content.
+	checksums string
 }
 
 // MockVersion initializes new product version mock.
@@ -205,6 +208,13 @@ func (v VersionMock) AddItems(items ...ItemMock) VersionMock {
 	return v
 }
 
+// SetChecksums stores the checksum entries that are written to a file when
+// version is created.
+func (v VersionMock) SetChecksums(entries ...string) VersionMock {
+	v.checksums = strings.Join(entries, "\n") + "\n"
+	return v
+}
+
 // Create creates the mocked version directory structure in the given directory.
 func (v *VersionMock) Create(t *testing.T, rootDir string) VersionMock {
 	v.setRootDir(t, rootDir)
@@ -216,6 +226,13 @@ func (v *VersionMock) Create(t *testing.T, rootDir string) VersionMock {
 	// Create version items.
 	for _, item := range v.items {
 		item.Create(t, v.AbsPath())
+	}
+
+	// Create checsums file.
+	if v.checksums != "" {
+		checksumPath := filepath.Join(v.AbsPath(), stream.FileChecksumSHA256)
+		err = os.WriteFile(checksumPath, []byte(v.checksums), os.ModePerm)
+		require.NoError(t, err)
 	}
 
 	return *v

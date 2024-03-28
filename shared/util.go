@@ -395,6 +395,27 @@ func ParseSquashfsCompression(compression string) (string, *int, error) {
 	return "", nil, fmt.Errorf("Invalid squashfs compression method %q", compression)
 }
 
+// AppendToFile opens an existing file and appends the given content to it.
+func AppendToFile(path string, content string) error {
+	if content == "" {
+		return nil
+	}
+
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	_, err = file.WriteString(content)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // FileHash calculates the combined hash for the given files using the provided
 // hash function.
 func FileHash(hash hash.Hash, paths ...string) (string, error) {
