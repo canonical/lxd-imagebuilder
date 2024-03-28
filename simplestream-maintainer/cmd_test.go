@@ -186,6 +186,7 @@ func TestBuildIndex(t *testing.T) {
 func TestBuildProductCatalog_ChecksumVerification(t *testing.T) {
 	t.Parallel()
 
+	// Some preset checksums to avoid long strings in the test.
 	checksums := []string{
 		fmt.Sprintf("%s  lxd.tar.xz", testutils.ItemDefaultContentSHA), // Valid
 		fmt.Sprintf("%s  disk.qcow2", testutils.ItemDefaultContentSHA), // Valid
@@ -197,7 +198,7 @@ func TestBuildProductCatalog_ChecksumVerification(t *testing.T) {
 	tests := []struct {
 		Name         string
 		Mock         testutils.ProductMock
-		WantVersions []string // List of expected versions in the final product catalog.
+		WantVersions []string // List of expected versions and checksums content.
 	}{
 		{
 			Name: "Ensure checksum validation is ignored when checksum file is missing",
@@ -255,7 +256,7 @@ func TestBuildProductCatalog_ChecksumVerification(t *testing.T) {
 
 			// Build product catalog.
 			catalog, err := buildProductCatalog(context.Background(), p.RootDir(), "v1", p.StreamName(), 2)
-			require.NoError(t, err, "Failed building index and catalog files!")
+			require.NoError(t, err, "Failed building product catalog!")
 
 			// Fetch the product from catalog by its id.
 			productID := strings.Join(strings.Split(p.RelPath(), "/")[1:], ":")
@@ -264,6 +265,116 @@ func TestBuildProductCatalog_ChecksumVerification(t *testing.T) {
 			// Ensure product and all expected product versions are found.
 			require.True(t, ok, "Product not found in the catalog!")
 			require.ElementsMatch(t, test.WantVersions, shared.MapKeys(product.Versions))
+		})
+	}
+}
+
+func TestBuildProductCatalog_FinalChecksumFile(t *testing.T) {
+	t.Parallel()
+
+	// Some preset checksums to avoid long strings in the mocks.
+	checksums := []string{
+		fmt.Sprintf("%s  lxd.tar.xz", testutils.ItemDefaultContentSHA), // Valid
+		fmt.Sprintf("%s  disk.qcow2", testutils.ItemDefaultContentSHA), // Valid
+	}
+
+	tests := []struct {
+		Name         string
+		Mock         testutils.ProductMock
+		WantVersions map[string]map[string]string // Map of versions and final version checksums.
+	}{
+		{
+			Name: "Ignore checksums if checksum file is missing",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+				testutils.MockVersion("v2").WithFiles("lxd.tar.xz", "root.squashfs"),
+				testutils.MockVersion("v3").WithFiles("lxd.tar.xz", "disk.qcow2")),
+			WantVersions: map[string]map[string]string{
+				"v1": nil,
+				"v2": nil,
+				"v3": nil,
+			},
+		},
+		{
+			Name: "Ensure now new checksums are added if checksums are invalid",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "invalid.qcow2"),
+				testutils.MockVersion("v2").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "invalid.squashfs")),
+			WantVersions: map[string]map[string]string{
+				"v1": {
+					"lxd.tar.xz": testutils.ItemDefaultContentSHA,
+					"disk.qcow2": testutils.ItemDefaultContentSHA,
+				},
+				"v2": {
+					"lxd.tar.xz": testutils.ItemDefaultContentSHA,
+					"disk.qcow2": testutils.ItemDefaultContentSHA,
+				},
+			},
+		},
+		{
+			Name: "Ensure checksums for delta files are appended",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "disk.qcow2"),
+				testutils.MockVersion("v2").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "disk.qcow2")),
+			WantVersions: map[string]map[string]string{
+				"v1": {
+					"lxd.tar.xz": testutils.ItemDefaultContentSHA,
+					"disk.qcow2": testutils.ItemDefaultContentSHA,
+				},
+				"v2": {
+					"lxd.tar.xz":           testutils.ItemDefaultContentSHA,
+					"disk.qcow2":           testutils.ItemDefaultContentSHA,
+					"disk.v1.qcow2.vcdiff": "db7efd312bacbb1a8ca8d52f4da37052081ac86f63f93f8f62b52ae455079db2",
+				},
+			},
+		},
+		{
+			Name: "Ensure checksums for delta files are appended only for valid versions",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+				testutils.MockVersion("v1").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "disk.qcow2"),
+				testutils.MockVersion("v2").SetChecksums("sha  notOk").WithFiles("lxd.tar.xz", "disk.qcow2"), // Missing checksum
+				testutils.MockVersion("v3").SetChecksums(checksums...).WithFiles("non.tar.xz", "disk.qcow2"), // Incomplete
+				testutils.MockVersion("v4").SetChecksums(checksums...).WithFiles("lxd.tar.xz", "disk.qcow2")),
+			WantVersions: map[string]map[string]string{
+				"v1": {
+					"lxd.tar.xz": testutils.ItemDefaultContentSHA,
+					"disk.qcow2": testutils.ItemDefaultContentSHA,
+				},
+				"v2": {
+					// Version is complete, but not valid, so deltas
+					// should not be calculated.
+					"notOk": "sha",
+				},
+				"v4": {
+					"lxd.tar.xz":           testutils.ItemDefaultContentSHA,
+					"disk.qcow2":           testutils.ItemDefaultContentSHA,
+					"disk.v1.qcow2.vcdiff": "db7efd312bacbb1a8ca8d52f4da37052081ac86f63f93f8f62b52ae455079db2",
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			p := test.Mock
+			p.Create(t, t.TempDir())
+
+			// Build product catalog.
+			_, err := buildProductCatalog(context.Background(), p.RootDir(), "v1", p.StreamName(), 2)
+			require.NoError(t, err, "Failed building product catalog!")
+
+			// Get products from directory structure and ensure it matches the
+			// expected versions.
+			product, err := stream.GetProduct(p.RootDir(), p.RelPath())
+			require.NoError(t, err)
+			require.ElementsMatch(t, shared.MapKeys(test.WantVersions), shared.MapKeys(product.Versions))
+
+			// Ensure expected checksums are present for each version.
+			for versionName, wantChecksums := range test.WantVersions {
+				checksumsPath := filepath.Join(p.RootDir(), p.RelPath(), versionName, stream.FileChecksumSHA256)
+				checksums, _ := stream.ReadChecksumFile(checksumsPath)
+				require.Equal(t, wantChecksums, checksums, "Final checksums do not match the expected ones!")
+			}
 		})
 	}
 }
