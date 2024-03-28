@@ -96,9 +96,6 @@ var productConfigNames = []string{
 
 // Item represents a file within a product version.
 type Item struct {
-	// Name of the file.
-	Name string `json:"-"`
-
 	// Type of the file. A known ItemType is used if possible, otherwise,
 	// this field is equal to the file's name.
 	Ftype string `json:"ftype"`
@@ -426,10 +423,10 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 	// Check whether version is complete, and calculate combined hashes if necessary.
 	metaItem, ok := version.Items[ItemTypeMetadata]
 	if ok {
-		metaItemPath := filepath.Join(versionPath, metaItem.Name)
+		metaItemPath := filepath.Join(versionPath, ItemTypeMetadata)
 
-		for _, i := range version.Items {
-			if !lxdShared.ValueInSlice(i.Ftype, []string{ItemTypeSquashfs, ItemTypeDiskKVM, ItemTypeRootTarXz}) {
+		for itemName, item := range version.Items {
+			if !lxdShared.ValueInSlice(item.Ftype, []string{ItemTypeSquashfs, ItemTypeDiskKVM, ItemTypeRootTarXz}) {
 				// Skip files that are not required for combined checksum.
 				continue
 			}
@@ -438,14 +435,14 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 
 			if calcHashes {
 				// Calculate combined hash for the item.
-				itemPath := filepath.Join(versionPath, i.Name)
+				itemPath := filepath.Join(versionPath, itemName)
 				itemHash, err = shared.FileHash(sha256.New(), metaItemPath, itemPath)
 				if err != nil {
 					return nil, err
 				}
 			}
 
-			switch i.Ftype {
+			switch item.Ftype {
 			case ItemTypeDiskKVM:
 				metaItem.CombinedSHA256DiskKvmImg = itemHash
 				isVersionComplete = true
@@ -482,7 +479,6 @@ func GetItem(rootDir string, itemRelPath string, calcHash bool) (*Item, error) {
 	}
 
 	item := Item{}
-	item.Name = file.Name()
 	item.Size = file.Size()
 	item.Path = itemRelPath
 
@@ -503,8 +499,8 @@ func GetItem(rootDir string, itemRelPath string, calcHash bool) (*Item, error) {
 		item.Ftype = ItemTypeDiskKVM
 
 	case ".vcdiff":
-		parts := strings.Split(item.Name, ".")
-		if strings.HasSuffix(item.Name, ItemExtDiskKVMDelta) {
+		parts := strings.Split(file.Name(), ".")
+		if strings.HasSuffix(file.Name(), ItemExtDiskKVMDelta) {
 			item.Ftype = ItemTypeDiskKVMDelta
 			item.DeltaBase = parts[len(parts)-3]
 		} else {
@@ -513,7 +509,7 @@ func GetItem(rootDir string, itemRelPath string, calcHash bool) (*Item, error) {
 		}
 
 	default:
-		item.Ftype = item.Name
+		item.Ftype = file.Name()
 	}
 
 	return &item, nil

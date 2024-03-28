@@ -239,8 +239,8 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 				// Verify items checksums if checksum file is present
 				// within the version.
 				if version.Checksums != nil {
-					for _, item := range version.Items {
-						checksum := version.Checksums[item.Name]
+					for itemName, item := range version.Items {
+						checksum := version.Checksums[itemName]
 
 						// Ignore verification, if the checksum for the delta
 						// file does not exist. This is because the delta file
@@ -251,7 +251,7 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 
 						// Verify checksum.
 						if checksum != item.SHA256 {
-							slog.Error("Checksum mismatch", "streamName", streamName, "product", id, "version", versionName, "item", item.Name)
+							slog.Error("Checksum mismatch", "streamName", streamName, "product", id, "version", versionName, "item", itemName)
 							return
 						}
 					}
@@ -295,7 +295,7 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 			targetVerName := versions[i]
 			targetVersion := product.Versions[targetVerName]
 
-			for _, item := range targetVersion.Items {
+			for itemName, item := range targetVersion.Items {
 				// Delta should be created only for qcow2 and squashfs files.
 				if item.Ftype != stream.ItemTypeDiskKVM && item.Ftype != stream.ItemTypeSquashfs {
 					continue
@@ -306,7 +306,7 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 					defer wg.Done()
 
 					// Evaluate delta file name.
-					prefix, _ := strings.CutSuffix(item.Name, filepath.Ext(item.Name))
+					prefix, _ := strings.CutSuffix(itemName, filepath.Ext(itemName))
 					suffix := "vcdiff"
 
 					if item.Ftype == stream.ItemTypeDiskKVM {
@@ -318,8 +318,8 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 
 					// Generate delta file if it does not already exist.
 					if !deltaExists {
-						sourcePath := filepath.Join(rootDir, productRelPath, sourceVerName, item.Name)
-						targetPath := filepath.Join(rootDir, productRelPath, targetVerName, item.Name)
+						sourcePath := filepath.Join(rootDir, productRelPath, sourceVerName, itemName)
+						targetPath := filepath.Join(rootDir, productRelPath, targetVerName, itemName)
 						outputPath := filepath.Join(rootDir, productRelPath, targetVerName, deltaName)
 
 						// Ensure source path exists.
@@ -330,12 +330,12 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 								return
 							}
 
-							slog.Error("Failed to read base delta file", "product", id, "version", targetVerName, "item", item.Name, "deltaBase", sourceVerName, "error", err)
+							slog.Error("Failed to read base delta file", "product", id, "version", targetVerName, "item", itemName, "deltaBase", sourceVerName, "error", err)
 							return
 						}
 
 						// -e compress
-						// -f force
+						// -s source
 						cmd := exec.CommandContext(ctx, "xdelta3", "-e", "-s", sourcePath, targetPath, outputPath)
 						cmd.Stdout = os.Stdout
 						cmd.Stderr = os.Stderr
