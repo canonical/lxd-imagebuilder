@@ -66,18 +66,12 @@ func (o *globalOptions) PreRun(cmd *cobra.Command, args []string) {
 		o.ctx, o.cancel = context.WithTimeout(context.Background(), time.Duration(o.flagTimeout)*time.Second)
 	}
 
-	// Configure interrupt signal handler.
-	chSingal := make(chan os.Signal, 1)
-	signal.Notify(chSingal, os.Interrupt)
+	// Set signals that cancel the context.
+	o.ctx, o.cancel = signal.NotifyContext(o.ctx, os.Interrupt)
 
 	go func() {
-		select {
-		case <-chSingal:
-			o.cancel()
-			slog.Error("Interrupted by signal")
-		case <-o.ctx.Done():
-			slog.Error("Interrupted by context", "error", o.ctx.Err())
-		}
+		<-o.ctx.Done()
+		slog.Error("Context canceled", "error", o.ctx.Err())
 	}()
 
 	err := setDefaultLogger(o.flagLogLevel, o.flagLogFormat)
