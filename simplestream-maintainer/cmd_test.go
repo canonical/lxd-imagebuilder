@@ -780,3 +780,119 @@ func TestPruneEmptyDirs_KeepRoot(t *testing.T) {
 		})
 	}
 }
+
+func TestDiffProducts(t *testing.T) {
+	t.Parallel()
+
+	type mapP map[string]stream.Product
+	type mapV map[string]stream.Version
+	type mapI map[string]stream.Item
+
+	tests := []struct {
+		Name    string
+		Old     map[string]stream.Product
+		New     map[string]stream.Product
+		WantOld map[string]stream.Product // Missing in New
+		WantNew map[string]stream.Product // Missing in Old
+	}{
+		{
+			Name:    "Products | Equal",
+			Old:     mapP{"p1": {}},
+			New:     mapP{"p1": {}},
+			WantOld: mapP{},
+			WantNew: mapP{},
+		},
+		{
+			Name:    "Products | Add",
+			Old:     mapP{},
+			New:     mapP{"p1": {}},
+			WantOld: mapP{},
+			WantNew: mapP{"p1": {}},
+		},
+		{
+			Name:    "Products | Remove",
+			Old:     mapP{"p1": {}},
+			New:     mapP{},
+			WantOld: mapP{"p1": {}},
+			WantNew: mapP{},
+		},
+		{
+			Name:    "Products | Replace",
+			Old:     mapP{"p1": {}},
+			New:     mapP{"p2": {}},
+			WantOld: mapP{"p1": {}},
+			WantNew: mapP{"p2": {}},
+		},
+		{
+			Name:    "Versions | Equal",
+			Old:     mapP{"p1": {Versions: mapV{"v1": {}, "v2": {}}}},
+			New:     mapP{"p1": {Versions: mapV{"v1": {}, "v2": {}}}},
+			WantOld: mapP{},
+			WantNew: mapP{},
+		},
+		{
+			Name:    "Versions | Add",
+			Old:     mapP{"p": {Versions: mapV{"v1": {}}}},
+			New:     mapP{"p": {Versions: mapV{"v1": {}, "v2": {}}}},
+			WantOld: mapP{},
+			WantNew: mapP{"p": {Versions: mapV{"v2": {}}}},
+		},
+		{
+			Name:    "Versions | Remove",
+			Old:     mapP{"p": {Versions: mapV{"v1": {}, "v2": {}}}},
+			New:     mapP{"p": {Versions: mapV{"v1": {}}}},
+			WantOld: mapP{"p": {Versions: mapV{"v2": {}}}},
+			WantNew: mapP{},
+		},
+		{
+			Name:    "Versions | Replace",
+			Old:     mapP{"p": {Versions: mapV{"v1": {}}}},
+			New:     mapP{"p": {Versions: mapV{"v2": {}}}},
+			WantOld: mapP{"p": {Versions: mapV{"v1": {}}}},
+			WantNew: mapP{"p": {Versions: mapV{"v2": {}}}},
+		},
+		{
+			Name: "Products and versions | Ensure metadata is preseverd",
+			Old: mapP{
+				"eql": {Aliases: "eql", Versions: mapV{"v1": {}}},
+				"old": {Aliases: "old", Versions: mapV{"v1": {}}},
+				"mod": {
+					Aliases: "---",
+					Versions: mapV{
+						"eql": {},
+						"old": {},
+						"mod": {Items: mapI{"old": {}}},
+					},
+				},
+			},
+			New: mapP{
+				"eql": {Aliases: "eql", Versions: mapV{"v1": {}}},
+				"new": {Aliases: "new", Versions: mapV{"v1": {}}},
+				"mod": {
+					Aliases: "+++",
+					Versions: mapV{
+						"eql": {},
+						"new": {},
+						"mod": {Items: mapI{"new": {}}},
+					},
+				},
+			},
+			WantOld: mapP{
+				"old": {Aliases: "old", Versions: mapV{"v1": {}}},
+				"mod": {Aliases: "---", Versions: mapV{"old": {}}},
+			},
+			WantNew: mapP{
+				"new": {Aliases: "new", Versions: mapV{"v1": {}}},
+				"mod": {Aliases: "+++", Versions: mapV{"new": {}}},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			old, new := diffProducts(test.Old, test.New)
+			require.Equal(t, test.WantOld, old, "Mismatch in diffed OLD products!")
+			require.Equal(t, test.WantNew, new, "Mismatch in diffed NEW products!")
+		})
+	}
+}

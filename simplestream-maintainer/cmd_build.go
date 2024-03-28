@@ -397,47 +397,39 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 
 // DiffProducts is a helper function that compares two product maps and returns
 // the difference between them.
-func diffProducts(oldProducts map[string]stream.Product, newProducts map[string]stream.Product) (old map[string]stream.Product, new map[string]stream.Product) {
-	old = make(map[string]stream.Product) // Extra (old) products.
-	new = make(map[string]stream.Product) // Missing (new) products.
+func diffProducts(oldProducts map[string]stream.Product, newProducts map[string]stream.Product) (map[string]stream.Product, map[string]stream.Product) {
+	findMissing := func(mapOld map[string]stream.Product, mapNew map[string]stream.Product) map[string]stream.Product {
+		missing := make(map[string]stream.Product)
 
-	// Extract new products and versions.
-	for id, p := range newProducts {
-		new[id] = p
+		for id, p := range mapNew {
+			_, ok := mapOld[id]
+			if !ok {
+				// Product is missing in the old map.
+				missing[id] = p
+				continue
+			}
 
-		_, ok := oldProducts[id]
-		if !ok {
-			// Product is missing in the old catalog.
-			continue
-		}
+			// Ensure we are not modifying product's nested map directly.
+			versions := make(map[string]stream.Version, len(p.Versions))
 
-		for name := range p.Versions {
-			_, ok := oldProducts[id].Versions[name]
-			if ok {
-				// Version exists in the old catalog.
-				delete(new[id].Versions, name)
+			for name, v := range p.Versions {
+				_, ok := mapOld[id].Versions[name]
+				if !ok {
+					// Version exists in the old map.
+					versions[name] = v
+				}
+			}
+
+			if len(versions) > 0 {
+				p.Versions = versions
+				missing[id] = p
 			}
 		}
+		return missing
 	}
 
-	// Extract old products and versions.
-	for id, p := range oldProducts {
-		new[id] = p
-
-		_, ok := newProducts[id]
-		if !ok {
-			// Product is missing in the new catalog.
-			continue
-		}
-
-		for name := range p.Versions {
-			_, ok := newProducts[id].Versions[name]
-			if ok {
-				// Version exists in the new catalog.
-				delete(new[id].Versions, name)
-			}
-		}
-	}
+	new := findMissing(oldProducts, newProducts)
+	old := findMissing(newProducts, oldProducts)
 
 	return old, new
 }
