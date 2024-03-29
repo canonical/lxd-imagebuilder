@@ -131,8 +131,9 @@ type Item struct {
 
 // Version represents a list of items available for the given image version.
 type Version struct {
-	// incomplete indicates that version is missing either a metadata file
-	// or one of the rootfs files (squashfs or qcow2).
+	// incomplete version is either a hidden directory which is considered
+	// partially uploaded version, or does not contain both the metadata
+	// and at least one rootfs file (squashfs or qcow2).
 	incomplete bool `json:"-"`
 
 	// Checksums of files within the version.
@@ -406,6 +407,12 @@ func GetProduct(rootDir string, productRelPath string, options ...Option) (*Prod
 func GetVersion(rootDir string, versionRelPath string, options ...Option) (*Version, error) {
 	opts := newOptions(options...)
 	versionPath := filepath.Join(rootDir, versionRelPath)
+
+	// Hidden versions are considered incomplete, as they may contain
+	// partially uploaded files.
+	if strings.HasPrefix(filepath.Base(versionPath), ".") && !opts.includeIncomplete {
+		return nil, fmt.Errorf("%w (hidden version): %q", ErrVersionIncomplete, versionRelPath)
+	}
 
 	version := Version{
 		Items:      make(map[string]Item),

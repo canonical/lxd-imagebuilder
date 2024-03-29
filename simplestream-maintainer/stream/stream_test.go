@@ -122,6 +122,14 @@ func TestGetVersion(t *testing.T) {
 			WantErr: stream.ErrVersionIncomplete,
 		},
 		{
+			Name: "Version is incomplete: hidden directory",
+			Mock: testutils.MockVersion(".20241010_1212").AddItems(
+				testutils.MockItem("lxd.tar.xz"),
+				testutils.MockItem("disk.qcow2"),
+			),
+			WantErr: stream.ErrVersionIncomplete,
+		},
+		{
 			Name: "Valid version without item hashes",
 			Mock: testutils.MockVersion("v10").AddItems(
 				testutils.MockItem("lxd.tar.xz"),
@@ -481,6 +489,10 @@ func TestGetProduct(t *testing.T) {
 				),
 				testutils.MockVersion("2024_01_04").AddItems( // Missing rootfs.
 					testutils.MockItem("lxd.tar.xz"),
+				),
+				testutils.MockVersion(".2024_01_05").AddItems( // Hidden version.
+					testutils.MockItem("lxd.tar.xz"),
+					testutils.MockItem("disk.qcow2"),
 				),
 			),
 			WantProduct: stream.Product{
