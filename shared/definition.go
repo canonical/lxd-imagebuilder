@@ -252,16 +252,38 @@ type DefinitionEnv struct {
 	EnvVariables  []DefinitionEnvVars `yaml:"variables,omitempty"`
 }
 
+// DefinitionSimplestreamRequirements contains a map of image requirements
+// and filters to selectively apply the requirements.
+type DefinitionSimplestreamRequirements struct {
+	DefinitionFilter `yaml:",inline"`
+
+	// Map of the image requirements.
+	Requirements map[string]string `yaml:"requirements,omitempty"`
+}
+
+// DefinitionSimplestream contains additional information about the image.
+// It is parsed by the simplestream-maintainer when building a product
+// catalog.
+type DefinitionSimplestream struct {
+	// Map of release aliases. Key represents the release name and value
+	// is a comma delimited string of additional release aliases.
+	ReleaseAliases map[string]string `yaml:"release_aliases,omitempty"`
+
+	// List of the image requirements.
+	Requirements []DefinitionSimplestreamRequirements `yaml:"requirements,omitempty"`
+}
+
 // A Definition a definition.
 type Definition struct {
-	Image       DefinitionImage    `yaml:"image"`
-	Source      DefinitionSource   `yaml:"source"`
-	Targets     DefinitionTarget   `yaml:"targets,omitempty"`
-	Files       []DefinitionFile   `yaml:"files,omitempty"`
-	Packages    DefinitionPackages `yaml:"packages,omitempty"`
-	Actions     []DefinitionAction `yaml:"actions,omitempty"`
-	Mappings    DefinitionMappings `yaml:"mappings,omitempty"`
-	Environment DefinitionEnv      `yaml:"environment,omitempty"`
+	Image        DefinitionImage        `yaml:"image"`
+	Source       DefinitionSource       `yaml:"source"`
+	Targets      DefinitionTarget       `yaml:"targets,omitempty"`
+	Files        []DefinitionFile       `yaml:"files,omitempty"`
+	Packages     DefinitionPackages     `yaml:"packages,omitempty"`
+	Actions      []DefinitionAction     `yaml:"actions,omitempty"`
+	Mappings     DefinitionMappings     `yaml:"mappings,omitempty"`
+	Environment  DefinitionEnv          `yaml:"environment,omitempty"`
+	Simplestream DefinitionSimplestream `yaml:"simplestream,omitempty"`
 }
 
 // SetValue writes the provided value to a field represented by the yaml tag 'key'.
