@@ -85,7 +85,7 @@ func TestGetItem(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			test.Mock.Create(t, t.TempDir())
 
-			item, err := stream.GetItem(test.Mock.RootDir(), test.Mock.RelPath(), test.CalcHash)
+			item, err := stream.GetItem(test.Mock.RootDir(), test.Mock.RelPath(), stream.WithHashes(test.CalcHash))
 			if test.WantErr != nil {
 				assert.ErrorIs(t, err, test.WantErr)
 			} else {
@@ -225,7 +225,7 @@ func TestGetVersion(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			test.Mock.Create(t, t.TempDir())
 
-			version, err := stream.GetVersion(test.Mock.RootDir(), test.Mock.RelPath(), test.CalcHashes)
+			version, err := stream.GetVersion(test.Mock.RootDir(), test.Mock.RelPath(), stream.WithHashes(test.CalcHashes))
 			if test.WantErr != nil {
 				assert.ErrorIs(t, err, test.WantErr)
 			} else {
@@ -591,9 +591,9 @@ func TestDoesNotExist(t *testing.T) {
 
 			switch test.Mock.(type) {
 			case testutils.ItemMock:
-				_, err = stream.GetItem(test.Mock.RootDir(), test.Mock.RelPath(), false)
+				_, err = stream.GetItem(test.Mock.RootDir(), test.Mock.RelPath())
 			case testutils.VersionMock:
-				_, err = stream.GetVersion(test.Mock.RootDir(), test.Mock.RelPath(), false)
+				_, err = stream.GetVersion(test.Mock.RootDir(), test.Mock.RelPath())
 			case testutils.ProductMock:
 				_, err = stream.GetProduct(test.Mock.RootDir(), test.Mock.RelPath())
 			default:

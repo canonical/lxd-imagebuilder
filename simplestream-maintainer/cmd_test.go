@@ -544,11 +544,24 @@ func TestPruneDanglingResources(t *testing.T) {
 			},
 		},
 		{
-			Name: "Ensure unreferenced old product is removed",
+			Name: "Ensure unreferenced old product version is removed",
 			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
 				AddVersions(testutils.MockVersion("1.0").WithFiles("lxd.tar.xz", "disk.qcow2")).
 				AddProductCatalog().
 				AddVersions(testutils.MockVersion("2.0").WithFiles("lxd.tar.xz", "root.squashfs")).
+				SetFilesAge(24 * time.Hour),
+			WantProducts: map[string][]string{
+				"ubuntu:noble:amd64:cloud": {
+					"1.0",
+				},
+			},
+		},
+		{
+			Name: "Ensure unreferenced old incomplete product version is removed",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddVersions(testutils.MockVersion("1.0").WithFiles("lxd.tar.xz", "disk.qcow2")).
+				AddProductCatalog().
+				AddVersions(testutils.MockVersion("2.0").WithFiles("lxd.tar.xz")).
 				SetFilesAge(24 * time.Hour),
 			WantProducts: map[string][]string{
 				"ubuntu:noble:amd64:cloud": {
@@ -596,7 +609,7 @@ func TestPruneDanglingResources(t *testing.T) {
 			err := pruneDanglingProductVersions(p.RootDir(), "v1", p.StreamName())
 			require.NoError(t, err)
 
-			products, err := stream.GetProducts(p.RootDir(), p.StreamName())
+			products, err := stream.GetProducts(p.RootDir(), p.StreamName(), stream.WithIncompleteVersions(true))
 			require.NoError(t, err)
 
 			// Ensure all expected products are found.

@@ -230,7 +230,7 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 
 				// Read the version and generate the file hashes.
 				versionPath := filepath.Join(productPath, versionName)
-				version, err := stream.GetVersion(rootDir, versionPath, true)
+				version, err := stream.GetVersion(rootDir, versionPath, stream.WithHashes(true))
 				if err != nil {
 					slog.Error("Failed to get version", "streamName", streamName, "product", id, "version", versionName, "error", err)
 					return
@@ -355,7 +355,7 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 					// the catalog.
 					if !deltaExists || deltaItem.SHA256 == "" {
 						deltaRelPath := filepath.Join(productRelPath, targetVerName, deltaName)
-						deltaItem, err := stream.GetItem(rootDir, deltaRelPath, true)
+						deltaItem, err := stream.GetItem(rootDir, deltaRelPath, stream.WithHashes(true))
 						if err != nil {
 							slog.Error("Failed to get existing delta item", "product", id, "version", targetVerName, "item", deltaName, "error", err)
 							return
