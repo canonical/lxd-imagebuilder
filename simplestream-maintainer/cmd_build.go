@@ -230,7 +230,7 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 
 				// Read the version and generate the file hashes.
 				versionPath := filepath.Join(productPath, versionName)
-				version, err := stream.GetVersion(rootDir, versionPath, true)
+				version, err := stream.GetVersion(rootDir, versionPath, stream.WithHashes(true))
 				if err != nil {
 					slog.Error("Failed to get version", "streamName", streamName, "product", id, "version", versionName, "error", err)
 					return
@@ -239,8 +239,8 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 				// Verify items checksums if checksum file is present
 				// within the version.
 				if version.Checksums != nil {
-					for _, item := range version.Items {
-						checksum := version.Checksums[item.Name]
+					for itemName, item := range version.Items {
+						checksum := version.Checksums[itemName]
 
 						// Ignore verification, if the checksum for the delta
 						// file does not exist. This is because the delta file
@@ -251,7 +251,7 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 
 						// Verify checksum.
 						if checksum != item.SHA256 {
-							slog.Error("Checksum mismatch", "streamName", streamName, "product", id, "version", versionName, "item", item.Name)
+							slog.Error("Checksum mismatch", "streamName", streamName, "product", id, "version", versionName, "item", itemName)
 							return
 						}
 					}
@@ -295,7 +295,7 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 			targetVerName := versions[i]
 			targetVersion := product.Versions[targetVerName]
 
-			for _, item := range targetVersion.Items {
+			for itemName, item := range targetVersion.Items {
 				// Delta should be created only for qcow2 and squashfs files.
 				if item.Ftype != stream.ItemTypeDiskKVM && item.Ftype != stream.ItemTypeSquashfs {
 					continue
@@ -306,7 +306,7 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 					defer wg.Done()
 
 					// Evaluate delta file name.
-					prefix, _ := strings.CutSuffix(item.Name, filepath.Ext(item.Name))
+					prefix, _ := strings.CutSuffix(itemName, filepath.Ext(itemName))
 					suffix := "vcdiff"
 
 					if item.Ftype == stream.ItemTypeDiskKVM {
@@ -318,8 +318,8 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 
 					// Generate delta file if it does not already exist.
 					if !deltaExists {
-						sourcePath := filepath.Join(rootDir, productRelPath, sourceVerName, item.Name)
-						targetPath := filepath.Join(rootDir, productRelPath, targetVerName, item.Name)
+						sourcePath := filepath.Join(rootDir, productRelPath, sourceVerName, itemName)
+						targetPath := filepath.Join(rootDir, productRelPath, targetVerName, itemName)
 						outputPath := filepath.Join(rootDir, productRelPath, targetVerName, deltaName)
 
 						// Ensure source path exists.
@@ -330,12 +330,12 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 								return
 							}
 
-							slog.Error("Failed to read base delta file", "product", id, "version", targetVerName, "item", item.Name, "deltaBase", sourceVerName, "error", err)
+							slog.Error("Failed to read base delta file", "product", id, "version", targetVerName, "item", itemName, "deltaBase", sourceVerName, "error", err)
 							return
 						}
 
 						// -e compress
-						// -f force
+						// -s source
 						cmd := exec.CommandContext(ctx, "xdelta3", "-e", "-s", sourcePath, targetPath, outputPath)
 						cmd.Stdout = os.Stdout
 						cmd.Stderr = os.Stderr
@@ -355,7 +355,7 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 					// the catalog.
 					if !deltaExists || deltaItem.SHA256 == "" {
 						deltaRelPath := filepath.Join(productRelPath, targetVerName, deltaName)
-						deltaItem, err := stream.GetItem(rootDir, deltaRelPath, true)
+						deltaItem, err := stream.GetItem(rootDir, deltaRelPath, stream.WithHashes(true))
 						if err != nil {
 							slog.Error("Failed to get existing delta item", "product", id, "version", targetVerName, "item", deltaName, "error", err)
 							return
@@ -397,47 +397,39 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 
 // DiffProducts is a helper function that compares two product maps and returns
 // the difference between them.
-func diffProducts(oldProducts map[string]stream.Product, newProducts map[string]stream.Product) (old map[string]stream.Product, new map[string]stream.Product) {
-	old = make(map[string]stream.Product) // Extra (old) products.
-	new = make(map[string]stream.Product) // Missing (new) products.
+func diffProducts(oldProducts map[string]stream.Product, newProducts map[string]stream.Product) (map[string]stream.Product, map[string]stream.Product) {
+	findMissing := func(mapOld map[string]stream.Product, mapNew map[string]stream.Product) map[string]stream.Product {
+		missing := make(map[string]stream.Product)
 
-	// Extract new products and versions.
-	for id, p := range newProducts {
-		new[id] = p
+		for id, p := range mapNew {
+			_, ok := mapOld[id]
+			if !ok {
+				// Product is missing in the old map.
+				missing[id] = p
+				continue
+			}
 
-		_, ok := oldProducts[id]
-		if !ok {
-			// Product is missing in the old catalog.
-			continue
-		}
+			// Ensure we are not modifying product's nested map directly.
+			versions := make(map[string]stream.Version, len(p.Versions))
 
-		for name := range p.Versions {
-			_, ok := oldProducts[id].Versions[name]
-			if ok {
-				// Version exists in the old catalog.
-				delete(new[id].Versions, name)
+			for name, v := range p.Versions {
+				_, ok := mapOld[id].Versions[name]
+				if !ok {
+					// Version exists in the old map.
+					versions[name] = v
+				}
+			}
+
+			if len(versions) > 0 {
+				p.Versions = versions
+				missing[id] = p
 			}
 		}
+		return missing
 	}
 
-	// Extract old products and versions.
-	for id, p := range oldProducts {
-		new[id] = p
-
-		_, ok := newProducts[id]
-		if !ok {
-			// Product is missing in the new catalog.
-			continue
-		}
-
-		for name := range p.Versions {
-			_, ok := newProducts[id].Versions[name]
-			if ok {
-				// Version exists in the new catalog.
-				delete(new[id].Versions, name)
-			}
-		}
-	}
+	new := findMissing(oldProducts, newProducts)
+	old := findMissing(newProducts, oldProducts)
 
 	return old, new
 }

@@ -79,7 +79,7 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 	// Find versions that need to be discarded.
 	var discardVersions []string
 
-	for i, p := range catalog.Products {
+	for id, p := range catalog.Products {
 		productPath := filepath.Join(rootDir, streamName, p.RelPath())
 
 		versions := shared.MapKeys(p.Versions)
@@ -94,7 +94,7 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 		// Extract versions that need to be discarded.
 		discard := slices.Delete(versions, 0, retain)
 		for _, v := range discard {
-			delete(catalog.Products[i].Versions, v)
+			delete(catalog.Products[id].Versions, v)
 
 			versionPath := filepath.Join(productPath, v)
 			discardVersions = append(discardVersions, versionPath)
@@ -142,8 +142,8 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 // and prunes the product versions that are not referenced by the corresponding
 // product catalog.
 func pruneDanglingProductVersions(rootDir string, streamVersion string, streamName string) error {
-	// Get raw products (from actual directory hierarchy).
-	products, err := stream.GetProducts(rootDir, streamName)
+	// Get all products including incomplete (from actual directory hierarchy).
+	products, err := stream.GetProducts(rootDir, streamName, stream.WithIncompleteVersions(true))
 	if err != nil {
 		return err
 	}

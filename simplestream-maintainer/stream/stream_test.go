@@ -30,7 +30,6 @@ func TestGetItem(t *testing.T) {
 			Mock: testutils.MockItem("lxd.tar.xz").WithContent("test-content"),
 			WantItem: stream.Item{
 				Size:   12,
-				Name:   "lxd.tar.xz",
 				Path:   "lxd.tar.xz",
 				Ftype:  "lxd.tar.xz",
 				SHA256: "",
@@ -42,7 +41,6 @@ func TestGetItem(t *testing.T) {
 			CalcHash: true,
 			WantItem: stream.Item{
 				Size:   2,
-				Name:   "disk.qcow2",
 				Path:   "disk.qcow2",
 				Ftype:  "disk-kvm.img",
 				SHA256: "8e5abdd396d535012cb3b24b6c998ab6d8f8118fe5c564c21c624c54964464e6",
@@ -54,7 +52,6 @@ func TestGetItem(t *testing.T) {
 			CalcHash: true,
 			WantItem: stream.Item{
 				Size:   9,
-				Name:   "root.squashfs",
 				Path:   "root.squashfs",
 				Ftype:  "squashfs",
 				SHA256: "a42d519714d616e9411dbceec4b52808bd6b1ee53e6f6497a281d655357d8b71",
@@ -65,7 +62,6 @@ func TestGetItem(t *testing.T) {
 			Mock: testutils.MockItem("test/delta.123123.vcdiff").WithContent("vcdiff"),
 			WantItem: stream.Item{
 				Size:      6,
-				Name:      "delta.123123.vcdiff",
 				Path:      "test/delta.123123.vcdiff",
 				Ftype:     "squashfs.vcdiff",
 				DeltaBase: "123123",
@@ -77,7 +73,6 @@ func TestGetItem(t *testing.T) {
 			Mock: testutils.MockItem("test/delta-123.qcow2.vcdiff").WithContent(""),
 			WantItem: stream.Item{
 				Size:      0,
-				Name:      "delta-123.qcow2.vcdiff",
 				Path:      "test/delta-123.qcow2.vcdiff",
 				Ftype:     "disk-kvm.img.vcdiff",
 				DeltaBase: "delta-123",
@@ -90,7 +85,7 @@ func TestGetItem(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			test.Mock.Create(t, t.TempDir())
 
-			item, err := stream.GetItem(test.Mock.RootDir(), test.Mock.RelPath(), test.CalcHash)
+			item, err := stream.GetItem(test.Mock.RootDir(), test.Mock.RelPath(), stream.WithHashes(test.CalcHash))
 			if test.WantErr != nil {
 				assert.ErrorIs(t, err, test.WantErr)
 			} else {
@@ -137,17 +132,14 @@ func TestGetVersion(t *testing.T) {
 				Items: map[string]stream.Item{
 					"lxd.tar.xz": {
 						Size:  12,
-						Name:  "lxd.tar.xz",
 						Ftype: "lxd.tar.xz",
 					},
 					"disk.qcow2": {
 						Size:  12,
-						Name:  "disk.qcow2",
 						Ftype: "disk-kvm.img",
 					},
 					"rootfs.squashfs": {
 						Size:  12,
-						Name:  "rootfs.squashfs",
 						Ftype: "squashfs",
 					},
 				},
@@ -165,7 +157,6 @@ func TestGetVersion(t *testing.T) {
 				Items: map[string]stream.Item{
 					"lxd.tar.xz": {
 						Size:                     12,
-						Name:                     "lxd.tar.xz",
 						Ftype:                    "lxd.tar.xz",
 						SHA256:                   "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 						CombinedSHA256DiskKvmImg: "d9da2d2151ce5c89dfb8e1c329b286a02bd8464deb38f0f4d858486a27b796bf",
@@ -173,13 +164,11 @@ func TestGetVersion(t *testing.T) {
 					},
 					"disk.qcow2": {
 						Size:   12,
-						Name:   "disk.qcow2",
 						Ftype:  "disk-kvm.img",
 						SHA256: "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 					},
 					"rootfs.squashfs": {
 						Size:   12,
-						Name:   "rootfs.squashfs",
 						Ftype:  "squashfs",
 						SHA256: "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 					},
@@ -200,7 +189,6 @@ func TestGetVersion(t *testing.T) {
 				Items: map[string]stream.Item{
 					"lxd.tar.xz": {
 						Size:                     12,
-						Name:                     "lxd.tar.xz",
 						Ftype:                    "lxd.tar.xz",
 						SHA256:                   "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 						CombinedSHA256DiskKvmImg: "d9da2d2151ce5c89dfb8e1c329b286a02bd8464deb38f0f4d858486a27b796bf",
@@ -208,26 +196,22 @@ func TestGetVersion(t *testing.T) {
 					},
 					"disk.qcow2": {
 						Size:   12,
-						Name:   "disk.qcow2",
 						Ftype:  "disk-kvm.img",
 						SHA256: "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 					},
 					"rootfs.squashfs": {
 						Size:   12,
-						Name:   "rootfs.squashfs",
 						Ftype:  "squashfs",
 						SHA256: "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 					},
 					"delta.2013_12_31.vcdiff": {
 						Size:      12,
-						Name:      "delta.2013_12_31.vcdiff",
 						Ftype:     "squashfs.vcdiff",
 						SHA256:    "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 						DeltaBase: "2013_12_31",
 					},
 					"delta.2024_12_31.qcow2.vcdiff": {
 						Size:      12,
-						Name:      "delta.2024_12_31.qcow2.vcdiff",
 						Ftype:     "disk-kvm.img.vcdiff",
 						SHA256:    "0a3666a0710c08aa6d0de92ce72beeb5b93124cce1bf3701c9d6cdeb543cb73e",
 						DeltaBase: "2024_12_31",
@@ -241,14 +225,14 @@ func TestGetVersion(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			test.Mock.Create(t, t.TempDir())
 
-			version, err := stream.GetVersion(test.Mock.RootDir(), test.Mock.RelPath(), test.CalcHashes)
+			version, err := stream.GetVersion(test.Mock.RootDir(), test.Mock.RelPath(), stream.WithHashes(test.CalcHashes))
 			if test.WantErr != nil {
 				assert.ErrorIs(t, err, test.WantErr)
 			} else {
 				// Set expected item paths in test.
-				for _, item := range test.WantVersion.Items {
-					item.Path = filepath.Join(test.Mock.RelPath(), item.Name)
-					test.WantVersion.Items[item.Name] = item
+				for itemName, item := range test.WantVersion.Items {
+					item.Path = filepath.Join(test.Mock.RelPath(), itemName)
+					test.WantVersion.Items[itemName] = item
 				}
 
 				require.NoError(t, err)
@@ -410,19 +394,16 @@ func TestGetProduct(t *testing.T) {
 						Items: map[string]stream.Item{
 							"lxd.tar.xz": {
 								Size:  12,
-								Name:  "lxd.tar.xz",
 								Path:  "images/ubuntu/xenial/arm64/default/2024_01_01/lxd.tar.xz",
 								Ftype: "lxd.tar.xz",
 							},
 							"container.squashfs": {
 								Size:  12,
-								Name:  "container.squashfs",
 								Path:  "images/ubuntu/xenial/arm64/default/2024_01_01/container.squashfs",
 								Ftype: "squashfs",
 							},
 							"vm.qcow2": {
 								Size:  12,
-								Name:  "vm.qcow2",
 								Path:  "images/ubuntu/xenial/arm64/default/2024_01_01/vm.qcow2",
 								Ftype: "disk-kvm.img",
 							},
@@ -610,9 +591,9 @@ func TestDoesNotExist(t *testing.T) {
 
 			switch test.Mock.(type) {
 			case testutils.ItemMock:
-				_, err = stream.GetItem(test.Mock.RootDir(), test.Mock.RelPath(), false)
+				_, err = stream.GetItem(test.Mock.RootDir(), test.Mock.RelPath())
 			case testutils.VersionMock:
-				_, err = stream.GetVersion(test.Mock.RootDir(), test.Mock.RelPath(), false)
+				_, err = stream.GetVersion(test.Mock.RootDir(), test.Mock.RelPath())
 			case testutils.ProductMock:
 				_, err = stream.GetProduct(test.Mock.RootDir(), test.Mock.RelPath())
 			default:

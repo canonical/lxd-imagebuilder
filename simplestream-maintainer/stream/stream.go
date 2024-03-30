@@ -96,9 +96,6 @@ var productConfigNames = []string{
 
 // Item represents a file within a product version.
 type Item struct {
-	// Name of the file.
-	Name string `json:"-"`
-
 	// Type of the file. A known ItemType is used if possible, otherwise,
 	// this field is equal to the file's name.
 	Ftype string `json:"ftype"`
@@ -135,6 +132,10 @@ type Item struct {
 
 // Version represents a list of items available for the given image version.
 type Version struct {
+	// incomplete indicates that version is missing either a metadata file
+	// or one of the rootfs files (squashfs or qcow2).
+	incomplete bool `json:"-"`
+
 	// Checksums of files within the version.
 	Checksums map[string]string `json:"-"`
 
@@ -220,9 +221,44 @@ func NewCatalog(products map[string]Product) *ProductCatalog {
 	}
 }
 
+// Option to modify the fetching behavior.
+type Option func(*options)
+
+type options struct {
+	includeIncomplete bool
+	calcHashes        bool
+}
+
+func newOptions(opts ...Option) *options {
+	o := &options{}
+
+	for _, opt := range opts {
+		if opt != nil {
+			opt(o)
+		}
+	}
+
+	return o
+}
+
+// WithIncompleteVersions ensures incomplete versions are included when
+// retrieving a version or products.
+func WithIncompleteVersions(val bool) Option {
+	return func(o *options) {
+		o.includeIncomplete = val
+	}
+}
+
+// WithHashes ensures that item hashes are calculated.
+func WithHashes(val bool) Option {
+	return func(o *options) {
+		o.calcHashes = val
+	}
+}
+
 // GetProducts traverses through the directories on the given path and retrieves
 // a map of found products.
-func GetProducts(rootDir string, streamRelPath string) (map[string]Product, error) {
+func GetProducts(rootDir string, streamRelPath string, options ...Option) (map[string]Product, error) {
 	streamPath := filepath.Join(rootDir, streamRelPath)
 
 	products := make(map[string]Product)
@@ -240,7 +276,7 @@ func GetProducts(rootDir string, streamRelPath string) (map[string]Product, erro
 		}
 
 		// Get product on the given path.
-		product, err := GetProduct(rootDir, relPath)
+		product, err := GetProduct(rootDir, relPath, options...)
 		if err != nil {
 			if errors.Is(err, ErrProductInvalidPath) {
 				// Ignore invalid product paths.
@@ -268,7 +304,7 @@ func GetProducts(rootDir string, streamRelPath string) (map[string]Product, erro
 // GetProduct reads the product on the given path including all of its versions.
 // Product's relative path must match the predetermined format, otherwise, an error
 // is returned.
-func GetProduct(rootDir string, productRelPath string) (*Product, error) {
+func GetProduct(rootDir string, productRelPath string, options ...Option) (*Product, error) {
 	productPath := filepath.Join(rootDir, productRelPath)
 	productPathFormat := "stream/distribution/release/architecture/variant"
 	productPathLength := len(strings.Split(productPathFormat, string(os.PathSeparator)))
@@ -315,7 +351,7 @@ func GetProduct(rootDir string, productRelPath string) (*Product, error) {
 			versionRelPath := filepath.Join(productRelPath, f.Name())
 
 			// Parse product version.
-			version, err := GetVersion(rootDir, versionRelPath, false)
+			version, err := GetVersion(rootDir, versionRelPath, options...)
 			if err != nil {
 				if errors.Is(err, ErrVersionIncomplete) {
 					// Ignore incomplete versions.
@@ -373,11 +409,13 @@ func GetProduct(rootDir string, productRelPath string) (*Product, error) {
 // files and converting those that should be incuded in the product catalog
 // into items. For the relevant items, the file hashes are calculated, if
 // calcHashes is set to true.
-func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Version, error) {
+func GetVersion(rootDir string, versionRelPath string, options ...Option) (*Version, error) {
+	opts := newOptions(options...)
 	versionPath := filepath.Join(rootDir, versionRelPath)
 
 	version := Version{
-		Items: make(map[string]Item),
+		Items:      make(map[string]Item),
+		incomplete: true,
 	}
 
 	// Get files on version path.
@@ -412,7 +450,7 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 
 		// Get an item and calculate its hash if necessary.
 		itemRelPath := filepath.Join(versionRelPath, file.Name())
-		item, err := GetItem(rootDir, itemRelPath, calcHashes)
+		item, err := GetItem(rootDir, itemRelPath, options...)
 		if err != nil {
 			return nil, err
 		}
@@ -420,39 +458,36 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 		version.Items[file.Name()] = *item
 	}
 
-	// Ensure version has at metadata and at least one rootfs (container, vm).
-	isVersionComplete := false
-
 	// Check whether version is complete, and calculate combined hashes if necessary.
 	metaItem, ok := version.Items[ItemTypeMetadata]
 	if ok {
-		metaItemPath := filepath.Join(versionPath, metaItem.Name)
+		metaItemPath := filepath.Join(versionPath, ItemTypeMetadata)
 
-		for _, i := range version.Items {
-			if !lxdShared.ValueInSlice(i.Ftype, []string{ItemTypeSquashfs, ItemTypeDiskKVM, ItemTypeRootTarXz}) {
+		for itemName, item := range version.Items {
+			if !lxdShared.ValueInSlice(item.Ftype, []string{ItemTypeSquashfs, ItemTypeDiskKVM, ItemTypeRootTarXz}) {
 				// Skip files that are not required for combined checksum.
 				continue
 			}
 
 			itemHash := ""
 
-			if calcHashes {
+			if opts.calcHashes {
 				// Calculate combined hash for the item.
-				itemPath := filepath.Join(versionPath, i.Name)
+				itemPath := filepath.Join(versionPath, itemName)
 				itemHash, err = shared.FileHash(sha256.New(), metaItemPath, itemPath)
 				if err != nil {
 					return nil, err
 				}
 			}
 
-			switch i.Ftype {
+			switch item.Ftype {
 			case ItemTypeDiskKVM:
 				metaItem.CombinedSHA256DiskKvmImg = itemHash
-				isVersionComplete = true
+				version.incomplete = false
 
 			case ItemTypeSquashfs:
 				metaItem.CombinedSHA256SquashFs = itemHash
-				isVersionComplete = true
+				version.incomplete = false
 
 			case ItemTypeRootTarXz:
 				metaItem.CombinedSHA256RootXz = itemHash
@@ -464,7 +499,7 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 
 	// At least metadata and one of squashfs or qcow2 files must exist
 	// for the version to be considered complete.
-	if !isVersionComplete {
+	if version.incomplete && !opts.includeIncomplete {
 		return nil, fmt.Errorf("%w: %q", ErrVersionIncomplete, versionRelPath)
 	}
 
@@ -473,7 +508,8 @@ func GetVersion(rootDir string, versionRelPath string, calcHashes bool) (*Versio
 
 // GetItem retrieves item metadata for the file on a given path. If calcHash is
 // set to true, the file's hash is calculated.
-func GetItem(rootDir string, itemRelPath string, calcHash bool) (*Item, error) {
+func GetItem(rootDir string, itemRelPath string, options ...Option) (*Item, error) {
+	opts := newOptions(options...)
 	itemPath := filepath.Join(rootDir, itemRelPath)
 
 	file, err := os.Stat(itemPath)
@@ -482,11 +518,10 @@ func GetItem(rootDir string, itemRelPath string, calcHash bool) (*Item, error) {
 	}
 
 	item := Item{}
-	item.Name = file.Name()
 	item.Size = file.Size()
 	item.Path = itemRelPath
 
-	if calcHash {
+	if opts.calcHashes {
 		hash, err := shared.FileHash(sha256.New(), itemPath)
 		if err != nil {
 			return nil, err
@@ -503,8 +538,8 @@ func GetItem(rootDir string, itemRelPath string, calcHash bool) (*Item, error) {
 		item.Ftype = ItemTypeDiskKVM
 
 	case ".vcdiff":
-		parts := strings.Split(item.Name, ".")
-		if strings.HasSuffix(item.Name, ItemExtDiskKVMDelta) {
+		parts := strings.Split(file.Name(), ".")
+		if strings.HasSuffix(file.Name(), ItemExtDiskKVMDelta) {
 			item.Ftype = ItemTypeDiskKVMDelta
 			item.DeltaBase = parts[len(parts)-3]
 		} else {
@@ -513,7 +548,7 @@ func GetItem(rootDir string, itemRelPath string, calcHash bool) (*Item, error) {
 		}
 
 	default:
-		item.Ftype = item.Name
+		item.Ftype = file.Name()
 	}
 
 	return &item, nil
