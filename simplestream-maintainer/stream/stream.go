@@ -327,17 +327,13 @@ func GetProduct(rootDir string, productRelPath string, options ...Option) (*Prod
 		Requirements: make(map[string]string, 0),
 	}
 
-	// Create default aliases.
-	aliases := []string{path.Join(p.Distro, p.Release, p.Variant)}
-	if p.Variant == "default" {
-		aliases = append(aliases, path.Join(p.Distro, p.Release))
-	}
-
 	// Check product content.
 	files, err := os.ReadDir(productPath)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read product contents: %w", err)
 	}
+
+	var aliases []string
 
 	for _, f := range files {
 		if !f.IsDir() {
@@ -360,6 +356,7 @@ func GetProduct(rootDir string, productRelPath string, options ...Option) (*Prod
 		// Apply image config if version is complete.
 		if !version.incomplete {
 			// Reset old values.
+			aliases = []string{}
 			p.Requirements = make(map[string]string)
 
 			// Set product requirements.
@@ -381,22 +378,8 @@ func GetProduct(rootDir string, productRelPath string, options ...Option) (*Prod
 					continue
 				}
 
-				releaseAliases := strings.Split(releaseAliases, ",")
-				for _, releaseAlias := range releaseAliases {
-					// Remove all spaces, as they are not allowed.
-					releaseAlias = strings.ReplaceAll(releaseAlias, " ", "")
-					if releaseAlias == "" {
-						continue
-					}
-
-					// Use path.Join for aliases to ignore OS specific
-					// filepath separator.
-					aliases = append(aliases, path.Join(p.Distro, releaseAlias, p.Variant))
-
-					// Also add shorter alias if variant is default.
-					if p.Variant == "default" {
-						aliases = append(aliases, path.Join(p.Distro, releaseAlias))
-					}
+				for _, releaseAlias := range strings.Split(releaseAliases, ",") {
+					aliases = append(aliases, CreateAliases(p.Distro, releaseAlias, p.Variant)...)
 				}
 			}
 		}
@@ -407,6 +390,9 @@ func GetProduct(rootDir string, productRelPath string, options ...Option) (*Prod
 
 		p.Versions[f.Name()] = *version
 	}
+
+	// Prepend default aliases.
+	aliases = append(CreateAliases(p.Distro, p.Release, p.Variant), aliases...)
 
 	p.Aliases = strings.Join(aliases, ",")
 
@@ -594,4 +580,28 @@ func ReadChecksumFile(path string) (map[string]string, error) {
 	}
 
 	return checksums, nil
+}
+
+// CreateAliases creates aliases from the given distro, release, and variant.
+// It appends them to the aliases slice and returns the updated slice.
+func CreateAliases(distro string, release string, variant string) []string {
+	// Use path.Join for aliases to ignore OS specific filepath separator.
+	aliases := []string{path.Join(distro, release, variant)}
+
+	// If release is "current" create an additional alias without release.
+	if release == "current" {
+		aliases = append(aliases, path.Join(distro, variant))
+	}
+
+	// If variant is "default" create an additional alias without variant.
+	if variant == "default" {
+		if release == "current" {
+			// If release is also "current", remove release and variant.
+			aliases = append(aliases, distro)
+		} else {
+			aliases = append(aliases, path.Join(distro, release))
+		}
+	}
+
+	return aliases
 }

@@ -390,7 +390,7 @@ func TestGetProduct(t *testing.T) {
 			IgnoreItems: true,
 			WantProduct: stream.Product{
 				// Aliases are collected from all versions.
-				Aliases:      "ubuntu/noble/cloud,ubuntu/24/cloud,ubuntu/24.04/cloud",
+				Aliases:      "ubuntu/noble/cloud,ubuntu/24.04/cloud",
 				Distro:       "ubuntu",
 				Release:      "noble",
 				Architecture: "amd64",
@@ -408,11 +408,11 @@ func TestGetProduct(t *testing.T) {
 		},
 		{
 			Name: "Product with no versions (empty)",
-			Mock: testutils.MockProduct("images/ubuntu/focal/arm64/cloud"),
+			Mock: testutils.MockProduct("images/ubuntu/current/arm64/cloud"),
 			WantProduct: stream.Product{
-				Aliases:      "ubuntu/focal/cloud",
+				Aliases:      "ubuntu/current/cloud,ubuntu/cloud",
 				Distro:       "ubuntu",
-				Release:      "focal",
+				Release:      "current",
 				Architecture: "arm64",
 				Variant:      "cloud",
 				Requirements: map[string]string{},
@@ -804,6 +804,64 @@ func TestReadChecksumFile(t *testing.T) {
 			checksums, err := stream.ReadChecksumFile(filePath)
 			require.NoError(t, err)
 			require.Equal(t, test.Expect, checksums)
+		})
+	}
+}
+
+func TestCreateAliases(t *testing.T) {
+	tests := []struct {
+		Name    string
+		Distro  string
+		Release string
+		Variant string
+		Expect  []string // Expected list of aliases.
+	}{
+		{
+			Name:    "Normal",
+			Distro:  "ubuntu",
+			Release: "noble",
+			Variant: "cloud",
+			Expect: []string{
+				"ubuntu/noble/cloud",
+			},
+		},
+		{
+			Name:    "Default variant",
+			Distro:  "ubuntu",
+			Release: "noble",
+			Variant: "default",
+			Expect: []string{
+				"ubuntu/noble/default",
+				"ubuntu/noble",
+			},
+		},
+		{
+			Name:    "Current release",
+			Distro:  "ubuntu",
+			Release: "current",
+			Variant: "cloud",
+			Expect: []string{
+				"ubuntu/current/cloud",
+				"ubuntu/cloud",
+			},
+		},
+		{
+			Name:    "Current default release",
+			Distro:  "ubuntu",
+			Release: "current",
+			Variant: "default",
+			Expect: []string{
+				"ubuntu/current/default",
+				"ubuntu/default",
+				"ubuntu",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			aliases := stream.CreateAliases(test.Distro, test.Release, test.Variant)
+			require.Equal(t, test.Expect, aliases)
 		})
 	}
 }
