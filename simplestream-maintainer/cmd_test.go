@@ -699,6 +699,61 @@ func TestBuildIndexAndPrune_Steps(t *testing.T) {
 			},
 		},
 		{
+			Name:           "Incomplete versions",
+			WithIncomplete: true,
+			Steps: []Step{
+				{
+					// Step 0: Valid version.
+					MockVersions: []testutils.VersionMock{
+						testutils.MockVersion("v0").
+							WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+					},
+					WantVersions: map[string][]string{
+						"v0": {"lxd.tar.xz", "root.squashfs", "disk.qcow2"},
+					},
+				},
+				{
+					// Step 1: Old incomplete version (missing rootfs).
+					MockVersions: []testutils.VersionMock{
+						testutils.MockVersion("v1").WithFiles("lxd.tar.xz").WithAge(24 * time.Hour),
+					},
+					WantVersions: map[string][]string{
+						"v0": {"lxd.tar.xz", "root.squashfs", "disk.qcow2"},
+					},
+				},
+				{
+					// Step 2: Old incomplete version (hidden).
+					MockVersions: []testutils.VersionMock{
+						testutils.MockVersion(".v2").WithFiles("lxd.tar.xz", "disk.qcow2").WithAge(24 * time.Hour),
+					},
+					WantVersions: map[string][]string{
+						"v0": {"lxd.tar.xz", "root.squashfs", "disk.qcow2"},
+					},
+				},
+				{
+					// Step 3: New incomplete version (hidden).
+					MockVersions: []testutils.VersionMock{
+						testutils.MockVersion(".v3").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					},
+					WantVersions: map[string][]string{
+						"v0":  {"lxd.tar.xz", "root.squashfs", "disk.qcow2"},
+						".v3": {"lxd.tar.xz", "disk.qcow2"}, // Incomplete, but not removed.
+					},
+				},
+				{
+					// Step 4: Valid version.
+					MockVersions: []testutils.VersionMock{
+						testutils.MockVersion("v4").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					},
+					WantVersions: map[string][]string{
+						"v0":  {"lxd.tar.xz", "root.squashfs", "disk.qcow2"},
+						".v3": {"lxd.tar.xz", "disk.qcow2"},
+						"v4":  {"lxd.tar.xz", "disk.qcow2", "disk.v0.qcow2.vcdiff"},
+					},
+				},
+			},
+		},
+		{
 			Name: "Ensure config from last version is applied",
 			Steps: []Step{
 				{

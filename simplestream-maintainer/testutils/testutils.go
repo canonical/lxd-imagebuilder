@@ -167,6 +167,9 @@ type VersionMock struct {
 
 	// Image config.
 	imageConfig string
+
+	// Files age will be modified once the version is created.
+	setAge time.Duration
 }
 
 // MockVersion initializes new product version mock.
@@ -235,7 +238,19 @@ func (v *VersionMock) Create(t *testing.T, rootDir string) VersionMock {
 		require.NoError(t, err)
 	}
 
+	// Set files age.
+	if v.setAge > 0 {
+		setFilesAge(t, v.AbsPath(), v.setAge)
+	}
+
 	return *v
+}
+
+// WithAge sets age (modification time) of the version contents
+// after version is created.
+func (v VersionMock) WithAge(age time.Duration) VersionMock {
+	v.setAge = age
+	return v
 }
 
 // ItemMock is a mock for a product version item (file) structure.
