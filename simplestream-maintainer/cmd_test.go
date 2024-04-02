@@ -160,25 +160,44 @@ func TestBuildIndex(t *testing.T) {
 			require.NoError(t, err)
 
 			// Read actual catalog and index files.
-			catalogPath := filepath.Join(p.RootDir(), "streams", "v1", fmt.Sprintf("%s.json", p.StreamName()))
-			indexPath := filepath.Join(p.RootDir(), "streams", "v1", "index.json")
-
-			jsonCatalogActual, err := os.ReadFile(catalogPath)
+			jsonCatalogPath := filepath.Join(p.RootDir(), "streams", "v1", fmt.Sprintf("%s.json", p.StreamName()))
+			jsonCatalog, err := os.ReadFile(jsonCatalogPath)
 			require.NoError(t, err)
 
-			jsonIndexActual, err := os.ReadFile(indexPath)
+			jsonIndexPath := filepath.Join(p.RootDir(), "streams", "v1", "index.json")
+			jsonIndex, err := os.ReadFile(jsonIndexPath)
 			require.NoError(t, err)
 
 			// Ensure index and catalog json files match.
 			require.Equal(t,
 				strings.TrimSpace(string(jsonCatalogExpect)),
-				strings.TrimSpace(string(jsonCatalogActual)),
+				strings.TrimSpace(string(jsonCatalog)),
 				"Expected catalog does not match the built one!")
 
 			require.Equal(t,
 				strings.TrimSpace(string(jsonIndexExpect)),
-				strings.TrimSpace(string(jsonIndexActual)),
+				strings.TrimSpace(string(jsonIndex)),
 				"Expected index does not match the built one!")
+
+			// Read the compressed versions of the catalog and index files.
+			jsonCatalogGzPath := filepath.Join(p.RootDir(), "streams", "v1", fmt.Sprintf("%s.json.gz", p.StreamName()))
+			jsonCatalogGz, err := shared.ReadGZipFile(jsonCatalogGzPath)
+			require.NoError(t, err)
+
+			jsonIndexGzPath := filepath.Join(p.RootDir(), "streams", "v1", "index.json.gz")
+			jsonIndexGz, err := shared.ReadGZipFile(jsonIndexGzPath)
+			require.NoError(t, err)
+
+			// Ensure uncompressed index and catalog json files match.
+			require.Equal(t,
+				strings.TrimSpace(string(jsonCatalogExpect)),
+				strings.TrimSpace(string(jsonCatalogGz)),
+				"Invalid compressed product catalog file!")
+
+			require.Equal(t,
+				strings.TrimSpace(string(jsonIndexExpect)),
+				strings.TrimSpace(string(jsonIndexGz)),
+				"Invalid compressed index file!")
 		})
 	}
 }

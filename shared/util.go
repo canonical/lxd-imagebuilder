@@ -1,6 +1,8 @@
 package shared
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -438,6 +440,72 @@ func FileHash(hash hash.Hash, paths ...string) (string, error) {
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// GZipFile compresses the file on the source path and writes the compressed
+// content to the destination path. If destination path is empty, the source
+// file name is used with .gz suffix.
+func GZipFile(srcPath string, dstPath string) error {
+	if dstPath == "" {
+		dstPath = fmt.Sprintf("%s.gz", srcPath)
+	}
+
+	srcFile, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dstPath)
+	if err != nil {
+		return err
+	}
+
+	defer dstFile.Close()
+
+	writer, err := gzip.NewWriterLevel(dstFile, gzip.BestCompression)
+	if err != nil {
+		return err
+	}
+
+	defer writer.Close()
+
+	// Copy the source file content to the gzip writer which
+	// writes the compresses content to the destination file.
+	_, err = io.Copy(writer, srcFile)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ReadGZipFile opens the GZ file on the given path and decompresses it
+// decode into an array of bytes.
+func ReadGZipFile(path string) ([]byte, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	defer file.Close()
+
+	reader, err := gzip.NewReader(file)
+	if err != nil {
+		return nil, err
+	}
+
+	defer reader.Close()
+
+	buf := &bytes.Buffer{}
+
+	_, err = io.Copy(buf, reader)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 // ReadYAMLFile opens the YAML file on the given path and tries to decode it into

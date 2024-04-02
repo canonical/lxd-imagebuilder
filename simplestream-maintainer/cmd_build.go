@@ -85,15 +85,27 @@ func buildIndex(ctx context.Context, rootDir string, streamVersion string, strea
 
 		err = shared.WriteJSONFile(catalogPathTemp, catalog)
 		if err != nil {
-			return err
+			return fmt.Errorf("Write product catalog file: %w", err)
 		}
 
 		defer os.Remove(catalogPathTemp)
 
-		replaces = append(replaces, replace{
-			OldPath: catalogPathTemp,
-			NewPath: catalogPath,
-		})
+		// Create compressed version of the product catalog file.
+		catalogGzPath := fmt.Sprintf("%s.gz", catalogPath)
+		catalogGzPathTemp := fmt.Sprintf("%s.gz", catalogPathTemp)
+
+		err = shared.GZipFile(catalogPathTemp, catalogGzPathTemp)
+		if err != nil {
+			return fmt.Errorf("Compress product catalog file: %w", err)
+		}
+
+		defer os.Remove(catalogGzPathTemp)
+
+		// Add replaces for temporary files.
+		replaces = append(replaces,
+			replace{OldPath: catalogPathTemp, NewPath: catalogPath},
+			replace{OldPath: catalogGzPathTemp, NewPath: catalogGzPath},
+		)
 
 		// Relative path for index.
 		catalogRelPath, err := filepath.Rel(rootDir, catalogPath)
@@ -113,17 +125,29 @@ func buildIndex(ctx context.Context, rootDir string, streamVersion string, strea
 
 	err = shared.WriteJSONFile(indexPathTemp, index)
 	if err != nil {
-		return err
+		return fmt.Errorf("Write index file: %w", err)
 	}
 
 	defer os.Remove(indexPathTemp)
 
-	// Index file should be updated last, once all catalog files
-	// are in place.
-	replaces = append(replaces, replace{
-		OldPath: indexPathTemp,
-		NewPath: indexPath,
-	})
+	// Create compressed version of the index file.
+	indexGzPath := fmt.Sprintf("%s.gz", indexPath)
+	indexGzPathTemp := fmt.Sprintf("%s.gz", indexPathTemp)
+
+	err = shared.GZipFile(indexPathTemp, indexGzPathTemp)
+	if err != nil {
+		return fmt.Errorf("Compress index file: %w", err)
+	}
+
+	defer os.Remove(indexGzPathTemp)
+
+	// Add replaces for temporary files. Note that index file must
+	// be updated last, once all catalog files are in place, to
+	// avoid referencing non-existing products (from catalog).
+	replaces = append(replaces,
+		replace{OldPath: indexPathTemp, NewPath: indexPath},
+		replace{OldPath: indexGzPathTemp, NewPath: indexGzPath},
+	)
 
 	// Move temporary files to final destinations.
 	for _, r := range replaces {
