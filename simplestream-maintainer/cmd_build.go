@@ -201,26 +201,26 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 	// to the catalog.
 	_, newProducts := diffProducts(catalog.Products, products)
 	for id, p := range newProducts {
-		if len(p.Versions) == 0 {
-			continue
-		}
-
 		productPath := filepath.Join(streamName, p.RelPath())
 
-		_, ok := catalog.Products[id]
-		if !ok {
-			// If product does not exist yet, set the product value to one
-			// that is fetched from the directory hierarchy. This ensures
-			// that the product id and other metadata is set. However,
-			// remove existing versions, as they will be repopulated below.
-			product := products[id]
-			product.Versions = make(map[string]stream.Version, len(p.Versions))
+		// Copy value of the product retrieved from the directory hierarchy
+		// to the catalog's product to ensure the potential new metadata is
+		// applied.
+		mutex.Lock()
+		tmp := p
 
-			// Lock before updating, as another gorotine may be accessing it.
-			mutex.Lock()
-			catalog.Products[id] = product
-			mutex.Unlock()
+		_, ok := catalog.Products[id]
+		if ok {
+			// Retain existing product versions.
+			tmp.Versions = catalog.Products[id].Versions
+		} else {
+			// Create new map for product versions. They will be added
+			// in the next step.
+			tmp.Versions = make(map[string]stream.Version, len(p.Versions))
 		}
+
+		catalog.Products[id] = tmp
+		mutex.Unlock()
 
 		for versionName := range p.Versions {
 			// Add a job for processing a new version.

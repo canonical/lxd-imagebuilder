@@ -623,6 +623,208 @@ func TestPruneDanglingResources(t *testing.T) {
 	}
 }
 
+func TestBuildIndexAndPrune_Steps(t *testing.T) {
+	t.Parallel()
+
+	type ProductMeta struct {
+		Requirements map[string]string
+		Aliases      string
+	}
+
+	type Step struct {
+		MockVersions    []testutils.VersionMock
+		WantVersions    map[string][]string // Expected versions and their items (in dir hierarchy).
+		WantProductMeta *ProductMeta        // Expected product metadata.
+	}
+
+	tests := []struct {
+		Name           string
+		Steps          []Step
+		WithIncomplete bool
+	}{
+		{
+			Name: "Calculate deltas for new versions",
+			Steps: []Step{
+				{
+					// Step 0
+					MockVersions: []testutils.VersionMock{
+						testutils.MockVersion("v1").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+					},
+					WantVersions: map[string][]string{
+						"v1": {"lxd.tar.xz", "root.squashfs", "disk.qcow2"},
+					},
+				},
+				{
+					// Step 1
+					MockVersions: []testutils.VersionMock{
+						testutils.MockVersion("v3").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
+					},
+					WantVersions: map[string][]string{
+						"v1": {"lxd.tar.xz", "root.squashfs", "disk.qcow2"},
+						"v3": {"lxd.tar.xz", "root.squashfs", "disk.qcow2", "root.v1.vcdiff", "disk.v1.qcow2.vcdiff"},
+					},
+				},
+				{
+					// Step 2
+					MockVersions: []testutils.VersionMock{
+						testutils.MockVersion("v2").WithFiles("lxd.tar.xz", "disk.qcow2"),
+						testutils.MockVersion("v5").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					},
+					WantVersions: map[string][]string{
+						// "v1": Pruned (retain = 3).
+						"v2": {"lxd.tar.xz", "disk.qcow2", "disk.v1.qcow2.vcdiff"},
+						"v3": {"lxd.tar.xz", "root.squashfs", "disk.qcow2", "root.v1.vcdiff", "disk.v1.qcow2.vcdiff", "disk.v2.qcow2.vcdiff"},
+						"v5": {"lxd.tar.xz", "disk.qcow2", "disk.v3.qcow2.vcdiff"},
+					},
+				},
+			},
+		},
+		{
+			Name: "Ensure config from last version is applied",
+			Steps: []Step{
+				{
+					// Step 0: Initial version.
+					MockVersions: []testutils.VersionMock{
+						testutils.MockVersion("v2").
+							WithFiles("lxd.tar.xz", "disk.qcow2").
+							SetImageConfig(
+								"simplestream:",
+								"  requirements:",
+								"  - requirements:",
+								"      secure_boot: false",
+							),
+					},
+					WantProductMeta: &ProductMeta{
+						Aliases:      "ubuntu/noble/cloud",
+						Requirements: map[string]string{"secure_boot": "false"},
+					},
+				},
+				{
+					// Step 1: Add older version
+					MockVersions: []testutils.VersionMock{
+						testutils.MockVersion("v1").
+							WithFiles("lxd.tar.xz", "disk.qcow2").
+							SetImageConfig(
+								"simplestream:",
+								"  requirements:",
+								"  - requirements:",
+								"      req: failnow",
+							),
+					},
+					WantProductMeta: &ProductMeta{
+						Aliases:      "ubuntu/noble/cloud",
+						Requirements: map[string]string{"secure_boot": "false"},
+					},
+				},
+				{
+					// Step 2: Ensure config from last version is applied.
+					MockVersions: []testutils.VersionMock{
+						testutils.MockVersion("v2").
+							WithFiles("lxd.tar.xz", "disk.qcow2").
+							SetImageConfig(
+								"simplestream:",
+								"  requirements:",
+								"  - requirements:",
+								"      secure_boot: true",
+							),
+						testutils.MockVersion("v3").
+							WithFiles("lxd.tar.xz", "disk.qcow2").
+							SetImageConfig(
+								"simplestream:",
+								"  release_aliases:",
+								"    noble: 24",
+							),
+					},
+					WantProductMeta: &ProductMeta{
+						Aliases:      "ubuntu/noble/cloud,ubuntu/24/cloud",
+						Requirements: map[string]string{},
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+
+			streamName := "images"
+			streamVersion := "v99"
+			productID := "ubuntu:noble:amd64:cloud"
+			productRelPath := "images/ubuntu/noble/amd64/cloud"
+
+			global := &globalOptions{
+				ctx: context.Background(),
+			}
+
+			buildOpts := buildOptions{
+				global:        global,
+				StreamVersion: streamVersion,
+				ImageDirs:     []string{streamName},
+				Workers:       2,
+			}
+
+			pruneOpts := pruneOptions{
+				global:        global,
+				StreamVersion: streamVersion,
+				ImageDirs:     []string{streamName},
+				Dangling:      true,
+				RetainNum:     3,
+			}
+
+			// Run each step within a test case. Each step first mocks the product
+			// with given versions and then runs the build and prune commands.
+			for i, step := range test.Steps {
+				p := testutils.MockProduct(productRelPath).AddVersions(step.MockVersions...)
+				p.Create(t, tmpDir)
+
+				// Build.
+				err := buildOpts.Run(nil, []string{tmpDir})
+				require.NoErrorf(t, err, "[ Step %d ] Failed running build command!", i)
+
+				// Prune.
+				err = pruneOpts.Run(nil, []string{tmpDir})
+				require.NoErrorf(t, err, "[ Step %d ] Failed running prune command!", i)
+
+				if step.WantProductMeta != nil {
+					catalog, err := buildProductCatalog(context.Background(), tmpDir, streamVersion, streamName, 2)
+					require.NoErrorf(t, err, "[ Step %d ] Failed building product catalog!", i)
+
+					product, ok := catalog.Products[productID]
+					require.Truef(t, ok, "[ Step %d ] Product not found in the product catalog!", i)
+
+					// Ensure product metadata matches the expected values.
+					require.Equalf(t, step.WantProductMeta.Requirements, product.Requirements, "[ Step %d ] Requirements mismatch!", i)
+					require.Equalf(t, step.WantProductMeta.Aliases, product.Aliases, "[ Step %d ] Aliases mismatch!", i)
+				}
+
+				if len(step.WantVersions) > 0 {
+					products, err := stream.GetProducts(tmpDir, streamName, stream.WithIncompleteVersions(test.WithIncomplete))
+					require.NoErrorf(t, err, "[ Step %d ] Failed to retrieve products!", i)
+
+					product, ok := products[productID]
+					require.Truef(t, ok, "[ Step %d ] Product not found in directory structure!", i)
+
+					// Ensure product contains all expected versions.
+					require.ElementsMatch(t,
+						shared.MapKeys(step.WantVersions),
+						shared.MapKeys(product.Versions),
+						"[ Step %d ] Versions mismatch!", i)
+
+					for versionName, wantItems := range step.WantVersions {
+						version, ok := product.Versions[versionName]
+						require.True(t, ok, "[ Step %d ] Version %q not found within resulting product %q!", i, versionName, productID)
+
+						// Ensure each version contains all expected items.
+						require.ElementsMatchf(t, wantItems, shared.MapKeys(version.Items),
+							"[ Step %d ] Items mismatch for version %q!", i, versionName)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestPruneEmptyDirs(t *testing.T) {
 	t.Parallel()
 

@@ -22,19 +22,23 @@ var (
 	// filesystem (qcow2/squashfs) must be present.
 	ErrVersionIncomplete = errors.New("Product version is incomplete")
 
+	// ErrVersionInvalidImageConfig indicates version's image config is invalid.
+	ErrVersionInvalidImageConfig = errors.New("Product version has invalid image config")
+
 	// ErrProductInvalidPath indicates that product's path is invalid because
 	// either the directory on the given path does not exist, or it's path
 	// does not match the expected format.
 	ErrProductInvalidPath = errors.New("Invalid product path")
-
-	// ErrProductInvalidConfig indicating product's configuration file is invalid.
-	ErrProductInvalidConfig = errors.New("Invalid product config")
 )
 
 // Static list of file names.
 const (
 	// FileChecksumSHA256 is the name of the checksum file containing SHA256 hashes.
 	FileChecksumSHA256 = "SHA256SUMS"
+
+	// FileImageConfig is the name of the file that contains additional information
+	// about the version.
+	FileImageConfig = "image.yaml"
 )
 
 // ItemType is a type of the file that item holds.
@@ -89,11 +93,6 @@ var allowedItemExtensions = []string{
 	ItemExtDiskKVMDelta,
 }
 
-// List of valid product config names.
-var productConfigNames = []string{
-	"config.yaml",
-}
-
 // Item represents a file within a product version.
 type Item struct {
 	// Type of the file. A known ItemType is used if possible, otherwise,
@@ -139,6 +138,9 @@ type Version struct {
 	// Checksums of files within the version.
 	Checksums map[string]string `json:"-"`
 
+	// ImageConfig contains additional information about the product version.
+	ImageConfig shared.DefinitionSimplestream `json:"-"`
+
 	// Map of items found within the version, where the map key
 	// represents file name.
 	Items map[string]Item `json:"items,omitempty"`
@@ -181,15 +183,6 @@ func (p Product) ID() string {
 // RelPath returns the product's path relative to the stream's root directory.
 func (p Product) RelPath() string {
 	return filepath.Join(p.Distro, p.Release, p.Architecture, p.Variant)
-}
-
-// ProductConfig contains additional data for all product versions (if found).
-type ProductConfig struct {
-	// A comma delimited release aliases that are used to construct final product aliases.
-	ReleaseAliases string `json:"release_aliases"`
-
-	// Map of the image requirements.
-	Requirements map[string]string `json:"requirements"`
 }
 
 // ProductCatalog contains all products.
@@ -334,71 +327,72 @@ func GetProduct(rootDir string, productRelPath string, options ...Option) (*Prod
 		Requirements: make(map[string]string, 0),
 	}
 
-	// Create default aliases.
-	aliases := []string{path.Join(p.Distro, p.Release, p.Variant)}
-	if p.Variant == "default" {
-		aliases = append(aliases, path.Join(p.Distro, p.Release))
-	}
-
 	// Check product content.
 	files, err := os.ReadDir(productPath)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read product contents: %w", err)
 	}
 
+	var aliases []string
+
 	for _, f := range files {
-		if f.IsDir() {
-			versionRelPath := filepath.Join(productRelPath, f.Name())
-
-			// Parse product version.
-			version, err := GetVersion(rootDir, versionRelPath, options...)
-			if err != nil {
-				if errors.Is(err, ErrVersionIncomplete) {
-					// Ignore incomplete versions.
-					continue
-				}
-
-				return nil, err
-			}
-
-			if p.Versions == nil {
-				p.Versions = make(map[string]Version)
-			}
-
-			p.Versions[f.Name()] = *version
-		} else if lxdShared.ValueInSlice(f.Name(), productConfigNames) {
-			configPath := filepath.Join(productPath, f.Name())
-
-			// Parse product config.
-			config, err := shared.ReadYAMLFile(configPath, &ProductConfig{})
-			if err != nil {
-				return nil, fmt.Errorf("product %q: %w: %w", productRelPath, ErrProductInvalidConfig, err)
-			}
-
-			// Evaluate extra aliases.
-			releaseAliases := strings.Split(config.ReleaseAliases, ",")
-			for _, release := range releaseAliases {
-				// Remove all spaces, as they are not allowed.
-				release = strings.ReplaceAll(release, " ", "")
-				if release == "" {
-					continue
-				}
-
-				// Use path.Join for aliases to ignore OS specific
-				// filepath separator.
-				alias := path.Join(p.Distro, release, p.Variant)
-				aliases = append(aliases, alias)
-
-				// Add shorter alias if variant is default.
-				if p.Variant == "default" {
-					aliases = append(aliases, path.Join(p.Distro, p.Release))
-				}
-			}
-
-			// Apply config to product.
-			p.Requirements = config.Requirements
+		if !f.IsDir() {
+			continue
 		}
+
+		versionRelPath := filepath.Join(productRelPath, f.Name())
+
+		// Parse product version.
+		version, err := GetVersion(rootDir, versionRelPath, options...)
+		if err != nil {
+			if errors.Is(err, ErrVersionIncomplete) {
+				// Ignore incomplete versions.
+				continue
+			}
+
+			return nil, err
+		}
+
+		// Apply image config if version is complete.
+		if !version.incomplete {
+			// Reset old values.
+			aliases = []string{}
+			p.Requirements = make(map[string]string)
+
+			// Set product requirements.
+			for _, req := range version.ImageConfig.Requirements {
+				// Apply requirements if filter matches the current product.
+				// Note that instance types are not supported because requirements
+				// are applied to the product itself and not a specific version.
+				if shared.ApplyFilter(&req.DefinitionFilter, p.Release, p.Architecture, p.Variant, "", 0) {
+					for k, v := range req.Requirements {
+						p.Requirements[k] = v
+					}
+				}
+			}
+
+			// Evaluate additional aliases.
+			for release, releaseAliases := range version.ImageConfig.ReleaseAliases {
+				if release != p.Release {
+					// Skip aliases for other releases.
+					continue
+				}
+
+				for _, releaseAlias := range strings.Split(releaseAliases, ",") {
+					aliases = append(aliases, CreateAliases(p.Distro, releaseAlias, p.Variant)...)
+				}
+			}
+		}
+
+		if p.Versions == nil {
+			p.Versions = make(map[string]Version)
+		}
+
+		p.Versions[f.Name()] = *version
 	}
+
+	// Prepend default aliases.
+	aliases = append(CreateAliases(p.Distro, p.Release, p.Variant), aliases...)
 
 	p.Aliases = strings.Join(aliases, ",")
 
@@ -431,7 +425,16 @@ func GetVersion(rootDir string, versionRelPath string, options ...Option) (*Vers
 			continue
 		}
 
-		if file.Name() == FileChecksumSHA256 {
+		if shared.HasSuffix(file.Name(), allowedItemExtensions...) {
+			// Get an item and calculate its hash if necessary.
+			itemRelPath := filepath.Join(versionRelPath, file.Name())
+			item, err := GetItem(rootDir, itemRelPath, options...)
+			if err != nil {
+				return nil, err
+			}
+
+			version.Items[file.Name()] = *item
+		} else if file.Name() == FileChecksumSHA256 {
 			// Read the checksum file and convert it to a map
 			// of filename and checksum pairs.
 			checksumPath := filepath.Join(versionPath, file.Name())
@@ -439,23 +442,16 @@ func GetVersion(rootDir string, versionRelPath string, options ...Option) (*Vers
 			if err != nil {
 				return nil, fmt.Errorf("Failed to read checksums file: %w", err)
 			}
+		} else if file.Name() == FileImageConfig {
+			// Read the image config file.
+			configPath := filepath.Join(versionPath, file.Name())
+			config, err := shared.ReadYAMLFile(configPath, &shared.Definition{})
+			if err != nil {
+				return nil, fmt.Errorf("%w: %w", ErrVersionInvalidImageConfig, err)
+			}
 
-			continue
+			version.ImageConfig = config.Simplestream
 		}
-
-		if !shared.HasSuffix(file.Name(), allowedItemExtensions...) {
-			// Skip disallowed items.
-			continue
-		}
-
-		// Get an item and calculate its hash if necessary.
-		itemRelPath := filepath.Join(versionRelPath, file.Name())
-		item, err := GetItem(rootDir, itemRelPath, options...)
-		if err != nil {
-			return nil, err
-		}
-
-		version.Items[file.Name()] = *item
 	}
 
 	// Check whether version is complete, and calculate combined hashes if necessary.
@@ -584,4 +580,28 @@ func ReadChecksumFile(path string) (map[string]string, error) {
 	}
 
 	return checksums, nil
+}
+
+// CreateAliases creates aliases from the given distro, release, and variant.
+// It appends them to the aliases slice and returns the updated slice.
+func CreateAliases(distro string, release string, variant string) []string {
+	// Use path.Join for aliases to ignore OS specific filepath separator.
+	aliases := []string{path.Join(distro, release, variant)}
+
+	// If release is "current" create an additional alias without release.
+	if release == "current" {
+		aliases = append(aliases, path.Join(distro, variant))
+	}
+
+	// If variant is "default" create an additional alias without variant.
+	if variant == "default" {
+		if release == "current" {
+			// If release is also "current", remove release and variant.
+			aliases = append(aliases, distro)
+		} else {
+			aliases = append(aliases, path.Join(distro, release))
+		}
+	}
+
+	return aliases
 }

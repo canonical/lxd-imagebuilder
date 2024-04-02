@@ -65,9 +65,6 @@ type ProductMock struct {
 	// Versions of the product.
 	versions []VersionMock
 
-	// Product config content.
-	config string
-
 	// When creating a product, the catalog is built after
 	// version indicated by catalogAfterVersion is created.
 	catalogAfterVersion string
@@ -91,13 +88,6 @@ func MockProduct(productRelPath string) ProductMock {
 // AddVersions adds mocked versions to the product.
 func (p ProductMock) AddVersions(versions ...VersionMock) ProductMock {
 	p.versions = append(p.versions, versions...)
-	return p
-}
-
-// AddProductConfig sets product config with the given content that is written
-// when product is created.
-func (p ProductMock) AddProductConfig(lines ...string) ProductMock {
-	p.config = strings.Join(lines, "\n")
 	return p
 }
 
@@ -157,13 +147,6 @@ func (p *ProductMock) Create(t *testing.T, rootDir string) ProductMock {
 		runAfterVersion(v.RelPath())
 	}
 
-	// Write product config.
-	if p.config != "" {
-		configPath := filepath.Join(p.AbsPath(), "config.yaml")
-		err = os.WriteFile(configPath, []byte(p.config), os.ModePerm)
-		require.NoError(t, err)
-	}
-
 	return *p
 }
 
@@ -181,6 +164,9 @@ type VersionMock struct {
 
 	// Version checksums file content.
 	checksums string
+
+	// Image config.
+	imageConfig string
 }
 
 // MockVersion initializes new product version mock.
@@ -215,6 +201,13 @@ func (v VersionMock) SetChecksums(entries ...string) VersionMock {
 	return v
 }
 
+// SetImageConfig sets image config with the given content that is written
+// when a product version is created.
+func (v VersionMock) SetImageConfig(lines ...string) VersionMock {
+	v.imageConfig = strings.Join(lines, "\n")
+	return v
+}
+
 // Create creates the mocked version directory structure in the given directory.
 func (v *VersionMock) Create(t *testing.T, rootDir string) VersionMock {
 	v.setRootDir(t, rootDir)
@@ -232,6 +225,13 @@ func (v *VersionMock) Create(t *testing.T, rootDir string) VersionMock {
 	if v.checksums != "" {
 		checksumPath := filepath.Join(v.AbsPath(), stream.FileChecksumSHA256)
 		err = os.WriteFile(checksumPath, []byte(v.checksums), os.ModePerm)
+		require.NoError(t, err)
+	}
+
+	// Write image config.
+	if v.imageConfig != "" {
+		configPath := filepath.Join(v.AbsPath(), stream.FileImageConfig)
+		err = os.WriteFile(configPath, []byte(v.imageConfig), os.ModePerm)
 		require.NoError(t, err)
 	}
 
