@@ -9,9 +9,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
-
-	lxdShared "github.com/canonical/lxd/shared"
 
 	"github.com/canonical/lxd-imagebuilder/shared"
 )
@@ -460,7 +459,7 @@ func GetVersion(rootDir string, versionRelPath string, options ...Option) (*Vers
 		metaItemPath := filepath.Join(versionPath, ItemTypeMetadata)
 
 		for itemName, item := range version.Items {
-			if !lxdShared.ValueInSlice(item.Ftype, []string{ItemTypeSquashfs, ItemTypeDiskKVM, ItemTypeRootTarXz}) {
+			if !slices.Contains([]string{ItemTypeSquashfs, ItemTypeDiskKVM, ItemTypeRootTarXz}, item.Ftype) {
 				// Skip files that are not required for combined checksum.
 				continue
 			}
