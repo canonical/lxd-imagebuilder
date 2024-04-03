@@ -70,6 +70,7 @@ func TestBuildIndex(t *testing.T) {
 						Aliases:      "ubuntu/focal/cloud",
 						Architecture: "amd64",
 						Distro:       "ubuntu",
+						OS:           "Ubuntu",
 						Release:      "focal",
 						Variant:      "cloud",
 						Requirements: map[string]string{},
