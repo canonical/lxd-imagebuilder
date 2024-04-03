@@ -265,6 +265,9 @@ type DefinitionSimplestreamRequirements struct {
 // It is parsed by the simplestream-maintainer when building a product
 // catalog.
 type DefinitionSimplestream struct {
+	// Pretty distro name.
+	DistroName string `yaml:"distro_name,omitempty"`
+
 	// Map of release aliases. Key represents the release name and value
 	// is a comma delimited string of additional release aliases.
 	ReleaseAliases map[string]string `yaml:"release_aliases,omitempty"`
