@@ -303,7 +303,7 @@ func mockProductCatalog(t *testing.T, rootDir string, streamName string) {
 	require.NoError(t, err)
 
 	// Create product catalog.
-	catalog := stream.NewCatalog(products)
+	catalog := stream.NewCatalog(streamName, products)
 	catalogPath := filepath.Join(metaDir, fmt.Sprintf("%s.json", streamName))
 
 	// Ensure catalog's directory exists.

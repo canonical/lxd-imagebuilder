@@ -182,7 +182,7 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 	}
 
 	if catalog == nil {
-		catalog = stream.NewCatalog(nil)
+		catalog = stream.NewCatalog(streamName, nil)
 	}
 
 	// Get existing products (from actual directory hierarchy).

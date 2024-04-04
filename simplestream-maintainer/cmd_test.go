@@ -62,7 +62,7 @@ func TestBuildIndex(t *testing.T) {
 				testutils.MockVersion("2024_01_04").WithFiles("lxd.tar.xz", "disk.qcow2", "rootfs.squashfs"),
 			),
 			WantCatalog: stream.ProductCatalog{
-				ContentID: "images",
+				ContentID: "images-daily",
 				Format:    "products:1.0",
 				DataType:  "image-downloads",
 				Products: map[string]stream.Product{

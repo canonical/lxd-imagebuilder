@@ -201,13 +201,13 @@ type ProductCatalog struct {
 }
 
 // NewCatalog creates a new product catalog.
-func NewCatalog(products map[string]Product) *ProductCatalog {
+func NewCatalog(streamName string, products map[string]Product) *ProductCatalog {
 	if products == nil {
 		products = make(map[string]Product)
 	}
 
 	return &ProductCatalog{
-		ContentID: "images",
+		ContentID: streamName,
 		DataType:  "image-downloads",
 		Format:    "products:1.0",
 		Products:  products,
