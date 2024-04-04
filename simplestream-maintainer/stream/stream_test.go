@@ -636,24 +636,11 @@ func TestGetProducts(t *testing.T) {
 			},
 			WantProducts: map[string]stream.Product{
 				"ubuntu:jammy:amd64:cloud": {
-					Aliases:      "ubuntu/jammy/cloud",
-					Distro:       "ubuntu",
-					OS:           "Ubuntu",
-					Release:      "jammy",
-					Architecture: "amd64",
-					Variant:      "cloud",
-					Requirements: map[string]string{},
 					Versions: map[string]stream.Version{
 						"2024_01_01": {},
 					},
 				},
 				"ubuntu:jammy:arm64:desktop": {
-					Aliases:      "ubuntu/jammy/desktop",
-					Distro:       "Ubuntu",
-					Release:      "jammy",
-					Architecture: "arm64",
-					Variant:      "desktop",
-					Requirements: map[string]string{},
 					Versions: map[string]stream.Version{
 						"2023": {},
 						"2024": {},
@@ -661,13 +648,6 @@ func TestGetProducts(t *testing.T) {
 					},
 				},
 				"alpine:edge:amd64:cloud": {
-					Aliases:      "alpine/edge/cloud",
-					Distro:       "alpine",
-					OS:           "Alpine",
-					Release:      "edge",
-					Architecture: "amd64",
-					Variant:      "cloud",
-					Requirements: map[string]string{},
 					Versions: map[string]stream.Version{
 						"v3": {},
 					},
@@ -677,34 +657,36 @@ func TestGetProducts(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		tmpDir := t.TempDir()
+		t.Run(test.Name, func(t *testing.T) {
+			tmpDir := t.TempDir()
 
-		ps := test.Mock
+			ps := test.Mock
 
-		for _, p := range ps {
-			p.Create(t, tmpDir)
-		}
+			for _, p := range ps {
+				p.Create(t, tmpDir)
+			}
 
-		if len(ps) == 0 {
-			require.Fail(t, "Test must include at least one mocked product!")
-		}
+			if len(ps) == 0 {
+				require.Fail(t, "Test must include at least one mocked product!")
+			}
 
-		products, err := stream.GetProducts(tmpDir, ps[0].StreamName())
-		require.NoError(t, err)
+			products, err := stream.GetProducts(tmpDir, ps[0].StreamName())
+			require.NoError(t, err)
 
-		// Ensure expected products are found.
-		require.ElementsMatch(t,
-			shared.MapKeys(test.WantProducts),
-			shared.MapKeys(products),
-			"Expected and actual products do not match")
+			// Ensure expected products are found.
+			require.ElementsMatch(t,
+				shared.MapKeys(test.WantProducts),
+				shared.MapKeys(products),
+				"Expected and actual products do not match")
 
-		// Ensure expected product versions are found for each product.
-		for id := range products {
-			require.ElementsMatchf(t,
-				shared.MapKeys(test.WantProducts[id].Versions),
-				shared.MapKeys(products[id].Versions),
-				"Versions do not match for product %q", id)
-		}
+			// Ensure expected product versions are found for each product.
+			for id := range products {
+				require.ElementsMatchf(t,
+					shared.MapKeys(test.WantProducts[id].Versions),
+					shared.MapKeys(products[id].Versions),
+					"Versions do not match for product %q", id)
+			}
+		})
 	}
 }
 
