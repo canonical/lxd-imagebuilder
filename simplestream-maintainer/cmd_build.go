@@ -18,6 +18,7 @@ import (
 
 	"github.com/canonical/lxd-imagebuilder/shared"
 	"github.com/canonical/lxd-imagebuilder/simplestream-maintainer/stream"
+	"github.com/canonical/lxd-imagebuilder/simplestream-maintainer/webpage"
 )
 
 type buildOptions struct {
@@ -26,6 +27,7 @@ type buildOptions struct {
 	StreamVersion string
 	ImageDirs     []string
 	Workers       int
+	BuildWebPage  bool
 }
 
 func (o *buildOptions) NewCommand() *cobra.Command {
@@ -39,6 +41,7 @@ func (o *buildOptions) NewCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&o.StreamVersion, "stream-version", "v1", "Stream version")
 	cmd.PersistentFlags().StringSliceVarP(&o.ImageDirs, "image-dir", "d", []string{"images"}, "Image directory (relative to path argument)")
 	cmd.PersistentFlags().IntVar(&o.Workers, "workers", max(runtime.NumCPU()/2, 1), "Maximum number of concurrent operations")
+	cmd.PersistentFlags().BoolVar(&o.BuildWebPage, "build-webpage", false, "Build index.html")
 
 	return cmd
 }
@@ -48,7 +51,7 @@ func (o *buildOptions) Run(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("Argument %q is required and cannot be empty", "path")
 	}
 
-	return buildIndex(o.global.ctx, args[0], o.StreamVersion, o.ImageDirs, o.Workers)
+	return buildIndex(o.global.ctx, args[0], o.StreamVersion, o.ImageDirs, o.Workers, o.BuildWebPage)
 }
 
 // replace struct holds old and new path for a file replace.
@@ -57,11 +60,15 @@ type replace struct {
 	NewPath string
 }
 
-func buildIndex(ctx context.Context, rootDir string, streamVersion string, streamNames []string, workers int) error {
-	metaDir := path.Join(rootDir, "streams", streamVersion)
+func buildIndex(ctx context.Context, rootDir string, streamVersion string, streamNames []string, workers int, buildWebpage bool) error {
+	if len(streamNames) > 1 && buildWebpage {
+		return fmt.Errorf("Building index.html is supported only for a single stream")
+	}
 
+	var indexHTML *webpage.WebPage
 	var replaces []replace
 	index := stream.NewStreamIndex()
+	metaDir := path.Join(rootDir, "streams", streamVersion)
 
 	// Ensure meta directory exists.
 	err := os.MkdirAll(metaDir, os.ModePerm)
@@ -113,6 +120,11 @@ func buildIndex(ctx context.Context, rootDir string, streamVersion string, strea
 			return err
 		}
 
+		// Create webpage for the stream.
+		if buildWebpage {
+			indexHTML = webpage.NewWebPage(*catalog)
+		}
+
 		// Add index entry.
 		index.AddEntry(streamName, catalogRelPath, *catalog)
 	}
@@ -160,6 +172,14 @@ func buildIndex(ctx context.Context, rootDir string, streamVersion string, strea
 		err = os.Chmod(r.NewPath, 0644)
 		if err != nil {
 			return err
+		}
+	}
+
+	// Write stream's index.html.
+	if indexHTML != nil {
+		err := indexHTML.Write(rootDir)
+		if err != nil {
+			return fmt.Errorf("Failed to write index.html: %w", err)
 		}
 	}
 
