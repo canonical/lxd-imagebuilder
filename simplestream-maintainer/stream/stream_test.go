@@ -293,6 +293,7 @@ func TestGetProduct(t *testing.T) {
 			WantProduct: stream.Product{
 				Aliases:      "distro/release/config",
 				Distro:       "distro",
+				OS:           "Distro",
 				Release:      "release",
 				Architecture: "arch",
 				Variant:      "config",
@@ -322,6 +323,7 @@ func TestGetProduct(t *testing.T) {
 			WantProduct: stream.Product{
 				Aliases:      "distro/myrel/default,distro/myrel,distro/test/default,distro/test,distro/test2/default,distro/test2",
 				Distro:       "distro",
+				OS:           "Distro",
 				Release:      "myrel",
 				Architecture: "arch",
 				Variant:      "default",
@@ -348,6 +350,7 @@ func TestGetProduct(t *testing.T) {
 			WantProduct: stream.Product{
 				Aliases:      "distro/release/variant",
 				Distro:       "distro",
+				OS:           "Distro",
 				Release:      "release",
 				Architecture: "arch",
 				Variant:      "variant",
@@ -359,7 +362,7 @@ func TestGetProduct(t *testing.T) {
 		},
 		{
 			Name: "Product containing multiple versions with a valid config",
-			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").AddVersions(
+			Mock: testutils.MockProduct("images/ubuntu-core/noble/amd64/cloud").AddVersions(
 				testutils.MockVersion("1").
 					WithFiles("lxd.tar.xz", "disk.qcow2").
 					SetImageConfig(
@@ -375,6 +378,7 @@ func TestGetProduct(t *testing.T) {
 					WithFiles("lxd.tar.xz", "disk.qcow2").
 					SetImageConfig(
 						"simplestream:",
+						"  distro_name: Ubuntu Core",
 						"  release_aliases:",
 						"    noble: 24.04",
 						"  requirements:",
@@ -398,8 +402,9 @@ func TestGetProduct(t *testing.T) {
 			IgnoreItems: true,
 			WantProduct: stream.Product{
 				// Aliases are collected from all versions.
-				Aliases:      "ubuntu/noble/cloud,ubuntu/24.04/cloud",
-				Distro:       "ubuntu",
+				Aliases:      "ubuntu-core/noble/cloud,ubuntu-core/24.04/cloud",
+				Distro:       "ubuntu-core",
+				OS:           "Ubuntu Core",
 				Release:      "noble",
 				Architecture: "amd64",
 				Variant:      "cloud",
@@ -420,6 +425,7 @@ func TestGetProduct(t *testing.T) {
 			WantProduct: stream.Product{
 				Aliases:      "ubuntu/current/cloud,ubuntu/cloud",
 				Distro:       "ubuntu",
+				OS:           "Ubuntu",
 				Release:      "current",
 				Architecture: "arm64",
 				Variant:      "cloud",
@@ -432,6 +438,7 @@ func TestGetProduct(t *testing.T) {
 			WantProduct: stream.Product{
 				Aliases:      "ubuntu/focal/default,ubuntu/focal", // Note 2 aliases.
 				Distro:       "ubuntu",
+				OS:           "Ubuntu",
 				Release:      "focal",
 				Architecture: "arm64",
 				Variant:      "default",
@@ -459,6 +466,7 @@ func TestGetProduct(t *testing.T) {
 			WantProduct: stream.Product{
 				Aliases:      "ubuntu/focal/cloud",
 				Distro:       "ubuntu",
+				OS:           "Ubuntu",
 				Release:      "focal",
 				Architecture: "amd64",
 				Variant:      "cloud",
@@ -498,6 +506,7 @@ func TestGetProduct(t *testing.T) {
 			WantProduct: stream.Product{
 				Aliases:      "ubuntu/lunar/cloud",
 				Distro:       "ubuntu",
+				OS:           "Ubuntu",
 				Release:      "lunar",
 				Architecture: "amd64",
 				Variant:      "cloud",
@@ -520,6 +529,7 @@ func TestGetProduct(t *testing.T) {
 			WantProduct: stream.Product{
 				Aliases:      "ubuntu/xenial/default,ubuntu/xenial",
 				Distro:       "ubuntu",
+				OS:           "Ubuntu",
 				Release:      "xenial",
 				Architecture: "arm64",
 				Variant:      "default",
@@ -626,23 +636,11 @@ func TestGetProducts(t *testing.T) {
 			},
 			WantProducts: map[string]stream.Product{
 				"ubuntu:jammy:amd64:cloud": {
-					Aliases:      "ubuntu/jammy/cloud",
-					Distro:       "ubuntu",
-					Release:      "jammy",
-					Architecture: "amd64",
-					Variant:      "cloud",
-					Requirements: map[string]string{},
 					Versions: map[string]stream.Version{
 						"2024_01_01": {},
 					},
 				},
 				"ubuntu:jammy:arm64:desktop": {
-					Aliases:      "ubuntu/jammy/desktop",
-					Distro:       "ubuntu",
-					Release:      "jammy",
-					Architecture: "arm64",
-					Variant:      "desktop",
-					Requirements: map[string]string{},
 					Versions: map[string]stream.Version{
 						"2023": {},
 						"2024": {},
@@ -650,12 +648,6 @@ func TestGetProducts(t *testing.T) {
 					},
 				},
 				"alpine:edge:amd64:cloud": {
-					Aliases:      "alpine/edge/cloud",
-					Distro:       "alpine",
-					Release:      "edge",
-					Architecture: "amd64",
-					Variant:      "cloud",
-					Requirements: map[string]string{},
 					Versions: map[string]stream.Version{
 						"v3": {},
 					},
@@ -665,34 +657,36 @@ func TestGetProducts(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		tmpDir := t.TempDir()
+		t.Run(test.Name, func(t *testing.T) {
+			tmpDir := t.TempDir()
 
-		ps := test.Mock
+			ps := test.Mock
 
-		for _, p := range ps {
-			p.Create(t, tmpDir)
-		}
+			for _, p := range ps {
+				p.Create(t, tmpDir)
+			}
 
-		if len(ps) == 0 {
-			require.Fail(t, "Test must include at least one mocked product!")
-		}
+			if len(ps) == 0 {
+				require.Fail(t, "Test must include at least one mocked product!")
+			}
 
-		products, err := stream.GetProducts(tmpDir, ps[0].StreamName())
-		require.NoError(t, err)
+			products, err := stream.GetProducts(tmpDir, ps[0].StreamName())
+			require.NoError(t, err)
 
-		// Ensure expected products are found.
-		require.ElementsMatch(t,
-			shared.MapKeys(test.WantProducts),
-			shared.MapKeys(products),
-			"Expected and actual products do not match")
+			// Ensure expected products are found.
+			require.ElementsMatch(t,
+				shared.MapKeys(test.WantProducts),
+				shared.MapKeys(products),
+				"Expected and actual products do not match")
 
-		// Ensure expected product versions are found for each product.
-		for id := range products {
-			require.ElementsMatchf(t,
-				shared.MapKeys(test.WantProducts[id].Versions),
-				shared.MapKeys(products[id].Versions),
-				"Versions do not match for product %q", id)
-		}
+			// Ensure expected product versions are found for each product.
+			for id := range products {
+				require.ElementsMatchf(t,
+					shared.MapKeys(test.WantProducts[id].Versions),
+					shared.MapKeys(products[id].Versions),
+					"Versions do not match for product %q", id)
+			}
+		})
 	}
 }
 

@@ -12,6 +12,9 @@ import (
 	"slices"
 	"strings"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
@@ -155,7 +158,10 @@ type Product struct {
 	Architecture string `json:"arch"`
 
 	// Name of the image distribution.
-	Distro string `json:"os"`
+	Distro string `json:"distro"`
+
+	// Pretty name of the operating system.
+	OS string `json:"os"`
 
 	// Name of the image release.
 	Release string `json:"release"`
@@ -334,6 +340,7 @@ func GetProduct(rootDir string, productRelPath string, options ...Option) (*Prod
 	}
 
 	var aliases []string
+	var osName string
 
 	for _, f := range files {
 		if !f.IsDir() {
@@ -358,6 +365,9 @@ func GetProduct(rootDir string, productRelPath string, options ...Option) (*Prod
 			// Reset old values.
 			aliases = []string{}
 			p.Requirements = make(map[string]string)
+
+			// Set pretty OS name.
+			osName = version.ImageConfig.DistroName
 
 			// Set product requirements.
 			for _, req := range version.ImageConfig.Requirements {
@@ -393,8 +403,14 @@ func GetProduct(rootDir string, productRelPath string, options ...Option) (*Prod
 
 	// Prepend default aliases.
 	aliases = append(CreateAliases(p.Distro, p.Release, p.Variant), aliases...)
-
 	p.Aliases = strings.Join(aliases, ",")
+
+	// Set OS name.
+	if osName != "" {
+		p.OS = osName
+	} else {
+		p.OS = cases.Title(language.English).String(p.Distro)
+	}
 
 	return &p, nil
 }
