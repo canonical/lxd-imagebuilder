@@ -18,7 +18,8 @@ type pruneOptions struct {
 	global *globalOptions
 
 	Dangling      bool
-	RetainNum     int
+	RetainBuilds  int
+	RetainDays    int
 	StreamVersion string
 	ImageDirs     []string
 }
@@ -33,7 +34,8 @@ func (o *pruneOptions) NewCommand() *cobra.Command {
 	}
 
 	cmd.PersistentFlags().BoolVar(&o.Dangling, "dangling", false, "Remove dangling product versions (not referenced from any product catalog)")
-	cmd.PersistentFlags().IntVar(&o.RetainNum, "retain", 10, "Number of product versions to retain")
+	cmd.PersistentFlags().IntVar(&o.RetainBuilds, "retain-builds", 10, "Maximum number of product versions to retain")
+	cmd.PersistentFlags().IntVar(&o.RetainDays, "retain-days", 0, "Maximum number of days to retain any product version")
 	cmd.PersistentFlags().StringVar(&o.StreamVersion, "stream-version", "v1", "Stream version")
 	cmd.PersistentFlags().StringSliceVarP(&o.ImageDirs, "image-dir", "d", []string{"images"}, "Image directory (relative to path argument)")
 
@@ -53,7 +55,7 @@ func (o *pruneOptions) Run(_ *cobra.Command, args []string) error {
 			}
 		}
 
-		err := pruneStreamProductVersions(args[0], o.StreamVersion, dir, o.RetainNum)
+		err := pruneStreamProductVersions(args[0], o.StreamVersion, dir, o.RetainBuilds, o.RetainDays)
 		if err != nil {
 			return err
 		}
@@ -64,9 +66,9 @@ func (o *pruneOptions) Run(_ *cobra.Command, args []string) error {
 
 // pruneStreamProductVersions reads the product catalog and removes all product
 // versions except for the number of latests versions defined by retain integer.
-func pruneStreamProductVersions(rootDir string, streamVersion string, streamName string, retain int) error {
-	if retain < 1 {
-		return fmt.Errorf("At least 1 product version must be retained")
+func pruneStreamProductVersions(rootDir string, streamVersion string, streamName string, retainBuilds int, retainDays int) error {
+	if retainBuilds < 1 {
+		return fmt.Errorf("At least 1 product version build must be retained")
 	}
 
 	// Read product catalog.
@@ -86,18 +88,30 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 		slices.Sort(versions)
 		slices.Reverse(versions)
 
-		if len(versions) <= retain {
-			// All product versions must be retained.
-			continue
-		}
-
 		// Extract versions that need to be discarded.
-		discard := slices.Delete(versions, 0, retain)
-		for _, v := range discard {
-			delete(catalog.Products[id].Versions, v)
-
+		for i, v := range versions {
 			versionPath := filepath.Join(productPath, v)
-			discardVersions = append(discardVersions, versionPath)
+
+			// Remove version outside the retainBuilds.
+			if i >= retainBuilds {
+				delete(catalog.Products[id].Versions, v)
+				discardVersions = append(discardVersions, versionPath)
+				continue
+			}
+
+			// Remove versions older then retainDays.
+			if retainDays > 0 {
+				info, err := os.Stat(versionPath)
+				if err != nil {
+					return err
+				}
+
+				maxAge := time.Duration(retainDays) * 24 * time.Hour
+				if time.Since(info.ModTime()) > maxAge {
+					delete(catalog.Products[id].Versions, v)
+					discardVersions = append(discardVersions, versionPath)
+				}
+			}
 		}
 	}
 

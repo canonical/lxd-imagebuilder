@@ -405,20 +405,21 @@ func TestPruneOldVersions(t *testing.T) {
 	tests := []struct {
 		Name          string
 		Mock          testutils.ProductMock
-		KeepVersions  int
+		RetainBuilds  int
+		RetainDays    int
 		WantErrString string
 		WantVersions  []string
 	}{
 		{
 			Name:          "Validation | Retain number too low",
-			KeepVersions:  0,
-			WantErrString: "At least 1 product version must be retained",
+			RetainBuilds:  0,
+			WantErrString: "At least 1 product version build must be retained",
 		},
 		{
 			Name: "Ensure no error on empty product catalog",
 			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
 				AddProductCatalog(),
-			KeepVersions: 1,
+			RetainBuilds: 1,
 			WantVersions: []string{},
 		},
 		{
@@ -429,7 +430,7 @@ func TestPruneOldVersions(t *testing.T) {
 					testutils.MockVersion("02").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
 					testutils.MockVersion("03").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2")).
 				AddProductCatalog(),
-			KeepVersions: 3,
+			RetainBuilds: 3,
 			WantVersions: []string{
 				"01",
 				"02",
@@ -445,7 +446,7 @@ func TestPruneOldVersions(t *testing.T) {
 					testutils.MockVersion("2024_05_01").WithFiles("lxd.tar.xz", "disk.squashfs"),
 					testutils.MockVersion("2025_01_01").WithFiles("lxd.tar.xz", "disk.qcow2")).
 				AddProductCatalog(),
-			KeepVersions: 3,
+			RetainBuilds: 3,
 			WantVersions: []string{
 				"2024_01_05",
 				"2024_05_01",
@@ -463,7 +464,7 @@ func TestPruneOldVersions(t *testing.T) {
 					testutils.MockVersion("2024_01_05").WithFiles("lxd.tar.xz", "disk.qcow2"),                  // Complete
 					testutils.MockVersion("2024_01_06").WithFiles("disk.qcow2")).                               // Incomplete
 				AddProductCatalog(),
-			KeepVersions: 2,
+			RetainBuilds: 2,
 			WantVersions: []string{
 				"2024_01_03",
 				"2024_01_05",
@@ -481,13 +482,45 @@ func TestPruneOldVersions(t *testing.T) {
 				AddVersions(
 					testutils.MockVersion("2027").WithFiles("lxd.tar.xz", "disk.qcow2"),
 					testutils.MockVersion("2028").WithFiles("lxd.tar.xz", "disk.qcow2")),
-			KeepVersions: 2,
+			RetainBuilds: 2,
 			WantVersions: []string{
 				"2025",
 				"2026",
 				"2027",
 				"2028",
 			},
+		},
+		{
+			Name: "Ensure versions older then retainDays are prunned",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddVersions(
+					testutils.MockVersion("2023").WithFiles("lxd.tar.xz", "disk.qcow2").WithAge(3*24*time.Hour), // 3 days
+					testutils.MockVersion("2024").WithFiles("lxd.tar.xz", "disk.qcow2").WithAge(3*24*time.Hour),
+					testutils.MockVersion("2025").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					testutils.MockVersion("2026").WithFiles("lxd.tar.xz", "disk.qcow2"),
+				).
+				AddProductCatalog(),
+			RetainBuilds: 3,
+			RetainDays:   2,
+			WantVersions: []string{
+				"2025",
+				"2026",
+			},
+		},
+		{
+			Name: "Ensure all versions older then retainDays are prunned",
+			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+				AddVersions(
+					testutils.MockVersion("2023").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					testutils.MockVersion("2024").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					testutils.MockVersion("2025").WithFiles("lxd.tar.xz", "disk.qcow2"),
+					testutils.MockVersion("2026").WithFiles("lxd.tar.xz", "disk.qcow2"),
+				).
+				AddProductCatalog().
+				SetFilesAge(12 * 24 * time.Hour), // 12 days
+			RetainBuilds: 2,
+			RetainDays:   10,
+			WantVersions: []string{},
 		},
 	}
 
@@ -496,7 +529,7 @@ func TestPruneOldVersions(t *testing.T) {
 			p := test.Mock
 			p.Create(t, t.TempDir())
 
-			err := pruneStreamProductVersions(p.RootDir(), "v1", p.StreamName(), test.KeepVersions)
+			err := pruneStreamProductVersions(p.RootDir(), "v1", p.StreamName(), test.RetainBuilds, test.RetainDays)
 			if test.WantErrString == "" {
 				require.NoError(t, err)
 			} else {
@@ -844,7 +877,7 @@ func TestBuildIndexAndPrune_Steps(t *testing.T) {
 				StreamVersion: streamVersion,
 				ImageDirs:     []string{streamName},
 				Dangling:      true,
-				RetainNum:     3,
+				RetainBuilds:  3,
 			}
 
 			// Run each step within a test case. Each step first mocks the product
