@@ -72,6 +72,7 @@ func TestBuildIndex(t *testing.T) {
 						Distro:       "ubuntu",
 						OS:           "Ubuntu",
 						Release:      "focal",
+						ReleaseTitle: "focal",
 						Variant:      "cloud",
 						Requirements: map[string]string{},
 						Versions: map[string]stream.Version{
