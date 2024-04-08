@@ -150,7 +150,7 @@ func TestBuildIndex(t *testing.T) {
 			p := test.Mock
 			p.Create(t, t.TempDir())
 
-			err := buildIndex(context.Background(), p.RootDir(), "v1", []string{p.StreamName()}, 2)
+			err := buildIndex(context.Background(), p.RootDir(), "v1", []string{p.StreamName()}, 2, false)
 			require.NoError(t, err, "Failed building index and catalog files!")
 
 			// Convert expected catalog and index files to json.
