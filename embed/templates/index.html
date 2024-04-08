@@ -51,7 +51,8 @@
         }
 
         .lxd-product-name {
-            font-size: 1.5rem;
+            padding-left: 10px;
+            font-size: 1.35rem;
             color: #f3f3f3;
         }
 
@@ -160,14 +161,13 @@
             </table>
         </div>
     </div>
-
 </body>
 <footer>
     <hr>
     <div class="container py-3 lxd-footer">
         <div class="d-flex justify-content-between">
-            <p>{{ .FooterCopyright }}</p>
-            <p>{{ .FooterUpdatedAt }}</p>
+            <p class="text-nowrap me-3">{{ .FooterCopyright }}</p>
+            <p class="text-end">{{ .FooterUpdatedAt }}</p>
         </div>
     <div>
 </footer>
