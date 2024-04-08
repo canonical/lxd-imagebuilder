@@ -379,8 +379,9 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 						}
 
 						// -e compress
+						// -9 compression level (0 no-compression -> 9 max-compression)
 						// -s source
-						cmd := exec.CommandContext(ctx, "xdelta3", "-e", "-s", sourcePath, targetPath, outputPath)
+						cmd := exec.CommandContext(ctx, "xdelta3", "-e", "-9", "-s", sourcePath, targetPath, outputPath)
 						cmd.Stdout = os.Stdout
 						cmd.Stderr = os.Stderr
 
