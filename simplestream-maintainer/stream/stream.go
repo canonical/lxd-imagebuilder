@@ -329,6 +329,7 @@ func GetProduct(rootDir string, productRelPath string, options ...Option) (*Prod
 		Variant:      parts[len(parts)-1],
 		Architecture: parts[len(parts)-2],
 		Release:      parts[len(parts)-3],
+		ReleaseTitle: parts[len(parts)-3],
 		Distro:       parts[len(parts)-4],
 		Requirements: make(map[string]string, 0),
 	}
