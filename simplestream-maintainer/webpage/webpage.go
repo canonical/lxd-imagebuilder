@@ -114,7 +114,7 @@ func NewWebPage(catalog stream.ProductCatalog) *WebPage {
 // to the final destination to avoid partial writes in case of errors.
 func (p WebPage) Write(rootDir string) error {
 	path := filepath.Join(rootDir, "index.html")
-	pathTmp := fmt.Sprintf("%s.%s", path, "tmp")
+	pathTmp := filepath.Join(rootDir, ".index.html.tmp")
 
 	t, err := template.ParseFS(embed.GetTemplates(), "templates/index.html")
 	if err != nil {
