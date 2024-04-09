@@ -25,6 +25,7 @@ import (
 
 const (
 	ContextKeyEnviron = ContextKey("environ")
+	ContextKeyStderr  = ContextKey("stderr")
 	EnvRootUUID       = "LXD_IMAGEBUILDER_ROOT_UUID"
 )
 
@@ -39,6 +40,12 @@ type Environment map[string]EnvVariable
 
 // ContextKey type.
 type ContextKey string
+
+type WriteFunc func([]byte) (int, error)
+
+func (w WriteFunc) Write(b []byte) (int, error) {
+	return w(b)
+}
 
 // Copy copies a file.
 func Copy(src, dest string) error {
@@ -84,7 +91,12 @@ func RunCommand(ctx context.Context, stdin io.Reader, stdout io.Writer, name str
 		cmd.Stdout = os.Stdout
 	}
 
-	cmd.Stderr = os.Stderr
+	stderr, ok := ctx.Value(ContextKeyStderr).(io.Writer)
+	if ok && stderr != nil {
+		cmd.Stderr = stderr
+	} else {
+		cmd.Stderr = os.Stderr
+	}
 
 	return cmd.Run()
 }
