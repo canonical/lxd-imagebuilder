@@ -6,4 +6,5 @@ These tutorials guide you through the usage of `lxd-imagebuilder`.
 :titlesonly:
 
 use.md
+imageserver.md
 ```
