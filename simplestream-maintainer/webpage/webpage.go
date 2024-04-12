@@ -47,10 +47,10 @@ func NewWebPage(catalog stream.ProductCatalog) *WebPage {
 		FaviconURL:      "https://raw.githubusercontent.com/canonical/lxd/main/doc/.sphinx/_static/favicon.ico",
 		LogoURL:         "https://raw.githubusercontent.com/canonical/lxd/main/doc/.sphinx/_static/tag.png",
 		FooterCopyright: fmt.Sprintf("© %d Canonical Ltd.", time.Now().Year()),
-		FooterUpdatedAt: fmt.Sprintf("Last updated: %s", time.Now().Format("2006-01-02 (15:04)")),
+		FooterUpdatedAt: fmt.Sprintf("Last updated: %s UTC", time.Now().UTC().Format("02 Jan 2006 (15:04)")),
 		Paragraphs: []template.HTML{
 			template.HTML("Images hosted on this server are available in LXD through the predefined remote <code>images:</code>. For detailed instructions about LXD image management, please refer to our <a href='https://documentation.ubuntu.com/lxd/en/latest/howto/images_manage'>How to Manage Images</a> guide in the official documentation."),
-			template.HTML("Images are built daily and we retain the last 3 successful builds of each image for up to 10 days. Thus, if a particular build fails on any given day, the previous successful builds will remain accessible."),
+			template.HTML("Images are built daily and we retain the last 2 successful builds of each image for up to 10 days. Thus, if a particular build fails on any given day, the previous successful builds will remain accessible."),
 			template.HTML("If you encounter any issues with the images hosted on our server or have suggestions for improvement, please let us know by <a href='https://github.com/canonical/lxd/issues/new'>opening an issue</a> in the LXD repository."),
 		},
 		Images: []WebPageImage{},
