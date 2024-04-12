@@ -7,5 +7,7 @@ These how-to guides cover key operations and processes in `lxd-imagebuilder`.
 
 install.md
 build.md
+simps-build.md
+simps-prune.md
 troubleshoot.md
 ```
