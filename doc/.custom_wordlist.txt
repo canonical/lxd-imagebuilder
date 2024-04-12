@@ -4,7 +4,6 @@ ACL
 ACLs
 AGPLv
 AIO
-APIs
 AppArmor
 ArchLinux
 ARMv
@@ -13,7 +12,6 @@ ASN
 AXFR
 backend
 backends
-balancer
 balancers
 benchmarking
 BGP
@@ -35,7 +33,6 @@ checksum
 checksums
 Chocolatey
 CIDR
-CLI
 CPUs
 CRIU
 CRL
@@ -81,7 +78,6 @@ Golang
 goroutines
 GPG
 GPUs
-Grafana
 HAProxy
 hardcoded
 Homebrew
@@ -106,14 +102,12 @@ IPs
 IPv
 IPVLAN
 jq
-JSON
 kB
 kbit
 KiB
 kibi
 Kibit
 lookups
-LTS
 LV
 LVM
 LXC
@@ -124,7 +118,6 @@ LXD's
 MAAS
 macOS
 macvlan
-Makefile
 manpages
 Mbit
 MiB
@@ -135,10 +128,7 @@ MII
 MITM
 MTU
 multicast
-MyST
-namespace
 namespaced
-namespaces
 NATed
 natively
 NDP
@@ -162,7 +152,6 @@ Pbit
 PCI
 PCIe
 peerings
-Permalink
 PFs
 PiB
 Pibit
@@ -171,7 +160,6 @@ PKI
 PNG
 Pongo
 POSIX
-pre
 preseed
 proxied
 proxying
@@ -221,7 +209,6 @@ subnet
 subnets
 subpage
 substep
-subtree
 subtrees
 subvolume
 subvolumes
@@ -248,7 +235,6 @@ TTYs
 UDP
 UEFI
 UFW
-UI
 UID
 UIDs
 unconfigured
@@ -268,7 +254,6 @@ virtualize
 virtualized
 VLAN
 VLANs
-VM
 VMs
 VPD
 VPS
@@ -278,7 +263,6 @@ WebSocket
 WebSockets
 XFS
 XHR
-YAML
 Zettabyte
 ZFS
 zpool
