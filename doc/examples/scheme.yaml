@@ -11,6 +11,24 @@ image:
   name: distro-release-x86_64
   serial: some-random-string
 
+simplestream:
+  distro_name: Pretty distro name
+  release_aliases:
+    a: alpha
+    b: beta
+  requirements:
+  - requirements:
+      secure_boot: false
+  - requirements:
+      cgroup: v1
+    releases:
+      - a
+      - b
+    architectures:
+      - x86_64
+    variants:
+      - default
+
 source:
   downloader: ubuntu-http
   url: http://archive.ubuntu.com
