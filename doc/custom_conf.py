@@ -55,11 +55,11 @@ ogp_site_url = 'https://canonical-lxd-imagebuilder.readthedocs-hosted.com/'
 # The documentation website name (usually the same as the product name)
 ogp_site_name = project
 # The URL of an image or logo that is used in the preview
-ogp_image = 'https://assets.ubuntu.com/v1/253da317-image-document-ubuntudocs.svg'
+ogp_image = 'https://canonical-lxd-imagebuilder.readthedocs-hosted.com/en/latest/_static/tag.png'
 
 # Update with the local path to the favicon for your product
 # (default is the circle of friends)
-html_favicon = '.sphinx/_static/favicon.png'
+html_favicon = '.sphinx/_static/favicon.ico'
 
 # (Some settings must be part of the html_context dictionary, while others
 #  are on root level. Don't move the settings.)
