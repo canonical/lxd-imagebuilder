@@ -1,12 +1,12 @@
 # Simple streams directory structure
 
-`simplestream-maintainer` is a CLI tool for building simple streams index and product catalog,
+`simplestream-maintainer` is a CLI tool for building a simple streams index and product catalog,
 and removing expired or invalid product versions.
 
 ## Terminology
 
 - `Stream`: Represents a directory that contains image builds.
-- `Product`: Represents a unique image within a single stream. It's ID is determined by the
+- `Product`: Represents a unique image within a single stream. Its ID is determined by the
     directory structure as `<distro>/<release>/<arch>/<variant>`.
 - `ProductVersion`: Represents a version (build) of a specific image. A single product can contain
     one or more versions. While the version name can be custom, it should allow sorting by time.
