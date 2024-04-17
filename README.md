@@ -13,7 +13,8 @@ CI              | GitHub                | [![Build Status](https://github.com/ca
 <!-- Include start installing -->
 ## Installing from package
 
-`lxd-imagebuilder` and `simplestream-maintainer` are available from the [Snap Store](https://snapcraft.io/lxd-imagebuilder).
+The `lxd-imagebuilder` and `simplestream-maintainer` tools are available in the `lxd-imagebuilder`
+snap from the [Snap Store](https://snapcraft.io/lxd-imagebuilder).
 
 ```
 sudo snap install lxd-imagebuilder --classic

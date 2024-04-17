@@ -29,9 +29,9 @@ By default, this flag is set to `0` which means the product versions are not pru
 
 ## Dangling images
 
-When pruning product versions, stream's contents are retrieved from the product catalog. This means
+When pruning product versions, the stream's contents are retrieved from the product catalog. This means
 there might exist an invalid product version that was not included in the product catalog (for
-example, due to the missing metadata file or mismatched checksums). By default, such versions are
+example, due to a missing metadata file or mismatched checksums). By default, such versions are
 not removed.
 
 The `--dangling` flag instructs `simplestream-maintainer` to remove product versions that are not
