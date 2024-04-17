@@ -36,15 +36,15 @@ cp $HOME/go/src/github.com/canonical/lxd-imagebuilder/doc/examples/ubuntu.yaml u
 Optionally, you can do some edits to the YAML configuration file.
 You can define the following keys:
 
-| Section    | Description                                                                              | Documentation                  |
-|------------|------------------------------------------------------------------------------------------|--------------------------------|
-| `image`    | Defines distribution, architecture, release etc.                                         | {doc}`../reference/image`      |
-| `source`   | Defines main package source, keys etc.                                                   | {doc}`../reference/source`     |
-| `targets`  | Defines configuration for specific targets (e.g. LXD, instances etc.)                    | {doc}`../reference/targets`    |
-| `files`    | Defines generators to modify files                                                       | {doc}`../reference/generators` |
-| `packages` | Defines packages for install or removal; adds repositories                               | {doc}`../reference/packages`   |
-| `actions`  | Defines scripts to be run after specific steps during image building                     | {doc}`../reference/actions`    |
-| `mappings` | Maps different terms for architectures for specific distributions (e.g. `x86_64: amd64`) | {doc}`../reference/mappings`   |
+| Section    | Description                                                                              | Documentation                                   |
+|------------|------------------------------------------------------------------------------------------|-------------------------------------------------|
+| `image`    | Defines distribution, architecture, release etc.                                         | {doc}`../reference/lxd-imagebuilder/image`      |
+| `source`   | Defines main package source, keys etc.                                                   | {doc}`../reference/lxd-imagebuilder/source`     |
+| `targets`  | Defines configuration for specific targets (e.g. LXD, instances etc.)                    | {doc}`../reference/lxd-imagebuilder/targets`    |
+| `files`    | Defines generators to modify files                                                       | {doc}`../reference/lxd-imagebuilder/generators` |
+| `packages` | Defines packages for install or removal; adds repositories                               | {doc}`../reference/lxd-imagebuilder/packages`   |
+| `actions`  | Defines scripts to be run after specific steps during image building                     | {doc}`../reference/lxd-imagebuilder/actions`    |
+| `mappings` | Maps different terms for architectures for specific distributions (e.g. `x86_64: amd64`) | {doc}`../reference/lxd-imagebuilder/mappings`   |
 
 ```{tip}
 When building a VM image, you should either build an image with cloud-init support (provides automatic size growth) or set a higher size in the template, because the standard size is relatively small (~4 GB). Alternatively, you can also grow it manually.

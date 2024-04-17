@@ -55,7 +55,7 @@ It's an open source project that warmly welcomes community projects, contributio
 :titlesonly:
 
 self
-Tutorial <tutorials/use>
+tutorials/index
 howto/index
 reference/index
 ```
