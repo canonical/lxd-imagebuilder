@@ -1,4 +1,4 @@
-# Troubleshoot `lxd-imagebuilder`
+# How to troubleshoot `lxd-imagebuilder`
 
 This section covers some of the most commonly encountered problems and gives instructions for resolving them.
 
