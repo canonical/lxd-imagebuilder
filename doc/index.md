@@ -1,4 +1,4 @@
-# `lxd-imagebuilder`
+# LXD image builder
 
 `lxd-imagebuilder` is an image building tool for LXC and LXD.
 
@@ -15,7 +15,7 @@ You can also use it to build images from ISO files that require licenses and the
 ## In this documentation
 
 ````{grid} 1 1 2 2
-```{grid-item} [](tutorials/index)
+```{grid-item} [Tutorial](tutorials/use)
 
 **Start here**: a hands-on introduction to `lxd-imagebuilder` for new users
 ```
@@ -47,16 +47,15 @@ You can also use it to build images from ISO files that require licenses and the
 It's an open source project that warmly welcomes community projects, contributions, suggestions, fixes and constructive feedback.
 
 - [Contribute to the project](https://github.com/canonical/lxd-imagebuilder/blob/master/CONTRIBUTING.md)  <!-- wokeignore:rule=master -->
-- [Discuss on IRC](https://web.libera.chat/#lxd) (see [Getting started with IRC](https://discuss.linuxcontainers.org/t/getting-started-with-irc/11920) if needed)
-- [Ask and answer questions on the forum](https://discuss.linuxcontainers.org)
-- [Join the mailing lists](https://lists.linuxcontainers.org)
+- [Discuss on IRC](https://web.libera.chat/#lxd) (see [Getting started with IRC](https://discourse.ubuntu.com/t/getting-started-with-irc/37907) if needed)
+- [Ask and answer questions on the forum](https://discourse.ubuntu.com/c/lxd/)
 
 ```{toctree}
 :hidden:
 :titlesonly:
 
 self
-tutorials/index
+Tutorial <tutorials/use>
 howto/index
 reference/index
 ```

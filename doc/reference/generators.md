@@ -41,6 +41,7 @@ See filters for more information.
 
 If `pongo` is `true`, the values of `path`, `content`, and `source` are rendered using Pongo2.
 
+(cloud-init)=
 ## `cloud-init`
 
 For LXC images, the generator disables cloud-init by disabling any cloud-init services, and creates the file `cloud-init.disable` which is checked by `cloud-init` on startup.
@@ -50,11 +51,13 @@ Valid names are `user-data`, `meta-data`, `vendor-data` and `network-config`.
 The default `path` if not defined otherwise is `/var/lib/cloud/seed/nocloud-net/<name>`.
 Setting `path`, `content` or `template.properties` will override the default values.
 
+(dump)=
 ## `dump`
 
 The `dump` generator writes the provided `content` to a file set in `path`.
 If provided, it will set the `mode` (octal format), `gid` (integer) and/or `uid` (integer).
 
+(copy)=
 ## `copy`
 
 The `copy` generator copies the file(s) from `source` to the destination `path`.
@@ -75,6 +78,7 @@ Copying will be done according to the following rules:
   For simplicity they are only allowed in the base name and not in the directory hierarchy.
   If more than one match is found, `path` will be automatically interpreted as a directory.
 
+(hostname)=
 ## `hostname`
 
 For LXC images, the host name generator writes the LXC specific string `LXC_NAME` to the `hostname` file set in `path`.
@@ -83,16 +87,19 @@ If the path doesn't exist, the generator does nothing.
 For LXD images, the generator creates a template for `path`.
 If the path doesn't exist, the generator does nothing.
 
+(hosts)=
 ## `hosts`
 
 For LXC images, the generator adds the entry `127.0.0.1 LXC_NAME` to the hosts file set in `path`.
 
 For LXD images, the generator creates a template for the hosts file set in `path`, adding an entry for `127.0.0.1 {{ container.name }}`.
 
+(remove)=
 ## `remove`
 
 The generator removes the file set in `path` from the container's root file system.
 
+(template)=
 ## `template`
 
 This generator creates a custom LXD template.
@@ -108,10 +115,12 @@ The `when` key can be one or more of:
 
 See {ref}`lxd:image-format` in the LXD documentation for more information.
 
+(lxd-agent)=
 ## `lxd-agent`
 
 This generator creates the `systemd` unit files which are needed to start the `lxd-agent` in LXD VMs.
 
+(fstab)=
 ## `fstab`
 
 This generator creates an `/etc/fstab` file which is used for VMs.
