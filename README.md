@@ -1,7 +1,9 @@
-# LXD Imagebuilder
+# LXD image builder
 
 This repository provides `lxd-imagebuilder` for building system container and virtual machine images
 for LXD, and `simplestream-maintainer` for managing images on the simple streams server.
+
+See https://canonical-lxd-imagebuilder.readthedocs-hosted.com/ for documentation.
 
 ## Status
 Type            | Service               | Status

@@ -6,6 +6,6 @@ The reference material in this section provides technical descriptions of `lxd-i
 :titlesonly:
 
 command_line_options
-directory_structure
-simplestream
+Directory structure <directory_structure>
+Configuration <simplestream>
 ```

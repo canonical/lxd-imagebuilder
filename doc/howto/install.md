@@ -1,4 +1,4 @@
-# How to install `lxd-imagebuilder`
+# How to install `lxd-imagebuilder` and `simplestream-maintainer`
 
 % Include content from [../../README.md](../../README.md)
 ```{include} ../../README.md

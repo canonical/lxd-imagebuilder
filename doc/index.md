@@ -17,7 +17,7 @@ You can also use it to build images from ISO files that require licenses and the
 ````{grid} 1 1 2 2
 ```{grid-item} [Tutorial](tutorials/use)
 
-**Start here**: a hands-on introduction to `lxd-imagebuilder` for new users
+**Start here**: a hands-on introduction to [`lxd-imagebuilder`](/tutorials/use) and [`simplestream-maintainer`](/tutorials/imageserver) for new users
 ```
 ```{grid-item} [](howto/index)
 
@@ -30,7 +30,7 @@ You can also use it to build images from ISO files that require licenses and the
 
 ```{grid-item} [](reference/index)
 
-**Technical information** - specifications, APIs, architecture
+**Technical information** - specifications, APIs, architecture for [`lxd-imagebuilder`](/reference/lxd-imagebuilder/index) and [`simplestream-maintainer`](/reference/simplestream-maintainer/index)
 ```
 
 ```{grid-item} Explanation (coming)

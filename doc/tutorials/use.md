@@ -3,7 +3,7 @@
 This guide shows you how to create an image for LXD or LXC.
 
 Before you start, you must install `lxd-imagebuilder`.
-See {doc}`../howto/install` for instructions.
+See [How to install `lxd-imagebuilder` and `simplestream-maintainer`](/howto/install) for instructions.
 
 ## Create an image
 
