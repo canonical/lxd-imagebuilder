@@ -5,6 +5,13 @@ The reference material in this section provides technical descriptions of `lxd-i
 ```{toctree}
 :titlesonly:
 
-lxd-imagebuilder/index
-simplestream-maintainer/index
+actions
+command_line_options
+filters
+generators
+image
+mappings
+packages
+source
+targets
 ```

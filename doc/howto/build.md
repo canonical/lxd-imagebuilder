@@ -141,7 +141,7 @@ The metadata tarball will always be named `lxd.tar.xz`.
 When creating a container image, the second file will be `rootfs.squashfs`.
 When creating a VM image, the second file will be `disk.qcow2`.
 If `--type=unified`, a unified tarball named `<image.name>.tar.xz` is created.
-See the [image section](../reference/image.md) for more on the image name.
+See the [image section](../reference/lxd-imagebuilder/image.md) for more on the image name.
 
 If `--compression` is set, the tarballs will use the provided compression instead of `xz`.
 
