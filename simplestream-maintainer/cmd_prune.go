@@ -113,6 +113,11 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 				}
 			}
 		}
+
+		// Remove products that contain no versions.
+		if len(catalog.Products[id].Versions) == 0 {
+			delete(catalog.Products, id)
+		}
 	}
 
 	// Write product catalog to a temporary file that is located next
