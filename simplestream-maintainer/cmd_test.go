@@ -400,6 +400,49 @@ func TestBuildProductCatalog_FinalChecksumFile(t *testing.T) {
 	}
 }
 
+// Tests an edge case where missing "versions" field in product catalog caused a panic because
+// map of versions was nil.
+func TestBuildProductCatalog_MissingVersionsField(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	// Create one product version in directory hierarchy.
+	m := testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+		AddProductCatalog().
+		AddVersions(testutils.MockVersion("v1").WithFiles("lxd.tar.xz", "disk.qcow2"))
+
+	m.Create(t, tmpDir)
+
+	// Create a product catalog that contains a product with missing "versions" field.
+	catalogPath := filepath.Join(tmpDir, "streams", "v1", "images.json")
+	catalogJSON := []byte(`
+{
+  "content_id": "images",
+  "format": "products:1.0",
+  "datatype": "image-downloads",
+  "products": {
+    "ubuntu:noble:amd64:cloud": {
+      "aliases": "ubuntu/noble/cloud",
+      "arch": "amd64",
+      "distro": "ubuntu",
+      "os": "Ubuntu",
+      "release": "noble",
+      "release_title": "noble",
+      "variant": "cloud",
+      "requirements": {}
+    }
+  }
+}`)
+
+	err := os.WriteFile(catalogPath, catalogJSON, 0777)
+	require.NoError(t, err)
+
+	// Ensure missing versions field does not fail the catalog building process.
+	_, err = buildProductCatalog(context.Background(), m.RootDir(), "v1", m.StreamName(), 2)
+	require.NoError(t, err, "Failed building product catalog!")
+}
+
 func TestPruneOldVersions(t *testing.T) {
 	t.Parallel()
 

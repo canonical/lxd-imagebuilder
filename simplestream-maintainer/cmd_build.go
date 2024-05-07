@@ -254,7 +254,7 @@ func buildProductCatalog(ctx context.Context, rootDir string, streamVersion stri
 		tmp := p
 
 		_, ok := catalog.Products[id]
-		if ok {
+		if ok && len(catalog.Products[id].Versions) > 0 {
 			// Retain existing product versions.
 			tmp.Versions = catalog.Products[id].Versions
 		} else {
