@@ -443,16 +443,18 @@ func TestBuildProductCatalog_MissingVersionsField(t *testing.T) {
 	require.NoError(t, err, "Failed building product catalog!")
 }
 
+// TestPruneOldVersions tests removal of old versions from directory hierarchy.
 func TestPruneOldVersions(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		Name          string
-		Mock          testutils.ProductMock
-		RetainBuilds  int
-		RetainDays    int
-		WantErrString string
-		WantVersions  []string
+		Name                string
+		Mock                testutils.ProductMock
+		RetainBuilds        int
+		RetainDays          int
+		WantErrString       string
+		WantVersions        []string // Expected versions in directory tree.
+		WantCatalogVersions []string // Expected versions in final product catalog.
 	}{
 		{
 			Name:          "Validation | Retain number too low",
@@ -463,8 +465,9 @@ func TestPruneOldVersions(t *testing.T) {
 			Name: "Ensure no error on empty product catalog",
 			Mock: testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
 				AddProductCatalog(),
-			RetainBuilds: 1,
-			WantVersions: []string{},
+			RetainBuilds:        1,
+			WantVersions:        []string{},
+			WantCatalogVersions: []string{},
 		},
 		{
 			Name: "Ensure exact number of versions is kept",
@@ -474,12 +477,9 @@ func TestPruneOldVersions(t *testing.T) {
 					testutils.MockVersion("02").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2"),
 					testutils.MockVersion("03").WithFiles("lxd.tar.xz", "root.squashfs", "disk.qcow2")).
 				AddProductCatalog(),
-			RetainBuilds: 3,
-			WantVersions: []string{
-				"01",
-				"02",
-				"03",
-			},
+			RetainBuilds:        3,
+			WantVersions:        []string{"01", "02", "03"},
+			WantCatalogVersions: []string{"01", "02", "03"},
 		},
 		{
 			Name: "Ensure the given number of product versions is retained",
@@ -490,12 +490,9 @@ func TestPruneOldVersions(t *testing.T) {
 					testutils.MockVersion("2024_05_01").WithFiles("lxd.tar.xz", "disk.squashfs"),
 					testutils.MockVersion("2025_01_01").WithFiles("lxd.tar.xz", "disk.qcow2")).
 				AddProductCatalog(),
-			RetainBuilds: 3,
-			WantVersions: []string{
-				"2024_01_05",
-				"2024_05_01",
-				"2025_01_01",
-			},
+			RetainBuilds:        3,
+			WantVersions:        []string{"2024_01_05", "2024_05_01", "2025_01_01"},
+			WantCatalogVersions: []string{"2024_01_05", "2024_05_01", "2025_01_01"},
 		},
 		{
 			Name: "Ensure only complete versions are retained",
@@ -508,11 +505,9 @@ func TestPruneOldVersions(t *testing.T) {
 					testutils.MockVersion("2024_01_05").WithFiles("lxd.tar.xz", "disk.qcow2"),                  // Complete
 					testutils.MockVersion("2024_01_06").WithFiles("disk.qcow2")).                               // Incomplete
 				AddProductCatalog(),
-			RetainBuilds: 2,
-			WantVersions: []string{
-				"2024_01_03",
-				"2024_01_05",
-			},
+			RetainBuilds:        2,
+			WantVersions:        []string{"2024_01_03", "2024_01_05"},
+			WantCatalogVersions: []string{"2024_01_03", "2024_01_05"},
 		},
 		{
 			Name: "Ensure only referenced versions are prunned",
@@ -526,13 +521,9 @@ func TestPruneOldVersions(t *testing.T) {
 				AddVersions(
 					testutils.MockVersion("2027").WithFiles("lxd.tar.xz", "disk.qcow2"),
 					testutils.MockVersion("2028").WithFiles("lxd.tar.xz", "disk.qcow2")),
-			RetainBuilds: 2,
-			WantVersions: []string{
-				"2025",
-				"2026",
-				"2027",
-				"2028",
-			},
+			RetainBuilds:        2,
+			WantVersions:        []string{"2025", "2026", "2027", "2028"},
+			WantCatalogVersions: []string{"2025", "2026"},
 		},
 		{
 			Name: "Ensure versions older then retainDays are prunned",
@@ -544,12 +535,10 @@ func TestPruneOldVersions(t *testing.T) {
 					testutils.MockVersion("2026").WithFiles("lxd.tar.xz", "disk.qcow2"),
 				).
 				AddProductCatalog(),
-			RetainBuilds: 3,
-			RetainDays:   2,
-			WantVersions: []string{
-				"2025",
-				"2026",
-			},
+			RetainBuilds:        3,
+			RetainDays:          2,
+			WantVersions:        []string{"2025", "2026"},
+			WantCatalogVersions: []string{"2025", "2026"},
 		},
 		{
 			Name: "Ensure all versions older then retainDays are prunned",
@@ -562,9 +551,10 @@ func TestPruneOldVersions(t *testing.T) {
 				).
 				AddProductCatalog().
 				SetFilesAge(12 * 24 * time.Hour), // 12 days
-			RetainBuilds: 2,
-			RetainDays:   10,
-			WantVersions: []string{},
+			RetainBuilds:        2,
+			RetainDays:          10,
+			WantVersions:        []string{},
+			WantCatalogVersions: []string{},
 		},
 	}
 
@@ -584,8 +574,23 @@ func TestPruneOldVersions(t *testing.T) {
 			product, err := stream.GetProduct(p.RootDir(), p.RelPath())
 			require.NoError(t, err)
 
-			// Ensure expected product versions are found.
-			require.ElementsMatch(t, test.WantVersions, shared.MapKeys(product.Versions))
+			// Ensure expected product versions are found in directory tree.
+			require.ElementsMatch(t, test.WantVersions, shared.MapKeys(product.Versions), "Mismatch between expected product versions and the directory tree")
+
+			// Ensure expected product versions are found in final product catalog.
+			catalogPath := filepath.Join(p.RootDir(), "streams", "v1", fmt.Sprintf("%s.json", p.StreamName()))
+			catalog, err := shared.ReadJSONFile(catalogPath, &stream.ProductCatalog{})
+			require.NoError(t, err)
+
+			if len(test.WantCatalogVersions) == 0 {
+				// There must be no products in catalog, if no product versions
+				// are expected.
+				require.Empty(t, shared.MapKeys(catalog.Products))
+			} else {
+				productID := strings.Join(strings.Split(p.RelPath(), "/")[1:], ":")
+				require.ElementsMatch(t, []string{productID}, shared.MapKeys(catalog.Products), "Mismatch between expected products and the product catalog")
+				require.ElementsMatch(t, test.WantCatalogVersions, shared.MapKeys(catalog.Products[productID].Versions), "Mismatch between expected product versions and the product catalog")
+			}
 		})
 	}
 }
