@@ -287,7 +287,7 @@ func (c *cmdLXD) run(cmd *cobra.Command, args []string, overlayDir string) error
 	var mounts []shared.ChrootMount
 	var vmDir string
 	var vm *vm
-
+	cleanup := true
 	if c.flagVM {
 		vmDir = filepath.Join(c.global.flagCacheDir, "vm")
 
@@ -338,7 +338,9 @@ func (c *cmdLXD) run(cmd *cobra.Command, args []string, overlayDir string) error
 		}
 
 		defer func() {
-			_ = shared.RunCommand(vm.ctx, nil, nil, "umount", "-R", vmDir)
+			if cleanup {
+				_ = vm.umountPartition(vmDir)
+			}
 		}()
 
 		err = vm.createUEFIFS()
@@ -436,11 +438,12 @@ func (c *cmdLXD) run(cmd *cobra.Command, args []string, overlayDir string) error
 
 	// Unmount VM directory and loop device before creating the image.
 	if c.flagVM {
-		err := shared.RunCommand(vm.ctx, nil, nil, "umount", "-R", vmDir)
+		err := vm.umountPartition(vmDir)
 		if err != nil {
 			return fmt.Errorf("Failed to unmount %q: %w", vmDir, err)
 		}
 
+		cleanup = false
 		err = vm.umountImage()
 		if err != nil {
 			return fmt.Errorf("Failed to unmount image: %w", err)
