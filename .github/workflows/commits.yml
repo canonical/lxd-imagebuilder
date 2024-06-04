@@ -10,7 +10,7 @@ jobs:
     permissions:
       pull-requests: read   # needed for private repos
     name: Branch target and CLA
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - name: Check branch target
       env:
