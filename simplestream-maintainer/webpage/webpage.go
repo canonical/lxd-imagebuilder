@@ -23,6 +23,7 @@ type WebPageImage struct {
 	VersionLastBuildDate string
 	SupportsContainer    bool
 	SupportsVM           bool
+	IsStale              bool
 }
 
 // WebPage represents the data that will be used to populate the webpage template.
@@ -50,7 +51,7 @@ func NewWebPage(catalog stream.ProductCatalog) *WebPage {
 		FooterUpdatedAt: fmt.Sprintf("Last updated: %s UTC", time.Now().UTC().Format("02 Jan 2006 (15:04)")),
 		Paragraphs: []template.HTML{
 			template.HTML("Images hosted on this server are available in LXD through the predefined remote <code>images:</code>. For detailed instructions about LXD image management, please refer to our <a href='https://documentation.ubuntu.com/lxd/en/latest/howto/images_manage'>How to Manage Images</a> guide in the official documentation."),
-			template.HTML("Images are built daily and we retain the last 2 successful builds of each image for up to 10 days. Thus, if a particular build fails on any given day, the previous successful builds will remain accessible."),
+			template.HTML("Images are built daily and we retain the last 2 successful builds of each image for up to 15 days. Thus, if a particular build fails on any given day, the previous successful builds will remain accessible."),
 			template.HTML("If you encounter any issues with the images hosted on our server or have suggestions for improvement, please let us know by <a href='https://github.com/canonical/lxd/issues/new'>opening an issue</a> in the LXD repository."),
 		},
 		Images: []WebPageImage{},
@@ -83,12 +84,17 @@ func NewWebPage(catalog stream.ProductCatalog) *WebPage {
 
 		// Converts timestamp from format "YYYYMMDD_hhmm" into a prettier
 		// format "YYYY-MM-DD (hh:mm)".
-		time, err := time.Parse("20060102_1504", last)
+		timestamp, err := time.Parse("20060102_1504", last)
 		if err != nil {
 			image.VersionLastBuildDate = "N/A"
 		} else {
-			image.VersionLastBuildDate = time.Format("2006-01-02 (15:04)")
+			image.VersionLastBuildDate = timestamp.UTC().Format("2006-01-02 (15:04)")
 			image.VersionPath = filepath.Join("/", catalog.ContentID, product.RelPath(), last)
+		}
+
+		// Image is considered stale if older than 8 days.
+		if timestamp.Before(time.Now().AddDate(0, 0, -8)) {
+			image.IsStale = true
 		}
 
 		// Iterate over version items and check if the image supports
