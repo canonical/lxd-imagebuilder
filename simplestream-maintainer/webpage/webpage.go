@@ -23,6 +23,7 @@ type WebPageImage struct {
 	VersionLastBuildDate string
 	SupportsContainer    bool
 	SupportsVM           bool
+	IsStale              bool
 }
 
 // WebPage represents the data that will be used to populate the webpage template.
@@ -83,12 +84,17 @@ func NewWebPage(catalog stream.ProductCatalog) *WebPage {
 
 		// Converts timestamp from format "YYYYMMDD_hhmm" into a prettier
 		// format "YYYY-MM-DD (hh:mm)".
-		time, err := time.Parse("20060102_1504", last)
+		timestamp, err := time.Parse("20060102_1504", last)
 		if err != nil {
 			image.VersionLastBuildDate = "N/A"
 		} else {
-			image.VersionLastBuildDate = time.Format("2006-01-02 (15:04)")
+			image.VersionLastBuildDate = timestamp.UTC().Format("2006-01-02 (15:04)")
 			image.VersionPath = filepath.Join("/", catalog.ContentID, product.RelPath(), last)
+		}
+
+		// Image is considered stale if older than 8 days.
+		if timestamp.Before(time.Now().AddDate(0, 0, -8)) {
+			image.IsStale = true
 		}
 
 		// Iterate over version items and check if the image supports
