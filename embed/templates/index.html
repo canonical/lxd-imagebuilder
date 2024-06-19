@@ -99,6 +99,23 @@
             border-bottom: 0;
         }
 
+        .lxd-text-arch {
+            display: inline-block;
+            text-align: center;
+            width: 65px;
+            border-radius: 5px;
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+
+        .lxd-text-arch.arm64 {
+            background-color: rgba(0, 127, 255, 0.3);
+        }
+
+        .lxd-text-arch.amd64 {
+            background-color: rgba(47, 130, 2, 0.3);
+        }
+
         .icon {
             background-repeat: no-repeat;
             display: inline-block;
@@ -202,7 +219,11 @@
                 <tr>
                     <td>{{ .Distribution }}</td>
                     <td>{{ .Release }}</td>
-                    <td>{{ .Architecture }}</td>
+                    <td>
+                        <div class="lxd-text-arch {{ .Architecture }}">
+                            {{ .Architecture }}
+                        </div>
+                    </td>
                     <td>{{ .Variant }}</td>
                     <td class="text-center"><i class="{{ if .SupportsContainer }}icon icon-ok{{ end }}"></i></td>
                     <td class="text-center"><i class="{{ if .SupportsVM }}icon icon-ok{{ end }}"></i></td>
