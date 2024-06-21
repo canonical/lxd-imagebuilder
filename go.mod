@@ -1,9 +1,9 @@
 module github.com/canonical/lxd-imagebuilder
 
-go 1.22.3
+go 1.22.4
 
 require (
-	github.com/canonical/lxd v0.0.0-20240619185413-619ae69e2443
+	github.com/canonical/lxd v0.0.0-20240620053341-f9f88f4e77ae
 	github.com/flosch/pongo2/v4 v4.0.2
 	github.com/google/go-github/v56 v56.0.0
 	github.com/mudler/docker-companion v0.4.6-0.20211015133729-bd4704fad372
