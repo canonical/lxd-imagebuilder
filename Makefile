@@ -14,7 +14,6 @@ default:
 update-gomod:
 	go get -t -v -d -u ./...
 	go mod tidy -go=$(GO_MIN)
-	go get toolchain@none
 	@echo "Dependencies updated"
 
 .PHONY: check
