@@ -61,6 +61,32 @@ func (v *vm) getUEFIDevFile() string {
 	return fmt.Sprintf("%sp1", v.loopDevice)
 }
 
+func (v *vm) findRootfsDevUUID() (rootUUID string, err error) {
+	rootfsDevFile := v.getRootfsDevFile()
+	if rootfsDevFile == "" {
+		return "", fmt.Errorf("Failed to get rootfs device name")
+	}
+
+	var out strings.Builder
+	if err = shared.RunCommand(v.ctx, nil, &out, "blkid", "-o", "export", rootfsDevFile); err != nil {
+		return "", fmt.Errorf("Failed to get rootfs device UUID: %w", err)
+	}
+
+	fields := strings.Fields(out.String())
+	for _, field := range fields {
+		if strings.HasPrefix(field, "UUID=") {
+			rootUUID = field
+			break
+		}
+	}
+
+	if rootUUID == "" {
+		return "", fmt.Errorf("No rootfs device UUID found")
+	}
+
+	return rootUUID, nil
+}
+
 func (v *vm) createEmptyDiskImage() error {
 	f, err := os.Create(v.imageFile)
 	if err != nil {

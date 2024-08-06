@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -349,6 +350,13 @@ func (c *cmdLXD) run(cmd *cobra.Command, args []string, overlayDir string) error
 		if err != nil {
 			return fmt.Errorf("Failed to mount UEFI partition: %w", err)
 		}
+
+		rootUUID, err := vm.findRootfsDevUUID()
+		if err != nil {
+			return fmt.Errorf("Failed to find rootfs device UUID: %w", err)
+		}
+
+		c.global.ctx = context.WithValue(c.global.ctx, shared.ContextKeyEnviron, []string{fmt.Sprintf("%s=%s", shared.EnvRootUUID, rootUUID)})
 
 		// We cannot use LXD's rsync package as that uses the --delete flag which
 		// causes an issue due to the boot/efi directory being present.
