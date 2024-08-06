@@ -6,6 +6,8 @@ GO_MIN=1.22.5
 
 .PHONY: default
 default:
+	go env -w GOCACHE=$(shell go env GOCACHE)
+	$(shell go env | grep -v GOENV | sed "s/'//g" > $(shell go env GOENV))
 	gofmt -s -w .
 	go install -v ./...
 	@echo "lxd-imagebuilder and simplestream-maintainer built successfully"
@@ -18,7 +20,7 @@ update-gomod:
 
 .PHONY: check
 check: default
-	go test -v ./...
+	sudo GOENV=$(shell go env GOENV) go test -v ./...
 
 .PHONY: dist
 dist:
