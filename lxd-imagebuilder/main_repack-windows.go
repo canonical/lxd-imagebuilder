@@ -42,7 +42,7 @@ func init() {
 
 func (c *cmdRepackWindows) command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "repack-windows <source-iso> <target-iso> [--drivers=DRIVERS]",
+		Use:     "repack-windows <source-iso> <target-iso> [--drivers=DRIVERS] [--windows-version=VERSION] [--windows-arch=ARCH]",
 		Short:   "Repack Windows ISO with drivers included",
 		Args:    cobra.ExactArgs(2),
 		PreRunE: c.preRun,
