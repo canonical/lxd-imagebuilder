@@ -60,15 +60,15 @@ To build an image for LXD, run `lxd-imagebuilder`. We are using the `build-lxd` 
 
 - To create a container image:
 
-  ```
-  sudo $HOME/go/bin/lxd-imagebuilder build-lxd ubuntu.yaml
-  ```
+ ```bash
+ sudo $HOME/go/bin/lxd-imagebuilder build-lxd ubuntu.yaml
+ ```
 
 - To create a VM image:
 
-  ```
-  sudo $HOME/go/bin/lxd-imagebuilder build-lxd ubuntu.yaml --vm
-  ```
+ ```bash
+ sudo $HOME/go/bin/lxd-imagebuilder build-lxd ubuntu.yaml --vm
+ ```
 
 See {ref}`howto-build-lxd` for more information about the `build-lxd` command.
 
