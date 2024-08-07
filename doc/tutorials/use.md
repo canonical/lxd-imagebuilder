@@ -178,6 +178,13 @@ Flag value | Version
 `2k8r2`    | Windows Server 2008 R2
 `2k3`      | Windows Server 2003
 
+When repacking a Windows ISO, `lxd-imagebuilder` uses external tools that may need to be installed. On a Ubuntu/Debian system, those can be installed with:
+
+```bash
+sudo apt-get install -y --no-install-recommends genisoimage libwin-hivex-perl rsync wimtools
+```
+````
+
 Here's how to repack a Windows ISO:
 
 ```bash
