@@ -192,16 +192,24 @@ lxd-imagebuilder repack-windows -h
 
 ### Install Windows
 
-Run the following commands to initialize the VM, to configure (=increase) the allocated disk space and finally attach the full path of your prepared ISO file. Note that the installation of Windows 10 takes about 10GB (before updates), therefore a 30GB disk gives you about 20GB of free space.
+Run the following commands to initialize the VM, add a TPM device, increase the allocated disk space, CPU, memory and finally attach the full path of your prepared ISO file.
 
 ```bash
-lxc init win10 --empty --vm -c security.secureboot=false
-lxc config device override win10 root size=30GiB
-lxc config device add win10 iso disk source=/path/to/Windows-repacked.iso boot.priority=10
+lxc init win11 --empty --vm
+lxc config device add win11 vtpm tpm path=/dev/tpm0
+lxc config device override win11 root size=50GiB
+lxc config set win11 limits.cpu=4 limits.memory=8GiB
+lxc config device add win11 iso disk source=/path/to/Windows-repacked.iso boot.priority=10
 ```
 
-Now, the VM win10 has been configured and it is ready to be started. The following command starts the virtual machine and opens up a VGA console so that we go through the graphical installation of Windows.
+Now, the VM win11 has been configured and it is ready to be started. The following command starts the virtual machine and opens up a VGA console so that we go through the graphical installation of Windows.
 
 ```bash
-lxc start win10 --console=vga
+lxc start win11 --console=vga
+```
+
+Once done with the manual installation process, the ISO can be removed to speed up next boots by avoiding the prompt to boot from it.
+
+```bash
+lxc config device remove win11 iso
 ```
