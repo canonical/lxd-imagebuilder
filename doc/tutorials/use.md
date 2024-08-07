@@ -47,7 +47,7 @@ You can define the following keys:
 | `mappings` | Maps different terms for architectures for specific distributions (e.g. `x86_64: amd64`) | {doc}`../reference/lxd-imagebuilder/mappings`   |
 
 ```{tip}
-When building a VM image, you should either build an image with cloud-init support (provides automatic size growth) or set a higher size in the template, because the standard size is relatively small (~4 GB). Alternatively, you can also grow it manually.
+When building a VM image, you should either build an image with cloud-init support (provides automatic size growth) or set a higher size in the template, because the standard size is relatively small (10 GiB). Alternatively, you can also grow it manually.
 ```
 
 ## Build and launch the image
