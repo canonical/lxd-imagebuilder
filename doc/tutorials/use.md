@@ -47,7 +47,7 @@ You can define the following keys:
 | `mappings` | Maps different terms for architectures for specific distributions (e.g. `x86_64: amd64`) | {doc}`../reference/lxd-imagebuilder/mappings`   |
 
 ```{tip}
-When building a VM image, you should either build an image with cloud-init support (provides automatic size growth) or set a higher size in the template, because the standard size is relatively small (~4 GB). Alternatively, you can also grow it manually.
+When building a VM image, you should either build an image with cloud-init support (provides automatic size growth) or set a higher size in the template, because the standard size is relatively small (10 GiB). Alternatively, you can also grow it manually.
 ```
 
 ## Build and launch the image
@@ -60,15 +60,15 @@ To build an image for LXD, run `lxd-imagebuilder`. We are using the `build-lxd` 
 
 - To create a container image:
 
-  ```
-  sudo $HOME/go/bin/lxd-imagebuilder build-lxd ubuntu.yaml
-  ```
+ ```bash
+ sudo $HOME/go/bin/lxd-imagebuilder build-lxd ubuntu.yaml
+ ```
 
 - To create a VM image:
 
-  ```
-  sudo $HOME/go/bin/lxd-imagebuilder build-lxd ubuntu.yaml --vm
-  ```
+ ```bash
+ sudo $HOME/go/bin/lxd-imagebuilder build-lxd ubuntu.yaml --vm
+ ```
 
 See {ref}`howto-build-lxd` for more information about the `build-lxd` command.
 
@@ -178,6 +178,13 @@ Flag value | Version
 `2k8r2`    | Windows Server 2008 R2
 `2k3`      | Windows Server 2003
 
+When repacking a Windows ISO, `lxd-imagebuilder` uses external tools that may need to be installed. On a Ubuntu/Debian system, those can be installed with:
+
+```bash
+sudo apt-get install -y --no-install-recommends genisoimage libwin-hivex-perl rsync wimtools
+```
+````
+
 Here's how to repack a Windows ISO:
 
 ```bash
@@ -192,16 +199,24 @@ lxd-imagebuilder repack-windows -h
 
 ### Install Windows
 
-Run the following commands to initialize the VM, to configure (=increase) the allocated disk space and finally attach the full path of your prepared ISO file. Note that the installation of Windows 10 takes about 10GB (before updates), therefore a 30GB disk gives you about 20GB of free space.
+Run the following commands to initialize the VM, add a TPM device, increase the allocated disk space, CPU, memory and finally attach the full path of your prepared ISO file.
 
 ```bash
-lxc init win10 --empty --vm -c security.secureboot=false
-lxc config device override win10 root size=30GiB
-lxc config device add win10 iso disk source=/path/to/Windows-repacked.iso boot.priority=10
+lxc init win11 --empty --vm
+lxc config device add win11 vtpm tpm path=/dev/tpm0
+lxc config device override win11 root size=50GiB
+lxc config set win11 limits.cpu=4 limits.memory=8GiB
+lxc config device add win11 iso disk source=/path/to/Windows-repacked.iso boot.priority=10
 ```
 
-Now, the VM win10 has been configured and it is ready to be started. The following command starts the virtual machine and opens up a VGA console so that we go through the graphical installation of Windows.
+Now, the VM win11 has been configured and it is ready to be started. The following command starts the virtual machine and opens up a VGA console so that we go through the graphical installation of Windows.
 
 ```bash
-lxc start win10 --console=vga
+lxc start win11 --console=vga
+```
+
+Once done with the manual installation process, the ISO can be removed to speed up next boots by avoiding the prompt to boot from it.
+
+```bash
+lxc config device remove win11 iso
 ```
