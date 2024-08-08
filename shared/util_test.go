@@ -3,6 +3,8 @@ package shared
 import (
 	"log"
 	"os"
+	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/flosch/pongo2/v4"
@@ -215,5 +217,118 @@ func TestSquashfsParseCompression(t *testing.T) {
 				require.Equal(t, tt.expectedLevel, *level)
 			}
 		}
+	}
+}
+
+func TestCaseInsensitive(t *testing.T) {
+	tcs := []struct {
+		input string
+		want  string
+	}{
+		{"sources", "[sS][oO][uU][rR][cC][eE][sS]"},
+		{"boot.wim", "[bB][oO][oO][tT]\\.[wW][iI][mM]"},
+		{"install.wim", "[iI][nN][sS][tT][aA][lL][lL]\\.[wW][iI][mM]"},
+		{"sources/boot.wim", "[sS][oO][uU][rR][cC][eE][sS]/[bB][oO][oO][tT]\\.[wW][iI][mM]"},
+		{"sources/install.wim", "[sS][oO][uU][rR][cC][eE][sS]/[iI][nN][sS][tT][aA][lL][lL]\\.[wW][iI][mM]"},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.input, func(t *testing.T) {
+			pattern := CaseInsensitive(tc.input)
+			if pattern != tc.want {
+				t.Fatal(pattern, tc.input, tc.want)
+			}
+		})
+	}
+}
+
+func findMatchHelper(t *testing.T, filenames ...string) (dir string, actuals []string, rb func()) {
+	t.Helper()
+	dir, err := os.MkdirTemp("", "findmatch*")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actuals = make([]string, len(filenames))
+	for i, filename := range filenames {
+		filename = filepath.Join(dir, filename)
+		err = os.MkdirAll(filepath.Dir(filename), 0755)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		file, err := os.Create(filename)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = file.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		actuals[i] = filename
+	}
+
+	rb = func() {
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return
+}
+
+func TestFindFirstMatch(t *testing.T) {
+	tcs := []struct {
+		name   string
+		actual string
+	}{
+		{"sources/boot.wim", "sources/boot.wim"},
+		{"sources/install.wim", "sources/install.wim"},
+		{"sources/install.wim", "SOURCES/INSTALL.wim"},
+		{"sources/boot.wim", "sources/BOOT.WIM"},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			dir, actuals, rb := findMatchHelper(t, tc.actual)
+			defer rb()
+			actual := actuals[0]
+			want, err := FindFirstMatch(dir, tc.name)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if want != actual {
+				t.Fatal(want, actual)
+			}
+		})
+	}
+}
+
+func TestFindAllMatches(t *testing.T) {
+	tcs := []struct {
+		name      string
+		filenames []string
+	}{
+		{"*.inf", []string{"vioinput.inf"}},
+		{"*.sys", []string{"viohidkmdf.sys", "vioinput.sys"}},
+		{"*.cat", []string{"vioinput.cat"}},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			dir, actuals, rb := findMatchHelper(t, tc.filenames...)
+			defer rb()
+			matches, err := FindAllMatches(dir, tc.name)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !slices.Equal(matches, actuals) {
+				t.Fatal(matches, actuals)
+			}
+		})
 	}
 }

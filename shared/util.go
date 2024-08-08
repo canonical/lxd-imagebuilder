@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -25,6 +26,7 @@ import (
 
 const (
 	ContextKeyEnviron = ContextKey("environ")
+	ContextKeyStderr  = ContextKey("stderr")
 	EnvRootUUID       = "LXD_IMAGEBUILDER_ROOT_UUID"
 )
 
@@ -39,6 +41,64 @@ type Environment map[string]EnvVariable
 
 // ContextKey type.
 type ContextKey string
+
+// WriteFunc type.
+type WriteFunc func([]byte) (int, error)
+
+// Write implements io.Writer interface.
+func (w WriteFunc) Write(b []byte) (int, error) {
+	return w(b)
+}
+
+// CaseInsensitive returns case insensive pattern used by filepath.Glob or filepath.Match.
+func CaseInsensitive(s string) (pattern string) {
+	s1 := strings.ToLower(s)
+	s2 := strings.ToUpper(s)
+	for i := range s {
+		a := s1[i : i+1]
+		b := s2[i : i+1]
+		if a != b {
+			pattern += "[" + a + b + "]"
+		} else if strings.Contains("?*[]/", a) {
+			pattern += a
+		} else {
+			pattern += "\\" + a
+		}
+	}
+	return
+}
+
+// FindFirstMatch find the first matched file case insensitive.
+func FindFirstMatch(dir string, elem ...string) (found string, err error) {
+	matches, err := FindAllMatches(dir, elem...)
+	if err != nil {
+		return
+	}
+
+	found = matches[0]
+	return
+}
+
+// FindAllMatches find all the matched files case insensitive.
+func FindAllMatches(dir string, elem ...string) (matches []string, err error) {
+	names := []string{dir}
+	for _, name := range elem {
+		names = append(names, CaseInsensitive(name))
+	}
+
+	pattern := filepath.Join(names...)
+	matches, err = filepath.Glob(pattern)
+	if err != nil {
+		return
+	}
+
+	if len(matches) == 0 {
+		err = fmt.Errorf("No match found %s", pattern)
+		return
+	}
+
+	return
+}
 
 // Copy copies a file.
 func Copy(src, dest string) error {
@@ -84,7 +144,12 @@ func RunCommand(ctx context.Context, stdin io.Reader, stdout io.Writer, name str
 		cmd.Stdout = os.Stdout
 	}
 
-	cmd.Stderr = os.Stderr
+	stderr, ok := ctx.Value(ContextKeyStderr).(io.Writer)
+	if ok && stderr != nil {
+		cmd.Stderr = stderr
+	} else {
+		cmd.Stderr = os.Stderr
+	}
 
 	return cmd.Run()
 }
