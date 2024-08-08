@@ -187,7 +187,7 @@ sudo apt-get install -y --no-install-recommends genisoimage libwin-hivex-perl rs
 Here's how to repack a Windows ISO:
 
 ```bash
-lxd-imagebuilder repack-windows path/to/Windows.iso path/to/Windows-repacked.iso
+sudo lxd-imagebuilder repack-windows path/to/Windows.iso path/to/Windows-repacked.iso
 ```
 
 More information on `repack-windows` can be found by running
