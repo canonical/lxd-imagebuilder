@@ -183,12 +183,11 @@ When repacking a Windows ISO, `lxd-imagebuilder` uses external tools that may ne
 ```bash
 sudo apt-get install -y --no-install-recommends genisoimage libwin-hivex-perl rsync wimtools
 ```
-````
 
 Here's how to repack a Windows ISO:
 
 ```bash
-lxd-imagebuilder repack-windows path/to/Windows.iso path/to/Windows-repacked.iso
+sudo lxd-imagebuilder repack-windows path/to/Windows.iso path/to/Windows-repacked.iso
 ```
 
 More information on `repack-windows` can be found by running
