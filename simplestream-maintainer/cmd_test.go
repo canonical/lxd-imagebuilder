@@ -155,10 +155,10 @@ func TestBuildIndex(t *testing.T) {
 			require.NoError(t, err, "Failed building index and catalog files!")
 
 			// Convert expected catalog and index files to json.
-			jsonCatalogExpect, err := json.MarshalIndent(test.WantCatalog, "", "  ")
+			jsonCatalogExpect, err := json.Marshal(test.WantCatalog)
 			require.NoError(t, err)
 
-			jsonIndexExpect, err := json.MarshalIndent(test.WantIndex, "", "  ")
+			jsonIndexExpect, err := json.Marshal(test.WantIndex)
 			require.NoError(t, err)
 
 			// Read actual catalog and index files.
