@@ -632,8 +632,6 @@ func WriteJSONFile(path string, obj any) error {
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-
 	err = encoder.Encode(obj)
 	if err != nil {
 		return fmt.Errorf("Error encoding JSON: %w", err)
