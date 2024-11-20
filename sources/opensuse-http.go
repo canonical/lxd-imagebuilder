@@ -70,7 +70,7 @@ func (s *opensuse) Run() error {
 	}
 
 	if !s.definition.Source.SkipVerification {
-		err = s.verifyTarball(filepath.Join(fpath, fname), s.definition)
+		err = s.verifyTarball(filepath.Join(fpath, fname))
 		if err != nil {
 			return fmt.Errorf("Failed to verify %q: %w", filepath.Join(fpath, fname), err)
 		}
@@ -87,7 +87,7 @@ func (s *opensuse) Run() error {
 	return nil
 }
 
-func (s *opensuse) verifyTarball(imagePath string, definition shared.Definition) error {
+func (s *opensuse) verifyTarball(imagePath string) error {
 	var err error
 	var checksum []byte
 
