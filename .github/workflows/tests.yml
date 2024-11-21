@@ -16,8 +16,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go:
-          - 1.22.x
         os:
           - ubuntu-20.04
           - ubuntu-22.04
@@ -35,7 +33,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go }}
+          go-version-file: go.mod
 
       - name: Install dependencies
         run: |

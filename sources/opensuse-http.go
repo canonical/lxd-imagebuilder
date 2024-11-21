@@ -2,6 +2,7 @@ package sources
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,8 +14,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-
-	"gopkg.in/antchfx/htmlquery.v1"
 
 	"github.com/canonical/lxd-imagebuilder/shared"
 )
@@ -29,7 +28,7 @@ func (s *opensuse) Run() error {
 	var fname string
 
 	if s.definition.Source.URL == "" {
-		s.definition.Source.URL = "https://mirrorcache-us.opensuse.org/download"
+		s.definition.Source.URL = "https://download.opensuse.org/download"
 	}
 
 	tarballPath, err := s.getPathToTarball(s.definition.Source.URL, s.definition.Image.Release,
@@ -70,7 +69,7 @@ func (s *opensuse) Run() error {
 	}
 
 	if !s.definition.Source.SkipVerification {
-		err = s.verifyTarball(filepath.Join(fpath, fname), s.definition)
+		err = s.verifyTarball(filepath.Join(fpath, fname))
 		if err != nil {
 			return fmt.Errorf("Failed to verify %q: %w", filepath.Join(fpath, fname), err)
 		}
@@ -87,7 +86,7 @@ func (s *opensuse) Run() error {
 	return nil
 }
 
-func (s *opensuse) verifyTarball(imagePath string, definition shared.Definition) error {
+func (s *opensuse) verifyTarball(imagePath string) error {
 	var err error
 	var checksum []byte
 
@@ -169,13 +168,34 @@ func (s *opensuse) getPathToTarball(baseURL string, release string, arch string)
 }
 
 func (s *opensuse) getTarballName(u *url.URL, release, arch string) (string, error) {
-	doc, err := htmlquery.LoadURL(u.String())
+	// Add ?jsontable query parameter.
+	query := u.Query()
+	query.Set("jsontable", "")
+	u.RawQuery = query.Encode()
+
+	// Fetch the JSON response.
+	resp, err := http.Get(u.String())
 	if err != nil {
-		return "", fmt.Errorf("Failed to load URL %q: %w", u.String(), err)
+		return "", fmt.Errorf("Failed to fetch URL %q: %w", u.String(), err)
 	}
 
-	if doc == nil {
-		return "", errors.New("Empty HTML document")
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Unexpected status code %d from %q", resp.StatusCode, u.String())
+	}
+
+	// Parse JSON response.
+	var result struct {
+		Data []struct {
+			Name string `json:"name"`
+			Size int    `json:"size"`
+		} `json:"data"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return "", fmt.Errorf("Failed to parse JSON response: %w", err)
 	}
 
 	// Translate x86 architectures.
@@ -183,26 +203,27 @@ func (s *opensuse) getTarballName(u *url.URL, release, arch string) (string, err
 		arch = "ix86"
 	}
 
-	nodes := htmlquery.Find(doc, `//a/@href`)
+	// Regex to match the tarball name.
 	re := regexp.MustCompile(fmt.Sprintf("^opensuse-%s-image.*%s.*\\.tar.xz$", release, arch))
 
 	var builds []string
 
-	for _, n := range nodes {
-		text := strings.TrimPrefix(htmlquery.InnerText(n), "./")
+	// Process the JSON data.
+	for _, item := range result.Data {
+		name := strings.TrimPrefix(item.Name, "./")
 
-		if !re.MatchString(text) {
+		if !re.MatchString(name) {
 			continue
 		}
 
-		if strings.Contains(text, "Build") {
-			builds = append(builds, text)
+		if strings.Contains(name, "Build") {
+			builds = append(builds, name)
 		} else {
-			if !s.validateURL(*u, text) {
+			if !s.validateURL(*u, name) {
 				continue
 			}
 
-			return text, nil
+			return name, nil
 		}
 	}
 
