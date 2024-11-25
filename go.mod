@@ -9,7 +9,7 @@ require (
 	github.com/mudler/docker-companion v0.4.6-0.20211015133729-bd4704fad372
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	golang.org/x/sys v0.27.0
 	golang.org/x/text v0.20.0
 	gopkg.in/antchfx/htmlquery.v1 v1.2.2
