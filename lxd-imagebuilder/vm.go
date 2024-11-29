@@ -152,12 +152,12 @@ func (v *vm) lsblkLoopDevice() (parseMajorMinor func(int) (uint32, uint32, error
 
 		fields := strings.Split(deviceNumbers[i], ":")
 
-		majorNum, err := strconv.Atoi(fields[0])
+		majorNum, err := strconv.ParseUint(fields[0], 10, 32)
 		if err != nil {
 			return 0, 0, fmt.Errorf("Failed to parse %q: %w", fields[0], err)
 		}
 
-		minorNum, err := strconv.Atoi(fields[1])
+		minorNum, err := strconv.ParseUint(fields[1], 10, 32)
 		if err != nil {
 			return 0, 0, fmt.Errorf("Failed to parse %q: %w", fields[1], err)
 		}
