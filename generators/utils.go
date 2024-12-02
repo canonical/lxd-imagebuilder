@@ -11,7 +11,7 @@ import (
 func updateFileAccess(file *os.File, defFile shared.DefinitionFile) error {
 	// Change file mode if needed
 	if defFile.Mode != "" {
-		mode, err := strconv.ParseUint(defFile.Mode, 8, 64)
+		mode, err := strconv.ParseUint(defFile.Mode, 8, 32)
 		if err != nil {
 			return fmt.Errorf("Failed to parse file mode: %w", err)
 		}
