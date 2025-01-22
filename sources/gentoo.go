@@ -151,7 +151,8 @@ func (s *gentoo) Run() error {
 	return nil
 }
 
-func (s *gentoo) getLatestBuild(baseURL, arch, variant string) (string, error) {
+func (s *gentoo) getLatestBuild(baseURL string, arch string, variant string) (string, error) {
+	s.logger.Infof("Getting latest build for variant %q (%s) from %q", variant, arch, baseURL)
 	var (
 		resp *http.Response
 		err  error
