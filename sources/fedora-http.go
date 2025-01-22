@@ -20,8 +20,7 @@ type fedora struct {
 
 // Run downloads a container base image and unpacks it and its layers.
 func (s *fedora) Run() error {
-	baseURL := fmt.Sprintf("%s/packages/Fedora-Container-Base",
-		s.definition.Source.URL)
+	baseURL := fmt.Sprintf("%s/packages/Fedora-Container-Base", s.definition.Source.URL)
 
 	// Get latest build
 	build, err := s.getLatestBuild(baseURL, s.definition.Image.Release)
@@ -130,7 +129,9 @@ func (s *fedora) unpackLayers(rootfsDir string) error {
 	return nil
 }
 
-func (s *fedora) getLatestBuild(URL, release string) (string, error) {
+func (s *fedora) getLatestBuild(URL string, release string) (string, error) {
+	s.logger.Infof("Getting latest build for release %q from %q", release, URL)
+
 	var (
 		resp *http.Response
 		err  error

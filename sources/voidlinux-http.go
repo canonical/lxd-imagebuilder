@@ -91,7 +91,9 @@ func (s *voidlinux) Run() error {
 	return nil
 }
 
-func (s *voidlinux) getLatestBuild(baseURL, arch, variant string) (string, error) {
+func (s *voidlinux) getLatestBuild(baseURL string, arch string, variant string) (string, error) {
+	s.logger.Infof("Getting latest build for variant %q (%s) from %q", variant, arch, baseURL)
+
 	var (
 		resp *http.Response
 		err  error
