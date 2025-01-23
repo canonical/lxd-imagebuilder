@@ -660,3 +660,30 @@ func HasSuffix(key string, suffixes ...string) bool {
 
 	return false
 }
+
+// VerifyChecksum verifies the checksum of the file using the provided hash function.
+func VerifyChecksum(filePath string, checksum string, hashFunc hash.Hash) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	if hashFunc != nil {
+		hashFunc.Reset()
+	}
+
+	_, err = io.Copy(hashFunc, file)
+	if err != nil {
+		return err
+	}
+
+	result := fmt.Sprintf("%x", hashFunc.Sum(nil))
+
+	if result != checksum {
+		return fmt.Errorf("Hash mismatch for %s: %q (actual) != %q (expected)", filePath, result, checksum)
+	}
+
+	return nil
+}
