@@ -130,6 +130,17 @@
             background-color: var(--color-codeblock);
         }
 
+        .lxd-text-codeblock-border {
+            display: inline-block;
+            text-align: center;
+            padding-left: 5px;
+            padding-right: 5px;
+            padding-top: 2px;
+            padding-left: 2px;
+            border-radius: 5px;
+            border: 1px solid var(--color-codeblock);
+        }
+
         .lxd-modal {
             min-width: 350px;
             border: 1px solid #111111;
@@ -329,6 +340,25 @@
                 </div>
                 <!-- Dialog: Body -->
                 <div class="modal-body">
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-center">
+                            <code class="px-3 py-2 text-black lxd-text-codeblock-border">
+                            lxc launch
+                            {{ if eq $index 0 }}
+                                <!-- Only the latest version is referencable by alias -->
+                                images:<span class="lxd-text-primary">{{ index $image.Aliases 0 }}</span>
+                                <span>{{ if and $version.FingerprintContainer $version.FingerprintVM }} c1 [--vm]{{ else if $version.FingerprintVM }} v1 --vm{{ else }}c1{{ end }}</span>
+                            {{ else }}
+                                <!-- Use fingerprint for other versions -->
+                                {{ if $version.FingerprintContainer }}
+                                images:<span class="lxd-text-primary">{{ $version.FingerprintContainer }}</span> c1
+                                {{ else }}
+                                images:<span class="lxd-text-primary">{{ $version.FingerprintVM }}</span> v1 --vm
+                                {{ end}}
+                            {{ end }}
+                            </code>
+                        </div>
+                    </div>
                     <div class="mx-3 mt-3 row row-cols-1 row-cols-lg-2">
                         <div class="col mt-1">
                             <div class="py-2">
