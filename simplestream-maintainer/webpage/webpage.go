@@ -1,8 +1,10 @@
 package webpage
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -64,7 +66,7 @@ type WebPage struct {
 // NewWebPage creates initializes a webpage struct from the given product catalog.
 // If the image paths from the catalog are detected in the provided rootDir, the
 // files are inspected and their metadata is included in the image version details.
-func NewWebPage(catalog stream.ProductCatalog) *WebPage {
+func NewWebPage(rootDir string, catalog stream.ProductCatalog) (*WebPage, error) {
 	// This is hardcoded in case we ever decide to manage index.html
 	// using a configuration file. In such case, we just have to parse
 	// those values and the rest of the code will work as expected.
@@ -112,14 +114,18 @@ func NewWebPage(catalog stream.ProductCatalog) *WebPage {
 		// inforation and files metadata.
 		for _, id := range versionIds {
 			versionDir := filepath.Join(catalog.ContentID, product.RelPath())
-			version := parseVersions(product, versionDir, id)
+			version, err := parseVersions(product, rootDir, versionDir, id)
+			if err != nil {
+				return nil, err
+			}
+
 			image.Versions = append(image.Versions, *version)
 		}
 
 		page.Images = append(page.Images, image)
 	}
 
-	return &page
+	return &page, nil
 }
 
 // Write parses the webpage template, populates it, and writes it to index.html
@@ -152,7 +158,7 @@ func (p WebPage) Write(rootDir string) error {
 }
 
 // parseVersions extracts image version metadata, and referenced files.
-func parseVersions(product stream.Product, versionDir string, versionId string) *WebPageImageVersion {
+func parseVersions(product stream.Product, rootDir string, versionDir string, versionId string) (*WebPageImageVersion, error) {
 	version := WebPageImageVersion{
 		Name:      versionId,
 		Path:      filepath.Join("/", versionDir, versionId),
@@ -197,6 +203,51 @@ func parseVersions(product stream.Product, versionDir string, versionId string) 
 		})
 	}
 
+	// Ensure we have an absolute path to the version directory.
+	absPath, err := filepath.Abs(filepath.Join(rootDir, version.Path))
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse directory entries and ignore not-exist error as webpage
+	// may be generated solely from the catalog.
+	files, err := os.ReadDir(absPath)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
+	}
+
+	// Lookup for any additional files that are not recorded in the
+	// catalog, such as image definition.
+	for _, file := range files {
+		// Ignore directories.
+		if file.IsDir() {
+			continue
+		}
+
+		// Check if file is already found in the catalog.
+		filter := func(f WebPageImageFile) bool {
+			return f.Name == file.Name()
+		}
+
+		if slices.ContainsFunc(version.Files, filter) {
+			continue
+		}
+
+		// Otherwise, add new file entry.
+		fileInfo, err := file.Info()
+		if err != nil {
+			return nil, err
+		}
+
+		relPath := filepath.Join(version.Path, file.Name())
+		version.Files = append(version.Files, WebPageImageFile{
+			Name: file.Name(),
+			Path: relPath,
+			Date: formatTime(fileInfo.ModTime()),
+			Size: formatSize(fileInfo.Size(), 2),
+		})
+	}
+
 	// Sort files alphabetically.
 	slices.SortFunc(version.Files, func(a, b WebPageImageFile) int {
 		if a.Name > b.Name {
@@ -210,7 +261,7 @@ func parseVersions(product stream.Product, versionDir string, versionId string) 
 		return 1
 	})
 
-	return &version
+	return &version, nil
 }
 
 // formatSize returns a human-readable string representation of the given size.
