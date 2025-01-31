@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 	"unicode"
 
@@ -47,6 +48,8 @@ type WebPageImage struct {
 	Architecture string
 	Variant      string
 	IsStale      bool
+	Aliases      []string
+	Requirements map[string]string
 
 	Versions []WebPageImageVersion
 }
@@ -99,10 +102,12 @@ func NewWebPage(rootDir string, catalog stream.ProductCatalog) (*WebPage, error)
 		}
 
 		image := WebPageImage{
+			Aliases:      strings.Split(product.Aliases, ","),
 			Distribution: product.OS,
 			Release:      product.Release,
 			Architecture: product.Architecture,
 			Variant:      product.Variant,
+			Requirements: product.Requirements,
 		}
 
 		// Sort version ids in reverse order, so that the first version
