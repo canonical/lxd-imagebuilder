@@ -7,6 +7,9 @@ import (
 	"path/filepath"
 	"slices"
 	"time"
+	"unicode"
+
+	"github.com/canonical/lxd/shared/units"
 
 	"github.com/canonical/lxd-imagebuilder/embed"
 	"github.com/canonical/lxd-imagebuilder/shared"
@@ -142,4 +145,21 @@ func (p WebPage) Write(rootDir string) error {
 	}
 
 	return os.Rename(pathTmp, path)
+}
+
+// formatSize returns a human-readable string representation of the given size.
+func formatSize(sizeBytes int64, precision uint) string {
+	sizeStr := units.GetByteSizeString(sizeBytes, precision)
+
+	// Read the string backwards to find the first digit
+	// and add space between the number and the unit.
+	for i := len(sizeStr) - 1; i >= 0; i-- {
+		if unicode.IsDigit(rune(sizeStr[i])) {
+			number := sizeStr[:i+1]
+			unit := sizeStr[i+1:]
+			return number + " " + unit
+		}
+	}
+
+	return sizeStr
 }
