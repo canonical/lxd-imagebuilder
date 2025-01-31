@@ -15,7 +15,7 @@
             --color-dark: #333333;
             --color-text-primary: #111111;
             --color-text-secondary: #777777;
-          }
+        }
 
         body {
             font-family: 'Ubuntu';
@@ -89,10 +89,6 @@
         .lxd-table tr td:last-child,
         .lxd-table tr th:last-child {
             padding-right: 15px;
-        }
-
-        .lxd-table tr:first-child td {
-            border-top: 10px solid var(--color-dark);
         }
 
         .lxd-table tr:last-child td {
@@ -175,7 +171,8 @@
         }
     </style>
 </head>
-<body class="lxd-bg-light">
+<body>
+    <!-- Header -->
     <div class="pb-3 lxd-header" >
         <div class="container">
             <div class="d-flex align-items-end">
@@ -184,6 +181,7 @@
             </div>
         </div>
     </div>
+    <!-- Content -->
     <div class="container mt-5 pt-5">
         <h2 class="mb-3">Image Server</h2>
         <div class="row justify-content-between" >
@@ -201,6 +199,7 @@
             </div>
         </div>
     </div>
+    <!-- Table of available images -->
     <div class="container align-items-center pb-5">
         <h2 class="mt-5" >Available Images</h2>
         <div class="table-responsive">
@@ -216,6 +215,7 @@
                     <th class="table-secondary text-end" scope="col">Last Build (UTC)</th>
                 </tr>
                 {{ range .Images }}
+                {{ $version := index .Versions 0 }} <!-- First element is latest version -->
                 <tr>
                     <td>{{ .Distribution }}</td>
                     <td>{{ .Release }}</td>
@@ -225,15 +225,15 @@
                         </div>
                     </td>
                     <td>{{ .Variant }}</td>
-                    <td class="text-center"><i class="{{ if .SupportsContainer }}icon icon-ok{{ end }}"></i></td>
-                    <td class="text-center"><i class="{{ if .SupportsVM }}icon icon-ok{{ end }}"></i></td>
+                    <td class="text-center"><i class="{{ if $version.FingerprintContainer }}icon icon-ok{{ end }}"></i></td>
+                    <td class="text-center"><i class="{{ if $version.FingerprintVM }}icon icon-ok{{ end }}"></i></td>
                     <td class="text-end">
                         <div class="icon-container">
-                            <i class="{{ if .IsStale }}icon icon-warn{{ end }}"></i>
+                            <i class="{{ if $version.IsStale }}icon icon-warn{{ end }}"></i>
                             <span class="icon-tooltip">Last image build is older than 8 days.</span>
                         </div>
                     </td>
-                    <td class="text-end"><a href="{{ .VersionPath }}">{{ .VersionLastBuildDate }}</a></td>
+                    <td class="text-end"><a href="{{ $version.Path }}">{{ $version.BuildDate }}</a></td>
                 </tr>
                 {{ end }}
             </table>
