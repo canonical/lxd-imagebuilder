@@ -16,6 +16,16 @@ import (
 	"github.com/canonical/lxd-imagebuilder/simplestream-maintainer/stream"
 )
 
+// WebPageImageFile represents a file related to a specific image.
+// Used for file listings in image details.
+type WebPageImageFile struct {
+	Name      string
+	Path      string
+	Date      string
+	Size      string
+	SizeBytes int64
+}
+
 // WebPageImageVersion represents a version of an image.
 type WebPageImageVersion struct {
 	Name                 string
@@ -24,6 +34,8 @@ type WebPageImageVersion struct {
 	IsStale              bool
 	FingerprintContainer string
 	FingerprintVM        string
+
+	Files []WebPageImageFile
 }
 
 // WebPageImage represents webpage table entries.
@@ -50,6 +62,8 @@ type WebPage struct {
 }
 
 // NewWebPage creates initializes a webpage struct from the given product catalog.
+// If the image paths from the catalog are detected in the provided rootDir, the
+// files are inspected and their metadata is included in the image version details.
 func NewWebPage(catalog stream.ProductCatalog) *WebPage {
 	// This is hardcoded in case we ever decide to manage index.html
 	// using a configuration file. In such case, we just have to parse
@@ -173,7 +187,28 @@ func parseVersions(product stream.Product, versionDir string, versionId string) 
 				version.FingerprintVM = item.CombinedSHA256DiskKvmImg[:12]
 			}
 		}
+
+		version.Files = append(version.Files, WebPageImageFile{
+			Name:      filepath.Base(item.Path),
+			Path:      item.Path,
+			Date:      version.BuildDate,
+			Size:      formatSize(item.Size, 2),
+			SizeBytes: item.Size,
+		})
 	}
+
+	// Sort files alphabetically.
+	slices.SortFunc(version.Files, func(a, b WebPageImageFile) int {
+		if a.Name > b.Name {
+			return 0
+		}
+
+		if a.Name < b.Name {
+			return -1
+		}
+
+		return 1
+	})
 
 	return &version
 }
