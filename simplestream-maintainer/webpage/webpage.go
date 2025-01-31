@@ -91,7 +91,7 @@ func NewWebPage(catalog stream.ProductCatalog) *WebPage {
 		if err != nil {
 			image.VersionLastBuildDate = "N/A"
 		} else {
-			image.VersionLastBuildDate = timestamp.UTC().Format("2006-01-02 (15:04)")
+			image.VersionLastBuildDate = formatTime(timestamp)
 			image.VersionPath = filepath.Join("/", catalog.ContentID, product.RelPath(), last)
 		}
 
@@ -162,4 +162,9 @@ func formatSize(sizeBytes int64, precision uint) string {
 	}
 
 	return sizeStr
+}
+
+// formatTime returns a UTC time as string in format "YYYY-MM-DD (hh:mm)".
+func formatTime(time time.Time) string {
+	return time.UTC().Format("2006-01-02 (15:04)")
 }
