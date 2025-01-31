@@ -15,6 +15,7 @@
             --color-dark: #333333;
             --color-text-primary: #111111;
             --color-text-secondary: #777777;
+            --color-codeblock: rgba(145, 149, 143, 0.3);;
         }
 
         body {
@@ -95,6 +96,14 @@
             border-bottom: 0;
         }
 
+        .lxd-text-primary {
+            color: var(--color-primary);
+        }
+
+        .lxd-text-secondary {
+            color: var(--color-text-secondary);
+        }
+
         .lxd-text-arch {
             display: inline-block;
             text-align: center;
@@ -112,6 +121,51 @@
             background-color: rgba(47, 130, 2, 0.3);
         }
 
+        .lxd-text-variant {
+            display: inline-block;
+            text-align: center;
+            padding-left: 5px;
+            padding-right: 5px;
+            border-radius: 5px;
+            background-color: var(--color-codeblock);
+        }
+
+        .lxd-modal {
+            min-width: 350px;
+            border: 1px solid #111111;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            font-family: 'Ubuntu';
+            font-size: 1.05rem;
+            color: var(--color-text-primary);
+            background-color: var(--color-light);
+        }
+
+        .lxd-modal::backdrop {
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .lxd-modal-header {
+            color: #fff;
+            background-color: var(--color-dark);
+            box-shadow: var(--color-dark) 0px 0px 10px;
+        }
+
+        div[data-bs-toggle="modal"] span {
+            color: gray;
+            text-align: center;
+            background-color: transparent;
+            padding: 7px;
+            border-radius: 7px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        div[data-bs-toggle="modal"]:hover span {
+            background-color: #e0e0e0;
+            color: black;
+        }
+
         .icon {
             background-repeat: no-repeat;
             display: inline-block;
@@ -125,6 +179,10 @@
 
         .icon-warn {
             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M256 32c14.2 0 27.3 7.5 34.5 19.8l216 368c7.3 12.4 7.3 27.7 .2 40.1S486.3 480 472 480H40c-14.3 0-27.6-7.7-34.7-20.1s-7-27.8 .2-40.1l216-368C228.7 39.5 241.8 32 256 32zm0 128c-13.3 0-24 10.7-24 24V296c0 13.3 10.7 24 24 24s24-10.7 24-24V184c0-13.3-10.7-24-24-24zm32 224a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z"/></svg>');
+        }
+
+        .icon-fingerprint {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M48 256C48 141.1 141.1 48 256 48c63.1 0 119.6 28.1 157.8 72.5c8.6 10.1 23.8 11.2 33.8 2.6s11.2-23.8 2.6-33.8C403.3 34.6 333.7 0 256 0C114.6 0 0 114.6 0 256l0 40c0 13.3 10.7 24 24 24s24-10.7 24-24l0-40zm458.5-52.9c-2.7-13-15.5-21.3-28.4-18.5s-21.3 15.5-18.5 28.4c2.9 13.9 4.5 28.3 4.5 43.1l0 40c0 13.3 10.7 24 24 24s24-10.7 24-24l0-40c0-18.1-1.9-35.8-5.5-52.9zM256 80c-19 0-37.4 3-54.5 8.6c-15.2 5-18.7 23.7-8.3 35.9c7.1 8.3 18.8 10.8 29.4 7.9c10.6-2.9 21.8-4.4 33.4-4.4c70.7 0 128 57.3 128 128l0 24.9c0 25.2-1.5 50.3-4.4 75.3c-1.7 14.6 9.4 27.8 24.2 27.8c11.8 0 21.9-8.6 23.3-20.3c3.3-27.4 5-55 5-82.7l0-24.9c0-97.2-78.8-176-176-176zM150.7 148.7c-9.1-10.6-25.3-11.4-33.9-.4C93.7 178 80 215.4 80 256l0 24.9c0 24.2-2.6 48.4-7.8 71.9C68.8 368.4 80.1 384 96.1 384c10.5 0 19.9-7 22.2-17.3c6.4-28.1 9.7-56.8 9.7-85.8l0-24.9c0-27.2 8.5-52.4 22.9-73.1c7.2-10.4 8-24.6-.2-34.2zM256 160c-53 0-96 43-96 96l0 24.9c0 35.9-4.6 71.5-13.8 106.1c-3.8 14.3 6.7 29 21.5 29c9.5 0 17.9-6.2 20.4-15.4c10.5-39 15.9-79.2 15.9-119.7l0-24.9c0-28.7 23.3-52 52-52s52 23.3 52 52l0 24.9c0 36.3-3.5 72.4-10.4 107.9c-2.7 13.9 7.7 27.2 21.8 27.2c10.2 0 19-7 21-17c7.7-38.8 11.6-78.3 11.6-118.1l0-24.9c0-53-43-96-96-96zm24 96c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 24.9c0 59.9-11 119.3-32.5 175.2l-5.9 15.3c-4.8 12.4 1.4 26.3 13.8 31s26.3-1.4 31-13.8l5.9-15.3C267.9 411.9 280 346.7 280 280.9l0-24.9z"/></svg>');
         }
 
         .icon-tooltip {
@@ -233,12 +291,106 @@
                             <span class="icon-tooltip">Last image build is older than 8 days.</span>
                         </div>
                     </td>
-                    <td class="text-end"><a href="{{ $version.Path }}">{{ $version.BuildDate }}</a></td>
+                    <td class="text-end">
+                        <a href="#modal-{{ $version.Path }}" data-bs-toggle="modal">{{ $version.BuildDate }}</a>
+                    </td>
                 </tr>
                 {{ end }}
             </table>
         </div>
     </div>
+    {{ range .Images }}
+    {{ $image := . }}
+    {{ range $index, $version := .Versions }}
+    <!-- Image details (dialog) for each version -->
+    <div class="modal" id="modal-{{ $version.Path }}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content lxd-modal">
+                <!-- Dialog: Header -->
+                <div class="modal-header lxd-modal-header border-0">
+                    <h5 class="modal-title">{{ $image.Distribution }} {{ $image.Release }} </h5>
+                    &ensp;
+                    <div class="lxd-text-variant">
+                        {{ $image.Variant }}
+                    </div>
+                    &ensp;
+                    <div class="lxd-text-arch {{ $image.Architecture }}">
+                        {{ $image.Architecture }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <!-- Dialog: Body -->
+                <div class="modal-body">
+                    <!-- Fingerprints -->
+                    <div class="col mt-1">
+                        <div class="py-2">
+                            <span class="fs-6 lxd-text-secondary">Fingerprints</span>
+                        </div>
+                        <div class="ps-1">
+                            {{ if $version.FingerprintContainer }}
+                            <div class="py-1 d-flex align-items-center">
+                                <i class="icon icon-fingerprint"></i>
+                                <code class="ps-2 text-black">{{ $version.FingerprintContainer }} (Container)</code>
+                            </div>
+                            {{ end}}
+                            {{ if $version.FingerprintVM }}
+                            <div class="py-1 d-flex align-items-center">
+                                <i class="icon icon-fingerprint"></i>
+                                <code class="ps-2 text-black">{{ $version.FingerprintVM }} (Virtual Machine)</code>
+                            </div>
+                            {{ end}}
+                        </div>
+                    </div>
+                    <!-- Image files -->
+                    <div class="table-responsive">
+                        <table class="table lxd-table mt-3">
+                            <thead>
+                                <tr>
+                                    <th class="table-secondary" scope="col">Filename</th>
+                                    <th class="table-secondary text-center" scope="col">Date (UTC)</th>
+                                    <th class="table-secondary text-end" scope="col">Size</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {{ range $version.Files }}
+                                <tr>
+                                    <td><a href="{{ .Path }}">{{ .Name }}</a></td>
+                                    <td class="text-center">{{ .Date }}</td>
+                                    <td class="text-end"><code class="text-black" data-bs-toggle="tooltip" title="{{ .SizeBytes }} bytes">{{ .Size }}</code></td>
+                                </tr>
+                            {{ end }}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Dialog: Footer -->
+                <div class="modal-footer lxd-footer d-flex flex-nowrap justify-content-between align-items-center text-center">
+                    <div class="col-md-2">
+                        <!-- Show button for previous version if index is not first element -->
+                        {{ if gt $index 0 }}
+                        <div class="p-1" data-bs-toggle="modal" data-bs-target="#modal-{{ (index $image.Versions (sub $index 1)).Path }}">
+                            <span class="text-nowrap">&#x3008;&emsp;Newer</span>
+                        </div>
+                        {{ end }}
+                    </div>
+                    <div class="p-1">
+                        <span>Version: <strong>{{ $version.BuildDate }}</strong> UTC</span>
+                    </div>
+                    <div class="col-md-2 align-items-center">
+                        <!-- Show button for next version if index is not last element -->
+                        {{ if lt $index (sub (len $image.Versions) 1) }}
+                        <div class="p-1" data-bs-toggle="modal" data-bs-target="#modal-{{ (index $image.Versions (add $index 1)).Path }}">
+                            <span class="text-nowrap">Older&emsp;&#x3009;</span>
+                        </div>
+                        {{ end }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ end }}
+    {{ end }}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
 </body>
 <footer>
     <hr>
