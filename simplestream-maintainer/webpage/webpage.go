@@ -16,17 +16,25 @@ import (
 	"github.com/canonical/lxd-imagebuilder/simplestream-maintainer/stream"
 )
 
+// WebPageImageVersion represents a version of an image.
+type WebPageImageVersion struct {
+	Name                 string
+	Path                 string
+	BuildDate            string
+	IsStale              bool
+	FingerprintContainer string
+	FingerprintVM        string
+}
+
 // WebPageImage represents webpage table entries.
 type WebPageImage struct {
-	Distribution         string
-	Release              string
-	Architecture         string
-	Variant              string
-	VersionPath          string
-	VersionLastBuildDate string
-	SupportsContainer    bool
-	SupportsVM           bool
-	IsStale              bool
+	Distribution string
+	Release      string
+	Architecture string
+	Variant      string
+	IsStale      bool
+
+	Versions []WebPageImageVersion
 }
 
 // WebPage represents the data that will be used to populate the webpage template.
@@ -81,35 +89,17 @@ func NewWebPage(catalog stream.ProductCatalog) *WebPage {
 			Variant:      product.Variant,
 		}
 
+		// Sort version ids in reverse order, so that the first version
+		// is the most recent one.
 		slices.Sort(versionIds)
-		last := versionIds[len(versionIds)-1]
-		lastVersion := product.Versions[last]
+		slices.Reverse(versionIds)
 
-		// Converts timestamp from format "YYYYMMDD_hhmm" into a prettier
-		// format "YYYY-MM-DD (hh:mm)".
-		timestamp, err := time.Parse("20060102_1504", last)
-		if err != nil {
-			image.VersionLastBuildDate = "N/A"
-		} else {
-			image.VersionLastBuildDate = formatTime(timestamp)
-			image.VersionPath = filepath.Join("/", catalog.ContentID, product.RelPath(), last)
-		}
-
-		// Image is considered stale if older than 8 days.
-		if timestamp.Before(time.Now().AddDate(0, 0, -8)) {
-			image.IsStale = true
-		}
-
-		// Iterate over version items and check if the image supports
-		// containers and/or VMs.
-		for _, item := range lastVersion.Items {
-			if item.Ftype == stream.ItemTypeSquashfs {
-				image.SupportsContainer = true
-			}
-
-			if item.Ftype == stream.ItemTypeDiskKVM {
-				image.SupportsVM = true
-			}
+		// Iterate over product's image versions and extract relevant
+		// inforation and files metadata.
+		for _, id := range versionIds {
+			versionDir := filepath.Join(catalog.ContentID, product.RelPath())
+			version := parseVersions(product, versionDir, id)
+			image.Versions = append(image.Versions, *version)
 		}
 
 		page.Images = append(page.Images, image)
@@ -145,6 +135,47 @@ func (p WebPage) Write(rootDir string) error {
 	}
 
 	return os.Rename(pathTmp, path)
+}
+
+// parseVersions extracts image version metadata, and referenced files.
+func parseVersions(product stream.Product, versionDir string, versionId string) *WebPageImageVersion {
+	version := WebPageImageVersion{
+		Name:      versionId,
+		Path:      filepath.Join("/", versionDir, versionId),
+		BuildDate: "N/A",
+	}
+
+	// Converts timestamp from format "YYYYMMDD_hhmm" into a prettier
+	// format "YYYY-MM-DD (hh:mm)".
+	timestamp, err := time.Parse("20060102_1504", versionId)
+	if err == nil {
+		version.BuildDate = formatTime(timestamp)
+	}
+
+	// Image is considered stale if older than 8 days.
+	if timestamp.Before(time.Now().AddDate(0, 0, -8)) {
+		version.IsStale = true
+	}
+
+	// Extract files metadata from the version (catalog).
+	for _, item := range product.Versions[versionId].Items {
+		// Indicate image support for VMs and containers and include
+		// respective fingerprint which can be used to launch instance
+		// from a particular image version.
+		if item.Ftype == stream.ItemTypeMetadata {
+			// The first 12 characters of the combined checksum
+			// are used as short fingerprint in LXD.
+			if len(item.CombinedSHA256SquashFs) > 12 {
+				version.FingerprintContainer = item.CombinedSHA256SquashFs[:12]
+			}
+
+			if len(item.CombinedSHA256DiskKvmImg) > 12 {
+				version.FingerprintVM = item.CombinedSHA256DiskKvmImg[:12]
+			}
+		}
+	}
+
+	return &version
 }
 
 // formatSize returns a human-readable string representation of the given size.
