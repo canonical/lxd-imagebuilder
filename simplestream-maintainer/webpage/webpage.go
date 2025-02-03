@@ -1,29 +1,57 @@
 package webpage
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
+	"unicode"
+
+	"github.com/canonical/lxd/shared/units"
 
 	"github.com/canonical/lxd-imagebuilder/embed"
 	"github.com/canonical/lxd-imagebuilder/shared"
 	"github.com/canonical/lxd-imagebuilder/simplestream-maintainer/stream"
 )
 
+// WebPageImageFile represents a file related to a specific image.
+// Used for file listings in image details.
+type WebPageImageFile struct {
+	Name      string
+	Path      string
+	Date      string
+	Size      string
+	SizeBytes int64
+}
+
+// WebPageImageVersion represents a version of an image.
+type WebPageImageVersion struct {
+	Name                 string
+	Path                 string
+	BuildDate            string
+	IsStale              bool
+	FingerprintContainer string
+	FingerprintVM        string
+
+	Files []WebPageImageFile
+}
+
 // WebPageImage represents webpage table entries.
 type WebPageImage struct {
-	Distribution         string
-	Release              string
-	Architecture         string
-	Variant              string
-	VersionPath          string
-	VersionLastBuildDate string
-	SupportsContainer    bool
-	SupportsVM           bool
-	IsStale              bool
+	Distribution string
+	Release      string
+	Architecture string
+	Variant      string
+	IsStale      bool
+	Aliases      []string
+	Requirements map[string]string
+
+	Versions []WebPageImageVersion
 }
 
 // WebPage represents the data that will be used to populate the webpage template.
@@ -39,7 +67,9 @@ type WebPage struct {
 }
 
 // NewWebPage creates initializes a webpage struct from the given product catalog.
-func NewWebPage(catalog stream.ProductCatalog) *WebPage {
+// If the image paths from the catalog are detected in the provided rootDir, the
+// files are inspected and their metadata is included in the image version details.
+func NewWebPage(rootDir string, catalog stream.ProductCatalog) (*WebPage, error) {
 	// This is hardcoded in case we ever decide to manage index.html
 	// using a configuration file. In such case, we just have to parse
 	// those values and the rest of the code will work as expected.
@@ -72,47 +102,35 @@ func NewWebPage(catalog stream.ProductCatalog) *WebPage {
 		}
 
 		image := WebPageImage{
+			Aliases:      strings.Split(product.Aliases, ","),
 			Distribution: product.OS,
 			Release:      product.Release,
 			Architecture: product.Architecture,
 			Variant:      product.Variant,
+			Requirements: product.Requirements,
 		}
 
+		// Sort version ids in reverse order, so that the first version
+		// is the most recent one.
 		slices.Sort(versionIds)
-		last := versionIds[len(versionIds)-1]
-		lastVersion := product.Versions[last]
+		slices.Reverse(versionIds)
 
-		// Converts timestamp from format "YYYYMMDD_hhmm" into a prettier
-		// format "YYYY-MM-DD (hh:mm)".
-		timestamp, err := time.Parse("20060102_1504", last)
-		if err != nil {
-			image.VersionLastBuildDate = "N/A"
-		} else {
-			image.VersionLastBuildDate = timestamp.UTC().Format("2006-01-02 (15:04)")
-			image.VersionPath = filepath.Join("/", catalog.ContentID, product.RelPath(), last)
-		}
-
-		// Image is considered stale if older than 8 days.
-		if timestamp.Before(time.Now().AddDate(0, 0, -8)) {
-			image.IsStale = true
-		}
-
-		// Iterate over version items and check if the image supports
-		// containers and/or VMs.
-		for _, item := range lastVersion.Items {
-			if item.Ftype == stream.ItemTypeSquashfs {
-				image.SupportsContainer = true
+		// Iterate over product's image versions and extract relevant
+		// inforation and files metadata.
+		for _, id := range versionIds {
+			versionDir := filepath.Join(catalog.ContentID, product.RelPath())
+			version, err := parseVersions(product, rootDir, versionDir, id)
+			if err != nil {
+				return nil, err
 			}
 
-			if item.Ftype == stream.ItemTypeDiskKVM {
-				image.SupportsVM = true
-			}
+			image.Versions = append(image.Versions, *version)
 		}
 
 		page.Images = append(page.Images, image)
 	}
 
-	return &page
+	return &page, nil
 }
 
 // Write parses the webpage template, populates it, and writes it to index.html
@@ -142,4 +160,133 @@ func (p WebPage) Write(rootDir string) error {
 	}
 
 	return os.Rename(pathTmp, path)
+}
+
+// parseVersions extracts image version metadata, and referenced files.
+func parseVersions(product stream.Product, rootDir string, versionDir string, versionId string) (*WebPageImageVersion, error) {
+	version := WebPageImageVersion{
+		Name:      versionId,
+		Path:      filepath.Join("/", versionDir, versionId),
+		BuildDate: "N/A",
+	}
+
+	// Converts timestamp from format "YYYYMMDD_hhmm" into a prettier
+	// format "YYYY-MM-DD (hh:mm)".
+	timestamp, err := time.Parse("20060102_1504", versionId)
+	if err == nil {
+		version.BuildDate = formatTime(timestamp)
+	}
+
+	// Image is considered stale if older than 8 days.
+	if timestamp.Before(time.Now().AddDate(0, 0, -8)) {
+		version.IsStale = true
+	}
+
+	// Extract files metadata from the version (catalog).
+	for _, item := range product.Versions[versionId].Items {
+		// Indicate image support for VMs and containers and include
+		// respective fingerprint which can be used to launch instance
+		// from a particular image version.
+		if item.Ftype == stream.ItemTypeMetadata {
+			// The first 12 characters of the combined checksum
+			// are used as short fingerprint in LXD.
+			if len(item.CombinedSHA256SquashFs) > 12 {
+				version.FingerprintContainer = item.CombinedSHA256SquashFs[:12]
+			}
+
+			if len(item.CombinedSHA256DiskKvmImg) > 12 {
+				version.FingerprintVM = item.CombinedSHA256DiskKvmImg[:12]
+			}
+		}
+
+		version.Files = append(version.Files, WebPageImageFile{
+			Name:      filepath.Base(item.Path),
+			Path:      item.Path,
+			Date:      version.BuildDate,
+			Size:      formatSize(item.Size, 2),
+			SizeBytes: item.Size,
+		})
+	}
+
+	// Ensure we have an absolute path to the version directory.
+	absPath, err := filepath.Abs(filepath.Join(rootDir, version.Path))
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse directory entries and ignore not-exist error as webpage
+	// may be generated solely from the catalog.
+	files, err := os.ReadDir(absPath)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
+	}
+
+	// Lookup for any additional files that are not recorded in the
+	// catalog, such as image definition.
+	for _, file := range files {
+		// Ignore directories.
+		if file.IsDir() {
+			continue
+		}
+
+		// Check if file is already found in the catalog.
+		filter := func(f WebPageImageFile) bool {
+			return f.Name == file.Name()
+		}
+
+		if slices.ContainsFunc(version.Files, filter) {
+			continue
+		}
+
+		// Otherwise, add new file entry.
+		fileInfo, err := file.Info()
+		if err != nil {
+			return nil, err
+		}
+
+		relPath := filepath.Join(version.Path, file.Name())
+		version.Files = append(version.Files, WebPageImageFile{
+			Name: file.Name(),
+			Path: relPath,
+			Date: formatTime(fileInfo.ModTime()),
+			Size: formatSize(fileInfo.Size(), 2),
+		})
+	}
+
+	// Sort files alphabetically.
+	slices.SortFunc(version.Files, func(a, b WebPageImageFile) int {
+		if a.Name > b.Name {
+			return 0
+		}
+
+		if a.Name < b.Name {
+			return -1
+		}
+
+		return 1
+	})
+
+	return &version, nil
+}
+
+// formatSize returns a human-readable string representation of the given size.
+func formatSize(sizeBytes int64, precision uint) string {
+	sizeStr := units.GetByteSizeString(sizeBytes, precision)
+
+	// Read the string backwards to find the first digit
+	// and add space between the number and the unit.
+	for i := len(sizeStr) - 1; i >= 0; i-- {
+		if unicode.IsDigit(rune(sizeStr[i])) {
+			number := sizeStr[:i+1]
+			unit := sizeStr[i+1:]
+			return number + " " + unit
+		}
+	}
+
+	return sizeStr
+}
+
+// formatTime returns a UTC time as string in format "YYYY-MM-DD (hh:mm)".
+func formatTime(time time.Time) string {
+	return time.UTC().Format("2006-01-02 (15:04)")
 }

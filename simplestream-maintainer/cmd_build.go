@@ -122,7 +122,10 @@ func buildIndex(ctx context.Context, rootDir string, streamVersion string, strea
 
 		// Create webpage for the stream.
 		if buildWebpage {
-			indexHTML = webpage.NewWebPage(*catalog)
+			indexHTML, err = webpage.NewWebPage(rootDir, *catalog)
+			if err != nil {
+				return err
+			}
 		}
 
 		// Add index entry.
