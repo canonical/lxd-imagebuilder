@@ -162,19 +162,22 @@
             box-shadow: var(--color-dark) 0px 0px 10px;
         }
 
-        div[data-bs-toggle="modal"] span {
+        .lxd-modal-btn-navigation {
             color: gray;
             text-align: center;
             background-color: transparent;
             padding: 7px;
             border-radius: 7px;
             transition: all 0.3s ease;
-            cursor: pointer;
         }
 
-        div[data-bs-toggle="modal"]:hover span {
+        .lxd-modal-btn-navigation:hover {
             background-color: #e0e0e0;
             color: black;
+        }
+
+        .cursor-pointer {
+            cursor: pointer;
         }
 
         .icon {
@@ -311,152 +314,283 @@
                         </div>
                     </td>
                     <td class="text-end">
-                        <a href="#modal-{{ $version.Path }}" data-bs-toggle="modal">{{ $version.BuildDate }}</a>
+                        <a class="modal-image-details-open cursor-pointer" data-image='{{ json . }}'>{{ $version.BuildDate }}</a>
                     </td>
                 </tr>
                 {{ end }}
             </table>
         </div>
     </div>
-    {{ range .Images }}
-    {{ $image := . }}
-    {{ range $index, $version := .Versions }}
-    <!-- Image details (dialog) for each version -->
-    <div class="modal" id="modal-{{ $version.Path }}" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content lxd-modal">
-                <!-- Dialog: Header -->
-                <div class="modal-header lxd-modal-header border-0">
-                    <h5 class="modal-title">{{ $image.Distribution }} {{ $image.Release }} </h5>
-                    &ensp;
-                    <div class="lxd-text-variant">
-                        {{ $image.Variant }}
-                    </div>
-                    &ensp;
-                    <div class="lxd-text-arch {{ $image.Architecture }}">
-                        {{ $image.Architecture }}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <!-- Dialog: Body -->
-                <div class="modal-body">
-                    <div class="mt-3">
-                        <div class="d-flex justify-content-center">
-                            <code class="px-3 py-2 text-black lxd-text-codeblock-border">
-                            lxc launch
-                            {{ if eq $index 0 }}
-                                <!-- Only the latest version is referencable by alias -->
-                                images:<span class="lxd-text-primary">{{ index $image.Aliases 0 }}</span>
-                                <span>{{ if and $version.FingerprintContainer $version.FingerprintVM }} c1 [--vm]{{ else if $version.FingerprintVM }} v1 --vm{{ else }}c1{{ end }}</span>
-                            {{ else }}
-                                <!-- Use fingerprint for other versions -->
-                                {{ if $version.FingerprintContainer }}
-                                images:<span class="lxd-text-primary">{{ $version.FingerprintContainer }}</span> c1
-                                {{ else }}
-                                images:<span class="lxd-text-primary">{{ $version.FingerprintVM }}</span> v1 --vm
-                                {{ end}}
-                            {{ end }}
-                            </code>
+
+    <!-- Placeholder for image details modal -->
+    <div id="modal-image-details"></div>
+
+    <!-- Template for image details modal -->
+    <script id="modal-image-details-template" type="text/x-handlebars-template">
+        <div class="modal" id="modal-image-details-dynamic" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content lxd-modal">
+                    <!-- Dialog: Header -->
+                    <div class="modal-header lxd-modal-header border-0">
+                        <h5 class="modal-title">{ distro } { release } </h5>
+                        &ensp;
+                        <div class="lxd-text-variant">
+                            { variant }
                         </div>
+                        &ensp;
+                        <div class="lxd-text-arch { arch }">
+                            { arch }
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="mx-3 mt-3 row row-cols-1 row-cols-lg-2">
-                        <div class="col mt-1">
-                            <div class="py-2">
-                                <!-- <i class="icon icon-fingerprint"></i> -->
-                                <span class="fs-6 lxd-text-secondary">Fingerprints</span>
+                    <!-- Dialog: Body -->
+                    <div class="modal-body">
+                        <!-- Launch command -->
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-center">
+                                <code class="px-3 py-2 text-black lxd-text-codeblock-border">
+                                lxc launch
+                                {#unless version.hasPrevious}
+                                    <!-- Only the latest version is referencable by alias -->
+                                    images:<span class="lxd-text-primary">{#each aliases}{#if @first}{ this }{/if}{/each}</span>
+                                    <span>{#if version.FingerprintContainer} c1{#if version.FingerprintVM} [--vm]{/if}{else}{#if $version.FingerprintVM} v1 --vm{else}c1{/if}{/if}</span>
+                                {else}
+                                    <!-- Use fingerprint for other versions -->
+                                    {#if version.FingerprintContainer}
+                                    images:<span class="lxd-text-primary">{ version.FingerprintContainer }</span> c1
+                                    {else}
+                                    images:<span class="lxd-text-primary">{ version.FingerprintVM }</span> v1 --vm
+                                    {/if}
+                                {/unless}
+                                </code>
                             </div>
-                            <div class="ps-1">
-                                {{ if $version.FingerprintContainer }}
-                                <div class="py-1 d-flex align-items-center">
-                                    <i class="icon icon-fingerprint"></i>
-                                    <code class="ps-2 text-black">{{ $version.FingerprintContainer }} (Container)</code>
+                        </div>
+                        <div class="mx-3 mt-3 row row-cols-1 row-cols-lg-2">
+                            <!-- Image fingerprints -->
+                            <div class="col mt-1">
+                                <div class="py-2">
+                                    <span class="fs-6 lxd-text-secondary">Fingerprints</span>
                                 </div>
-                                {{ end}}
-                                {{ if $version.FingerprintVM }}
-                                <div class="py-1 d-flex align-items-center">
-                                    <i class="icon icon-fingerprint"></i>
-                                    <code class="ps-2 text-black">{{ $version.FingerprintVM }} (Virtual Machine)</code>
+                                <div class="ps-1">
+                                    {#if version.FingerprintContainer}
+                                    <div class="py-1 d-flex align-items-center">
+                                        <i class="icon icon-fingerprint"></i>
+                                        <code class="ps-2 text-black">{ version.FingerprintContainer } (Container)</code>
+                                    </div>
+                                    {/if}
+                                    {#if version.FingerprintVM}
+                                    <div class="py-1 d-flex align-items-center">
+                                        <i class="icon icon-fingerprint"></i>
+                                        <code class="ps-2 text-black">{ version.FingerprintVM } (Virtual Machine)</code>
+                                    </div>
+                                    {/if}
                                 </div>
-                                {{ end}}
+                            </div>
+                            <!-- Image aliases (only for latest version) -->
+                            {#unless version.hasPrevious}
+                            <div class="col mt-1">
+                                <div class="py-2">
+                                    <span class="fs-6 lxd-text-secondary">Aliases</span>
+                                </div>
+                                {#each aliases }
+                                <div class="ps-1 py-1 d-flex align-items-center">
+                                    <i class="icon icon-at"></i>
+                                    <code class="ps-2 text-black">{ this }</code>
+                                </div>
+                                {/each}
+                            </div>
+                            {/unless}
+                        </div>
+                        <div class="mx-3 mt-2 row row-cols-1 row-cols-lg-2">
+                            <!-- Image requirements -->
+                            <div class="col mt-1">
+                            {#isNotEmpty requirements}
+                                <div class="py-2">
+                                    <span class="fs-6 lxd-text-secondary">Requirements</span>
+                                </div>
+                                {#eachInMap requirements }
+                                <div class="ps-1 py-1 d-flex align-items-center">
+                                    <i class="icon icon-file"></i>
+                                    <code class="ms-2 text-black">{ key }={ value }</code>
+                                </div>
+                                {/eachInMap}
+                            {/isNotEmpty}
                             </div>
                         </div>
-                        {{ if eq $index 0 }}
-                        <div class="col mt-1">
-                            <div class="py-2">
-                                <span class="fs-6 lxd-text-secondary">Aliases</span>
-                            </div>
-                            {{ range $image.Aliases }}
-                            <div class="ps-1 py-1 d-flex align-items-center">
-                                <i class="icon icon-at"></i>
-                                <code class="ps-2 text-black">{{ . }}</code>
-                            </div>
-                            {{ end }}
-                        </div>
-                        {{ end }}
-                    </div>
-                    <div class="mx-3 mt-2 row row-cols-1 row-cols-lg-2">
-                        <div class="col mt-1">
-                        {{ if gt (len $image.Requirements) 0 }}
-                            <div class="py-2">
-                                <span class="fs-6 lxd-text-secondary">Requirements</span>
-                            </div>
-                            {{ range $key, $value := $image.Requirements }}
-                            <div class="ps-1 py-1 d-flex align-items-center">
-                                <i class="icon icon-file"></i>
-                                <code class="ms-2 text-black">{{ $key }}={{ $value }}</code>
-                            </div>
-                            {{ end }}
-                        {{ end }}
+                        <!-- Image files -->
+                        <div class="table-responsive">
+                            <table class="table lxd-table mt-3">
+                                <thead>
+                                    <tr>
+                                        <th class="table-secondary" scope="col">Filename</th>
+                                        <th class="table-secondary text-center" scope="col">Date (UTC)</th>
+                                        <th class="table-secondary text-end" scope="col">Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {#each version.Files}
+                                    <tr>
+                                        <td><a href="{ this.Path }">{ this.Name }</a></td>
+                                        <td class="text-center">{ this.Date }</td>
+                                        <td class="text-end"><code class="text-black" data-bs-toggle="tooltip" title="{ this.SizeBytes } bytes">{ this.Size }</code></td>
+                                    </tr>
+                                {/each}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table lxd-table mt-3">
-                            <thead>
-                                <tr>
-                                    <th class="table-secondary" scope="col">Filename</th>
-                                    <th class="table-secondary text-center" scope="col">Date (UTC)</th>
-                                    <th class="table-secondary text-end" scope="col">Size</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            {{ range $version.Files }}
-                                <tr>
-                                    <td><a href="{{ .Path }}">{{ .Name }}</a></td>
-                                    <td class="text-center">{{ .Date }}</td>
-                                    <td class="text-end"><code class="text-black" data-bs-toggle="tooltip" title="{{ .SizeBytes }} bytes">{{ .Size }}</code></td>
-                                </tr>
-                            {{ end }}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <!-- Dialog: Footer -->
-                <div class="modal-footer lxd-footer d-flex flex-nowrap justify-content-between align-items-center text-center">
-                    <div class="col-md-2">
-                        <!-- Show button for previous version if index is not first element -->
-                        {{ if gt $index 0 }}
-                        <div class="p-1" data-bs-toggle="modal" data-bs-target="#modal-{{ (index $image.Versions (sub $index 1)).Path }}">
-                            <span class="text-nowrap">&#x3008;&emsp;Newer</span>
+                    <!-- Dialog: Footer -->
+                    <div class="modal-footer lxd-footer d-flex flex-nowrap justify-content-between align-items-center text-center">
+                        <div class="col-md-2">
+                            <!-- Show button for previous version if index is not first element -->
+                            {#if version.hasPrevious}
+                            <div class="p-1">
+                                <span id="modal-prev" class="text-nowrap lxd-modal-btn-navigation cursor-pointer">&#x3008;&emsp;Newer</span>
+                            </div>
+                            {/if}
                         </div>
-                        {{ end }}
-                    </div>
-                    <div class="p-1">
-                        <span>Version: <strong>{{ $version.BuildDate }}</strong> UTC</span>
-                    </div>
-                    <div class="col-md-2 align-items-center">
-                        <!-- Show button for next version if index is not last element -->
-                        {{ if lt $index (sub (len $image.Versions) 1) }}
-                        <div class="p-1" data-bs-toggle="modal" data-bs-target="#modal-{{ (index $image.Versions (add $index 1)).Path }}">
-                            <span class="text-nowrap">Older&emsp;&#x3009;</span>
+                        <div class="p-1">
+                            <span>Version: <strong>{ version.BuildDate }</strong> UTC</span>
                         </div>
-                        {{ end }}
+                        <div class="col-md-2 align-items-center">
+                            <!-- Show button for next version if index is not last element -->
+                            {#if version.hasNext}
+                            <div class="p-1">
+                                <span id="modal-next" class="text-nowrap lxd-modal-btn-navigation cursor-pointer">Older&emsp;&#x3009;</span>
+                            </div>
+                            {/if}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-    {{ end }}
-    {{ end }}
+    </script>
+
+    <!-- Script to handle dynamic modal with Handlebars -->
+    <script>
+        // Helper function to iterate over maps.
+        function iteraterMap(value, options) {
+            let result = "";
+
+            for (const key in value) {
+                if (value.hasOwnProperty(key)) {
+                    result += options.fn({ key: key, value: value[key] });
+                }
+            }
+
+            return result;
+        }
+
+        // Helper function to check if a value is empty.
+        function isEmpty(context, options) {
+            if (!context ||
+                (Array.isArray(context) && context.length === 0) ||
+                (typeof context === "string" && context.trim().length === 0) ||
+                (typeof context === "object" && Object.keys(context).length === 0)) {
+                // Process inner Handlebars content when empty.
+                return options.fn(this);
+            }
+
+            // Handle the "else" case.
+            return options.inverse(this);
+        }
+
+        // Helper function to check if a value is not empty.
+        function isNotEmpty(context, options) {
+            if (context &&
+                (!Array.isArray(context) || context.length > 0) &&
+                (typeof context !== "string" || context.trim().length > 0) &&
+                (typeof context !== "object" || Object.keys(context).length > 0)) {
+                // Process inner Handlebars content when empty.
+                return options.fn(this);
+            }
+
+            // Handle the "else" case.
+            return options.inverse(this);
+        }
+
+        document.querySelectorAll(".modal-image-details-open").forEach(button => {
+            button.addEventListener("click", function() {
+                const image = JSON.parse(this.getAttribute("data-image"));
+
+                // Pre-process versions to add index, booleans indicating whether
+                // there are previous and next versions.
+                // This is used to navigate between versions in the modal.
+                image.Versions.forEach((version, index, arr) => {
+                    version.index = index;
+                    version.hasPrevious = index > 0;
+                    version.hasNext = index < arr.length - 1;
+                });
+
+                // Set initial version index to 0 (latest version).
+                let currentVersionIndex = 0;
+
+                function renderModal(index) {
+                    // Get template and replace custom delimiters {} with handlebars
+                    // delimiters to avoid conflicts with Go template.
+                    let templateSource = document.getElementById("modal-image-details-template").innerHTML;
+                    templateSource = templateSource.replace(/\{/g, "\{\{").replace(/\}/g, "\}\}");
+
+                    // Register helper functions.
+                    Handlebars.registerHelper("eachInMap", iteraterMap);
+                    Handlebars.registerHelper("isEmpty", isEmpty);
+                    Handlebars.registerHelper("isNotEmpty", isNotEmpty);
+
+                    const template = Handlebars.compile(templateSource);
+                    const modalHTML = template({
+                        arch: image.Architecture,
+                        distro: image.Distribution,
+                        release: image.Release,
+                        variant: image.Variant,
+                        aliases: image.Aliases,
+                        requirements: image.Requirements,
+
+                        // Use the version at the current index.
+                        version: image.Versions[index],
+                    });
+
+                    // Set modal content and show it.
+                    document.getElementById("modal-image-details").innerHTML = modalHTML;
+
+                    const modalElement = document.getElementById("modal-image-details-dynamic")
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+
+                    modalElement.addEventListener("hidden.bs.modal", function(){
+                        if (!document.querySelector(".modal.show")) {
+                            // If no modals are open, restore scroll.
+                            document.body.style.overflow = "";
+                            document.body.style.paddingRight = "";
+                        }
+                    });
+
+                    // Add event listeners for navigation. When previous or next buttons are
+                    // clicked, the current modal is closed, the content is replaced with
+                    // appropriate version, and finally rendered again. This transition is
+                    // not visible to the user.
+                    document.querySelector("#modal-prev")?.addEventListener("click", () => {
+                        modal.dispose();
+                        if (currentVersionIndex > 0) {
+                            currentVersionIndex--;
+                            renderModal(currentVersionIndex);
+                        }
+                    });
+
+                    document.querySelector("#modal-next")?.addEventListener("click", () => {
+                        modal.dispose();
+                        if (currentVersionIndex < image.Versions.length - 1) {
+                            currentVersionIndex++;
+                            renderModal(currentVersionIndex);
+                        }
+                    });
+                }
+
+                // Render the initial modal.
+                renderModal(currentVersionIndex);
+            });
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/handlebars@4.7.8/dist/handlebars.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
 </body>
 <footer>

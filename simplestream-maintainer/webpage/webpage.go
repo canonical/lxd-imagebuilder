@@ -1,6 +1,7 @@
 package webpage
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -140,7 +141,21 @@ func (p WebPage) Write(rootDir string) error {
 	path := filepath.Join(rootDir, "index.html")
 	pathTmp := filepath.Join(rootDir, ".index.html.tmp")
 
-	t, err := template.ParseFS(embed.GetTemplates(), "templates/index.html")
+	customFuncs := template.FuncMap{
+		// json returns a JSON representation of the given value.
+		"json": func(v any) (string, error) {
+			json, err := json.Marshal(v)
+			if err != nil {
+				return "", err
+			}
+
+			return string(json), nil
+		},
+	}
+
+	tplName := "templates/index.html"
+
+	t, err := template.New(filepath.Base(tplName)).Funcs(customFuncs).ParseFS(embed.GetTemplates(), tplName)
 	if err != nil {
 		return err
 	}
