@@ -1,6 +1,7 @@
 package webpage
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,11 @@ import (
 	"unicode"
 
 	"github.com/canonical/lxd/shared/units"
+	"github.com/tdewolff/minify/v2"
+	"github.com/tdewolff/minify/v2/css"
+	"github.com/tdewolff/minify/v2/html"
+	"github.com/tdewolff/minify/v2/js"
+	"github.com/tdewolff/minify/v2/svg"
 
 	"github.com/canonical/lxd-imagebuilder/embed"
 	"github.com/canonical/lxd-imagebuilder/shared"
@@ -169,7 +175,23 @@ func (p WebPage) Write(rootDir string) error {
 
 	defer f.Close()
 
-	err = t.Execute(f, p)
+	buffer := &bytes.Buffer{}
+
+	// Populate webpage template into buffer.
+	err = t.Execute(buffer, p)
+	if err != nil {
+		return err
+	}
+
+	m := minify.New()
+	m.AddFunc("text/html", html.Minify)
+	m.AddFunc("text/css", css.Minify)
+	m.AddFunc("image/svg+xml", svg.Minify)
+	m.AddFunc("text/x-handlebars-template", html.Minify)
+	m.AddFunc("application/javascript", js.Minify)
+
+	// Minify buffered webpage and write it to the file.
+	err = m.Minify("text/html", f, buffer)
 	if err != nil {
 		return err
 	}
