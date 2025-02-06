@@ -353,7 +353,7 @@
                                 {#unless version.hasPrevious}
                                     <!-- Only the latest version is referencable by alias -->
                                     images:<span class="lxd-text-primary">{#each aliases}{#if @first}{ this }{/if}{/each}</span>
-                                    <span>{#if version.FingerprintContainer} c1{#if version.FingerprintVM} [--vm]{/if}{else}{#if $version.FingerprintVM} v1 --vm{else}c1{/if}{/if}</span>
+                                    <span>{#if version.FingerprintContainer} c1{#if version.FingerprintVM} [--vm]{/if}{else}{#if version.FingerprintVM} v1 --vm{else}c1{/if}{/if}</span>
                                 {else}
                                     <!-- Use fingerprint for other versions -->
                                     {#if version.FingerprintContainer}
