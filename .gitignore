@@ -6,3 +6,7 @@ doc/html/
 .sphinx/warnings.txt
 .sphinx/.wordlist.dic
 .sphinx/_static/download
+
+# Locally built binaries
+/lxd-imagebuilder/lxd-imagebuilder
+/simplestream-maintainer/simplestream-maintainer
