@@ -73,13 +73,13 @@ func (s *fedora) Run() error {
 			return fmt.Errorf("Failed to create OCI path: %q: %w", ociDir, err)
 		}
 
-		_, err = lxdShared.RunCommand("umoci", "unpack", "--keep-dirlinks", "--image", fmt.Sprintf("%s:fedora:%s", filepath.Join(ociDir, "image"), s.definition.Image.Release), filepath.Join(ociDir, "content"))
+		_, err = lxdShared.RunCommandContext(s.ctx, "umoci", "unpack", "--keep-dirlinks", "--image", fmt.Sprintf("%s:fedora:%s", filepath.Join(ociDir, "image"), s.definition.Image.Release), filepath.Join(ociDir, "content"))
 		if err != nil {
 			return fmt.Errorf("Failed to run umoci: %w", err)
 		}
 
 		// Transfer the content.
-		_, err = lxdShared.RunCommand("rsync", "-avP", fmt.Sprintf("%s/rootfs/", filepath.Join(ociDir, "content")), s.rootfsDir)
+		_, err = lxdShared.RunCommandContext(s.ctx, "rsync", "-avP", fmt.Sprintf("%s/rootfs/", filepath.Join(ociDir, "content")), s.rootfsDir)
 		if err != nil {
 			return fmt.Errorf("Failed to run rsync: %w", err)
 		}
