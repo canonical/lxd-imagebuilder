@@ -43,7 +43,6 @@ func TestBuildIndex(t *testing.T) {
 						Path:     "streams/v1/images.json",
 						Format:   "products:1.0",
 						Datatype: "image-downloads",
-						Updated:  time.Now().Format(time.RFC3339),
 						Products: []string{},
 					},
 				},
@@ -136,7 +135,6 @@ func TestBuildIndex(t *testing.T) {
 						Path:     "streams/v1/images-daily.json",
 						Format:   "products:1.0",
 						Datatype: "image-downloads",
-						Updated:  time.Now().Format(time.RFC3339),
 						Products: []string{
 							"ubuntu:focal:amd64:cloud",
 						},
@@ -144,6 +142,25 @@ func TestBuildIndex(t *testing.T) {
 				},
 			},
 		},
+	}
+
+	// Remove the "updated" field as it causes the test to occasionally
+	// fail due to a millisecond difference.
+	rmIndexUpdatedTimestamp := func(data []byte) []byte {
+		var obj stream.StreamIndex
+		err := json.Unmarshal(data, &obj)
+		require.NoError(t, err)
+
+		for key := range obj.Index {
+			index := obj.Index[key]
+			index.Updated = ""
+			obj.Index[key] = index
+		}
+
+		filtered, err := json.Marshal(obj)
+		require.NoError(t, err)
+
+		return filtered
 	}
 
 	for _, test := range tests {
@@ -178,7 +195,7 @@ func TestBuildIndex(t *testing.T) {
 
 			require.Equal(t,
 				strings.TrimSpace(string(jsonIndexExpect)),
-				strings.TrimSpace(string(jsonIndex)),
+				strings.TrimSpace(string(rmIndexUpdatedTimestamp(jsonIndex))),
 				"Expected index does not match the built one!")
 
 			// Read the compressed versions of the catalog and index files.
@@ -198,7 +215,7 @@ func TestBuildIndex(t *testing.T) {
 
 			require.Equal(t,
 				strings.TrimSpace(string(jsonIndexExpect)),
-				strings.TrimSpace(string(jsonIndexGz)),
+				strings.TrimSpace(string(rmIndexUpdatedTimestamp(jsonIndexGz))),
 				"Invalid compressed index file!")
 		})
 	}
