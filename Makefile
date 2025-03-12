@@ -2,7 +2,7 @@ VERSION=$(shell grep "var Version" shared/version/version.go | cut -d'"' -f2)
 ARCHIVE=lxd-imagebuilder-$(VERSION).tar
 GO111MODULE=on
 SPHINXENV=.sphinx/venv/bin/activate
-GO_MIN=1.23.6
+GO_MIN=1.24.1
 
 .PHONY: default
 default:
@@ -16,6 +16,10 @@ default:
 update-gomod:
 	go get -t -v -u ./...
 	go mod tidy -go=$(GO_MIN)
+
+	# Use the bundled toolchain that meets the minimum go version
+	go get toolchain@none
+
 	@echo "Dependencies updated"
 
 .PHONY: check
@@ -73,7 +77,7 @@ doc-woke:
 .PHONY: static-analysis
 static-analysis:
 ifeq ($(shell command -v golangci-lint 2> /dev/null),)
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.0
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$HOME/go/bin
 endif
 	golangci-lint run --timeout 5m
 	run-parts $(shell run-parts -V 2> /dev/null 1> /dev/null && echo -n "--exit-on-error --regex '.sh'") test/lint
