@@ -16,6 +16,10 @@ default:
 update-gomod:
 	go get -t -v -u ./...
 	go mod tidy -go=$(GO_MIN)
+
+	# Use the bundled toolchain that meets the minimum go version
+	go get toolchain@none
+
 	@echo "Dependencies updated"
 
 .PHONY: check
