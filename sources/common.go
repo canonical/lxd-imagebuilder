@@ -89,7 +89,11 @@ func (s *common) DownloadHash(def shared.DefinitionImage, file, checksum string,
 		}
 	}
 
-	imagePath := filepath.Join(destDir, filepath.Base(file))
+	// Ensure that the resolved path is within the safe directory
+	imagePath, err := filepath.Abs(filepath.Join(destDir, filepath.Base(file)))
+	if err != nil || !strings.HasPrefix(imagePath, destDir) {
+		return "", fmt.Errorf("Invalid file path: %q", imagePath)
+	}
 
 	stat, err := os.Stat(imagePath)
 	if err == nil && stat.Size() > 0 {
