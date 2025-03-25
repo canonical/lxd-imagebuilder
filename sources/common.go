@@ -49,7 +49,7 @@ func (s *common) init(ctx context.Context, logger *logrus.Logger, definition sha
 
 func (s *common) getTargetDir() string {
 	dir := filepath.Join(s.sourcesDir, fmt.Sprintf("%s-%s-%s", s.definition.Image.Distribution, s.definition.Image.Release, s.definition.Image.ArchitectureMapped))
-	dir = strings.Replace(dir, " ", "", -1)
+	dir = strings.ReplaceAll(dir, " ", "")
 	dir = strings.ToLower(dir)
 
 	return dir
