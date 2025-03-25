@@ -31,7 +31,7 @@ func (g *hosts) RunLXC(img *image.LXCImage, target shared.DefinitionTargetLXC) e
 	}
 
 	// Replace hostname with placeholder
-	content = []byte(strings.Replace(string(content), "lxd-imagebuilder", "LXC_NAME", -1))
+	content = []byte(strings.ReplaceAll(string(content), "lxd-imagebuilder", "LXC_NAME"))
 
 	// Add a new line if needed
 	if !strings.Contains(string(content), "LXC_NAME") {
@@ -82,7 +82,7 @@ func (g *hosts) RunLXD(img *image.LXDImage, target shared.DefinitionTargetLXD) e
 	}
 
 	// Replace hostname with placeholder
-	content = []byte(strings.Replace(string(content), "lxd-imagebuilder", "{{ container.name }}", -1))
+	content = []byte(strings.ReplaceAll(string(content), "lxd-imagebuilder", "{{ container.name }}"))
 
 	// Add a new line if needed
 	if !strings.Contains(string(content), "{{ container.name }}") {

@@ -1,14 +1,28 @@
+version: "2"
 linters:
   enable:
-    - gofmt
-    - misspell
-    - godot
-    - whitespace
-    - gci
     - errorlint
-linters-settings:
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/canonical/lxd-imagebuilder)
+    - godot
+    - misspell
+    - whitespace
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - staticcheck
+        text: "ST1005:" # ST1005: error strings should not be capitalized
+formatters:
+  enable:
+    - gci
+    - gofmt
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/canonical/lxd-imagebuilder)
