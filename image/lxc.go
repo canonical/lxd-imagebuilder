@@ -55,7 +55,7 @@ func (l *LXCImage) AddTemplate(path string) error {
 
 	defer file.Close()
 
-	_, err = file.WriteString(fmt.Sprintf("%v\n", path))
+	_, err = fmt.Fprintf(file, "%v\n", path)
 	if err != nil {
 		return fmt.Errorf("Failed to write to template file: %w", err)
 	}
