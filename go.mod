@@ -1,7 +1,6 @@
 module github.com/canonical/lxd-imagebuilder
 
 go 1.24.1
-
 require (
 	github.com/canonical/lxd v0.0.0-20250319130657-21ebaba86623
 	github.com/flosch/pongo2/v4 v4.0.2
@@ -10,7 +9,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
-	github.com/tdewolff/minify/v2 v2.22.3
+	github.com/tdewolff/minify/v2 v2.22.4
 	golang.org/x/sys v0.31.0
 	golang.org/x/text v0.23.0
 	gopkg.in/antchfx/htmlquery.v1 v1.2.2
