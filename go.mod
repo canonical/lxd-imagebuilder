@@ -10,7 +10,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
-	github.com/tdewolff/minify/v2 v2.23.1
+	github.com/tdewolff/minify/v2 v2.23.2
 	golang.org/x/sys v0.32.0
 	golang.org/x/text v0.24.0
 	gopkg.in/antchfx/htmlquery.v1 v1.2.2
