@@ -65,7 +65,7 @@ jobs:
     env:
       SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       PACKAGE: "lxd-imagebuilder"
-      REPO: "git+ssh://lxdbot@git.launchpad.net/~canonical-lxd/lxd-imagebuilder"
+      REPO: "git+ssh://lxdbot@git.launchpad.net/~lxd-snap/lxd-imagebuilder"
       BRANCH: >-
         ${{ fromJson('{
           "main": "latest-edge",
