@@ -48,9 +48,6 @@ jobs:
           sudo apt-get -qq update
           sudo apt-get install -y --no-install-recommends squashfs-tools xdelta3
 
-      - name: Update Go modules
-        run: make update-gomod
-
       - name: Run static analysis
         run: make static-analysis
 
