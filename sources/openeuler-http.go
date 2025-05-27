@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/canonical/lxd-imagebuilder/shared"
@@ -51,6 +52,7 @@ func (s *openEuler) getLatestRelease(baseURL, release string) (string, error) {
 	releases := regex.FindAllString(string(body), -1)
 
 	if len(releases) > 0 {
+		slices.Sort(releases)
 		return strings.TrimPrefix(releases[len(releases)-1], "openEuler-"), nil
 	}
 
