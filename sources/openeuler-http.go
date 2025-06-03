@@ -109,7 +109,7 @@ touch /etc/mtab /etc/fstab
 yum_args=""
 mkdir -p /etc/yum.repos.d
 
-if which dnf; then
+if command -v dnf; then
 	alias yum=dnf
 else
 	# for openEuler packageDir and repoDir always exist.
@@ -140,7 +140,7 @@ yum_args="--disablerepo=* --enablerepo=cdrom"
 
 # newest install.img doesnt have rpm installed,
 # so install rpm firstly
-if [ -z "$(which rpmkeys)" ]; then
+if ! command -v rpmkeys; then
 	cd /mnt/cdrom/Packages
 	yum ${yum_args} -y install rpm --nogpgcheck
 fi
