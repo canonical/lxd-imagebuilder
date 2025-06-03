@@ -285,7 +285,7 @@ else
 	baseurl_latest=https://yum.oracle.com/repo/OracleLinux/OL${version}/baseos/latest/${arch}/
 fi
 
-if which dnf; then
+if command -v dnf; then
 	alias yum=dnf
 	gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-oracle
 else
