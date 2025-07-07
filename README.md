@@ -19,7 +19,7 @@ The `lxd-imagebuilder` and `simplestream-maintainer` tools are available in the 
 snap from the [Snap Store](https://snapcraft.io/lxd-imagebuilder).
 
 ```
-sudo snap install lxd-imagebuilder --classic
+sudo snap install lxd-imagebuilder --classic --edge
 ```
 
 ## Installing from source
