@@ -26,7 +26,8 @@ update-gomod:
 
 .PHONY: check
 check: default
-	sudo GOENV=$(shell go env GOENV) go test -v ./...
+	$(shell go env | grep -v GOENV | sed "s/'//g" > $(shell go env GOENV))
+	go test -v ./...
 
 .PHONY: dist
 dist:
