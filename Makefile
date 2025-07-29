@@ -1,6 +1,8 @@
 VERSION=$(shell grep "var Version" shared/version/version.go | cut -d'"' -f2)
 ARCHIVE=lxd-imagebuilder-$(VERSION).tar
 GO111MODULE=on
+GOTOOLCHAIN=local
+export GOTOOLCHAIN
 SPHINXENV=.sphinx/venv/bin/activate
 GO_MIN=1.24.4
 
@@ -24,7 +26,8 @@ update-gomod:
 
 .PHONY: check
 check: default
-	sudo GOENV=$(shell go env GOENV) go test -v ./...
+	$(shell go env | grep -v GOENV | sed "s/'//g" > $(shell go env GOENV))
+	go test -v ./...
 
 .PHONY: dist
 dist:
