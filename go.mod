@@ -12,7 +12,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/tdewolff/minify/v2 v2.23.10
 	golang.org/x/sys v0.34.0
-	golang.org/x/text v0.27.0
+	golang.org/x/text v0.28.0
 	gopkg.in/antchfx/htmlquery.v1 v1.2.2
 	gopkg.in/yaml.v2 v2.4.0
 )
