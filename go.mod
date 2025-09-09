@@ -9,7 +9,7 @@ require (
 	github.com/mudler/docker-companion v0.4.6-0.20211015133729-bd4704fad372
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tdewolff/minify/v2 v2.24.3
 	golang.org/x/sys v0.35.0
 	golang.org/x/text v0.28.0
