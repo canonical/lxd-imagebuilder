@@ -131,9 +131,6 @@ func (g *copy) copyDir(srcPath, destPath string, defFile shared.DefinitionFile) 
 		}
 
 		dest := filepath.Join(destPath, rel)
-		if err != nil {
-			return fmt.Errorf("Failed to join path elements: %w", err)
-		}
 
 		switch fi.Mode() & os.ModeType {
 		case 0, os.ModeSymlink:
