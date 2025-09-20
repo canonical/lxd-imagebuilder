@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -376,9 +377,7 @@ func GetProduct(rootDir string, productRelPath string, options ...Option) (*Prod
 				// Note that instance types are not supported because requirements
 				// are applied to the product itself and not a specific version.
 				if shared.ApplyFilter(&req.DefinitionFilter, p.Release, p.Architecture, p.Variant, "", 0) {
-					for k, v := range req.Requirements {
-						p.Requirements[k] = v
-					}
+					maps.Copy(p.Requirements, req.Requirements)
 				}
 			}
 
