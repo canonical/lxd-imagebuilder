@@ -388,7 +388,7 @@ func GetProduct(rootDir string, productRelPath string, options ...Option) (*Prod
 					continue
 				}
 
-				for _, releaseAlias := range strings.Split(releaseAliases, ",") {
+				for releaseAlias := range strings.SplitSeq(releaseAliases, ",") {
 					aliases = append(aliases, CreateAliases(p.Distro, releaseAlias, p.Variant)...)
 				}
 			}
