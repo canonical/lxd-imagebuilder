@@ -292,7 +292,7 @@ func GetExpiryDate(creationDate time.Time, format string) time.Time {
 }
 
 // RenderTemplate renders a pongo2 template.
-func RenderTemplate(template string, iface interface{}) (string, error) {
+func RenderTemplate(template string, iface any) (string, error) {
 	// Serialize interface
 	data, err := yaml.Marshal(iface)
 	if err != nil {
