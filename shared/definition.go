@@ -41,7 +41,7 @@ const (
 )
 
 // UnmarshalYAML validates the filter type.
-func (d *DefinitionFilterType) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (d *DefinitionFilterType) UnmarshalYAML(unmarshal func(any) error) error {
 	var filterType string
 
 	err := unmarshal(&filterType)
