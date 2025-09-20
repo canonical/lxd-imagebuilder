@@ -366,7 +366,7 @@ func RsyncLocal(ctx context.Context, src string, dest string) error {
 func Retry(f func() error, attempts uint) error {
 	var err error
 
-	for i := uint(0); i < attempts; i++ {
+	for range attempts {
 		err = f()
 		// Stop retrying if the call succeeded or if the context has been cancelled.
 		if err == nil || errors.Is(err, context.Canceled) {
