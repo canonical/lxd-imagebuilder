@@ -14,7 +14,7 @@ import (
 func TestRenderTemplate(t *testing.T) {
 	tests := []struct {
 		name       string
-		iface      interface{}
+		iface      any
 		template   string
 		expected   string
 		shouldFail bool

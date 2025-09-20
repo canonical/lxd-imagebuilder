@@ -59,7 +59,7 @@ func Unpack(file string, path string) error {
 
 			// Confirm that all errors are related to character or block devices.
 			found := false
-			for _, line := range strings.Split(runError.StdErr().String(), "\n") {
+			for line := range strings.SplitSeq(runError.StdErr().String(), "\n") {
 				line = strings.TrimSpace(line)
 				if line == "" {
 					continue

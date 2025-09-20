@@ -73,8 +73,8 @@ func (v *vm) findRootfsDevUUID() (rootUUID string, err error) {
 		return "", fmt.Errorf("Failed to get rootfs device UUID: %w", err)
 	}
 
-	fields := strings.Fields(out.String())
-	for _, field := range fields {
+	fields := strings.FieldsSeq(out.String())
+	for field := range fields {
 		if strings.HasPrefix(field, "UUID=") {
 			rootUUID = field
 			break

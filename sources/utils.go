@@ -79,7 +79,7 @@ func getChecksum(fname string, hashLen int, r io.Reader) []string {
 			continue
 		}
 
-		for _, s := range strings.Split(scanner.Text(), " ") {
+		for s := range strings.SplitSeq(scanner.Text(), " ") {
 			if !regex.MatchString(s) {
 				continue
 			}
@@ -118,7 +118,7 @@ func getChecksum(fname string, hashLen int, r io.Reader) []string {
 
 	// Special case: CentOS
 	for _, m := range matches {
-		for _, s := range strings.Split(m, " ") {
+		for s := range strings.SplitSeq(m, " ") {
 			if !regex.MatchString(s) {
 				continue
 			}
@@ -186,9 +186,9 @@ func recvGPGKeys(ctx context.Context, gpgDir string, keyserver string, keys []st
 	// Verify output
 	var importedKeys []string
 	var missingKeys []string
-	lines := strings.Split(buffer.String(), "\n")
+	lines := strings.SplitSeq(buffer.String(), "\n")
 
-	for _, l := range lines {
+	for l := range lines {
 		if strings.HasPrefix(l, "gpg: key ") && (strings.HasSuffix(l, " imported") || strings.HasSuffix(l, " not changed")) {
 			key := strings.Split(l, " ")
 			importedKeys = append(importedKeys, strings.Split(key[2], ":")[0])

@@ -92,7 +92,7 @@ func TestLsblkOutput(t *testing.T) {
 				t.Fatal(err, num, tc.want)
 			}
 
-			for i := 0; i < num; i++ {
+			for i := range num {
 				major, minor, err := parse(i)
 				if err != nil {
 					t.Fatal(err)
