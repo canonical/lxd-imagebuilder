@@ -253,7 +253,7 @@ func (s *common) CreateGPGKeyring() (string, error) {
 
 	var ok bool
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		ok, err = recvGPGKeys(s.ctx, gpgDir, s.definition.Source.Keyserver, s.definition.Source.Keys)
 		if ok {
 			break
