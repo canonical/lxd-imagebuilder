@@ -41,7 +41,7 @@ const (
 )
 
 // UnmarshalYAML validates the filter type.
-func (d *DefinitionFilterType) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (d *DefinitionFilterType) UnmarshalYAML(unmarshal func(any) error) error {
 	var filterType string
 
 	err := unmarshal(&filterType)
@@ -686,13 +686,7 @@ func ApplyFilter(filter Filter, release string, architecture string, variant str
 	}
 
 	hasTargetType := func(targetType DefinitionFilterType) bool {
-		for _, t := range types {
-			if t == targetType {
-				return true
-			}
-		}
-
-		return false
+		return slices.Contains(types, targetType)
 	}
 
 	if acceptedImageTargets&ImageTargetAll > 0 {
