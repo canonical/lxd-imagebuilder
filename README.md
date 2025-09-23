@@ -38,7 +38,7 @@ To compile from source, first install the Go programming language, and some othe
     sudo pacman -S go debootstrap rsync gnupg squashfs-tools git make xdelta3 --needed
     ```
 
-NOTE: Go 1.24.4 or higher is required. If your package manager doesn't provide a recent enough
+NOTE: Go 1.24.6 or higher is required. If your package manager doesn't provide a recent enough
 version, [get it from upstream](https://go.dev/doc/install).
 
 Second, download the source code of the `lxd-imagebuilder` repository (this repository).
