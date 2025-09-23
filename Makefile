@@ -4,7 +4,7 @@ GO111MODULE=on
 GOTOOLCHAIN=local
 export GOTOOLCHAIN
 SPHINXENV=.sphinx/venv/bin/activate
-GO_MIN=1.24.6
+GOMIN=1.24.6
 
 .PHONY: default
 default:
@@ -17,7 +17,9 @@ default:
 .PHONY: update-gomod
 update-gomod:
 	go get -t -v -u ./...
-	go mod tidy -go=$(GO_MIN)
+
+	# Enforce minimum go version
+	$(MAKE) check-gomin
 
 	# Use the bundled toolchain that meets the minimum go version
 	go get toolchain@none
@@ -25,9 +27,19 @@ update-gomod:
 	@echo "Dependencies updated"
 
 .PHONY: check
-check: default
+check: check-gomin default
 	$(shell go env | grep -v GOENV | sed "s/'//g" > $(shell go env GOENV))
 	go test -v ./...
+
+.PHONY: check-gomin
+check-gomin:
+	go mod tidy -go=$(GOMIN)
+	@echo "Check the doc mentions the right Go minimum version"
+	$(eval DOC_GOMIN := $(shell sed -n 's/^NOTE: Go \([0-9.]\+\) .*/\1/p' README.md))
+	if [ "$(DOC_GOMIN)" != "$(GOMIN)" ]; then \
+		echo "Please update the Go version in 'README.md' to be $(GOMIN) instead of $(DOC_GOMIN)"; \
+		exit 1; \
+	fi
 
 .PHONY: dist
 dist:
