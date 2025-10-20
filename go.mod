@@ -10,7 +10,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.11.1
-	github.com/tdewolff/minify/v2 v2.24.3
+	github.com/tdewolff/minify/v2 v2.24.4
 	golang.org/x/sys v0.37.0
 	golang.org/x/text v0.30.0
 	gopkg.in/antchfx/htmlquery.v1 v1.2.2
@@ -78,7 +78,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
-	github.com/tdewolff/parse/v2 v2.8.3 // indirect
+	github.com/tdewolff/parse/v2 v2.8.4 // indirect
 	github.com/urfave/cli v1.22.16 // indirect
 	github.com/vbatts/go-mtree v0.5.4 // indirect
 	github.com/zitadel/logging v0.6.1 // indirect
