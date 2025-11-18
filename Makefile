@@ -14,6 +14,33 @@ default:
 	go install -v ./...
 	@echo "lxd-imagebuilder and simplestream-maintainer built successfully"
 
+.PHONY: update-gomin
+update-gomin:
+ifndef NEW_GOMIN
+	@echo "Usage: make update-gomin NEW_GOMIN=1.x.y"
+	@echo "Current Go minimum version: $(GOMIN)"
+	exit 1
+endif
+ifeq "$(GOMIN)" "$(NEW_GOMIN)"
+	@echo "Error: NEW_GOMIN ($(NEW_GOMIN)) is the same as current GOMIN ($(GOMIN))"
+	exit 1
+endif
+	@echo "Updating Go minimum version from $(GOMIN) to $(NEW_GOMIN)"
+
+	@# Update GOMIN in Makefile
+	sed -i 's/^GOMIN=[0-9.]\+/GOMIN=$(NEW_GOMIN)/' Makefile
+
+	@# Update GOMIN in go.mod
+	sed -i 's/^go [0-9.]\+$$/go $(NEW_GOMIN)/' go.mod
+
+	@echo "Go minimum version updated to $(NEW_GOMIN)"
+	if [ -t 0 ]; then \
+		read -rp "Would you like to commit Go version changes (Y/n)? " answer; \
+		if [ "$${answer:-y}" = "y" ] || [ "$${answer:-y}" = "Y" ]; then \
+			git commit -S -sm "go: Update Go minimum version to $(NEW_GOMIN)" -- Makefile go.mod; \
+		fi; \
+	fi
+
 .PHONY: update-gomod
 update-gomod:
 	go get -t -v -u ./...
@@ -34,12 +61,6 @@ check: check-gomin default
 .PHONY: check-gomin
 check-gomin:
 	go mod tidy -go=$(GOMIN)
-	@echo "Check the doc mentions the right Go minimum version"
-	$(eval DOC_GOMIN := $(shell sed -n 's/^NOTE: Go \([0-9.]\+\) .*/\1/p' README.md))
-	if [ "$(DOC_GOMIN)" != "$(GOMIN)" ]; then \
-		echo "Please update the Go version in 'README.md' to be $(GOMIN) instead of $(DOC_GOMIN)"; \
-		exit 1; \
-	fi
 
 .PHONY: dist
 dist:
