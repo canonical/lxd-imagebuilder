@@ -57,7 +57,9 @@ func (s *common) getTargetDir() string {
 
 // DownloadHash downloads a file. If a checksum file is provided, it will try and
 // match the hash.
-func (s *common) DownloadHash(def shared.DefinitionImage, file, checksum string, hashFunc hash.Hash) (string, error) {
+func (s *common) DownloadHash(def shared.DefinitionImage, file string, checksum string, hashFunc hash.Hash) (string, error) {
+	s.logger.WithField("file", file).WithField("checksum", checksum).Info("Downloading file")
+
 	var (
 		hashes []string
 		err    error
