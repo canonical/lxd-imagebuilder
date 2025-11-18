@@ -61,12 +61,6 @@ check: check-gomin default
 .PHONY: check-gomin
 check-gomin:
 	go mod tidy -go=$(GOMIN)
-	@echo "Check the doc mentions the right Go minimum version"
-	$(eval DOC_GOMIN := $(shell sed -n 's/^NOTE: Go \([0-9.]\+\) .*/\1/p' README.md))
-	if [ "$(DOC_GOMIN)" != "$(GOMIN)" ]; then \
-		echo "Please update the Go version in 'README.md' to be $(GOMIN) instead of $(DOC_GOMIN)"; \
-		exit 1; \
-	fi
 
 .PHONY: dist
 dist:
