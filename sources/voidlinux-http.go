@@ -100,7 +100,7 @@ func (s *voidlinux) getLatestBuild(baseURL string, arch string, variant string) 
 	)
 
 	err = shared.Retry(func() error {
-		resp, err = http.Get(baseURL)
+		resp, err = s.client.Get(baseURL)
 		if err != nil {
 			return fmt.Errorf("Failed to GET %q: %w", baseURL, err)
 		}

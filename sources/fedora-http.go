@@ -183,7 +183,7 @@ func (s *fedora) getLatestBuild(URL string, release string) (string, error) {
 	)
 
 	err = shared.Retry(func() error {
-		resp, err = http.Get(fmt.Sprintf("%s/%s", URL, release))
+		resp, err = s.client.Get(fmt.Sprintf("%s/%s", URL, release))
 		if err != nil {
 			return fmt.Errorf("Failed to GET %q: %w", fmt.Sprintf("%s/%s", URL, release), err)
 		}
