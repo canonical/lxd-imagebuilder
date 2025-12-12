@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/flosch/pongo2/v4"
-	"golang.org/x/sys/unix"
 	"go.yaml.in/yaml/v2"
+	"golang.org/x/sys/unix"
 )
 
 const (
