@@ -6,7 +6,7 @@ import (
 
 	"github.com/canonical/lxd/shared/osarch"
 	"github.com/stretchr/testify/require"
-	yaml "gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v2"
 )
 
 func TestSetDefinitionDefaults(t *testing.T) {
