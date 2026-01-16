@@ -7,7 +7,7 @@ require (
 	github.com/flosch/pongo2/v4 v4.0.2
 	github.com/google/go-github/v56 v56.0.0
 	github.com/mudler/docker-companion v0.4.6-0.20250528081746-7d707b97b3aa
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	github.com/tdewolff/minify/v2 v2.24.8
