@@ -13,7 +13,7 @@ require (
 	github.com/tdewolff/minify/v2 v2.24.8
 	go.yaml.in/yaml/v2 v2.4.3
 	golang.org/x/sys v0.41.0
-	golang.org/x/text v0.33.0
+	golang.org/x/text v0.34.0
 	gopkg.in/antchfx/htmlquery.v1 v1.2.2
 )
 
