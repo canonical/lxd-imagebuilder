@@ -82,8 +82,8 @@ func NewWebPage(rootDir string, catalog stream.ProductCatalog) (*WebPage, error)
 	// those values and the rest of the code will work as expected.
 	page := WebPage{
 		Title:           "LXD Images",
-		FaviconURL:      "https://raw.githubusercontent.com/canonical/lxd/main/doc/.sphinx/_static/favicon.ico",
-		LogoURL:         "https://raw.githubusercontent.com/canonical/lxd/main/doc/.sphinx/_static/tag.png",
+		FaviconURL:      "https://raw.githubusercontent.com/canonical/lxd/main/doc/_static/favicon.ico",
+		LogoURL:         "https://raw.githubusercontent.com/canonical/lxd/main/doc/_static/lxd_tag.png",
 		FooterCopyright: fmt.Sprintf("© %d Canonical Ltd.", time.Now().Year()),
 		FooterUpdatedAt: fmt.Sprintf("Last updated: %s UTC", time.Now().UTC().Format("02 Jan 2006 (15:04)")),
 		Paragraphs: []template.HTML{
