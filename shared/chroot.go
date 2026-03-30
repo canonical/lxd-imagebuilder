@@ -288,15 +288,9 @@ func SetupChroot(rootfs string, definition Definition, m []ChrootMount) (func() 
 				continue
 			}
 
-			entry, ok := env[e.Key]
-			if ok {
-				entry.Value = e.Value
-				entry.Set = true
-			} else {
-				env[e.Key] = EnvVariable{
-					Value: e.Value,
-					Set:   true,
-				}
+			env[e.Key] = EnvVariable{
+				Value: e.Value,
+				Set:   true,
 			}
 		}
 	}
