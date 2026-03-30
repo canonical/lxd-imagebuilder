@@ -48,7 +48,7 @@ It's an open source project that warmly welcomes community projects, contributio
 
 - [Contribute to the project](https://github.com/canonical/lxd-imagebuilder/blob/master/CONTRIBUTING.md)  <!-- wokeignore:rule=master -->
 - [Discuss on IRC](https://web.libera.chat/#lxd) (see [Getting started with IRC](https://discourse.ubuntu.com/t/getting-started-with-irc/37907) if needed)
-- [Ask and answer questions on the forum](https://discourse.ubuntu.com/c/lxd/)
+- [Ask and answer questions on the forum](https://discourse.ubuntu.com/c/lxd/126)
 
 ```{toctree}
 :hidden:
