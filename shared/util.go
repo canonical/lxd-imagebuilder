@@ -417,7 +417,7 @@ func ParseCompression(compression string) (string, *int, error) {
 			return "", nil, fmt.Errorf("Compression method %q does not support specifying levels", compression)
 		}
 
-		return "", nil, fmt.Errorf("Invalid compression level %q for method %q", level, compression)
+		return "", nil, fmt.Errorf("Invalid compression level %d for method %q", level, compression)
 	}
 
 	if compression == "lzo" {
@@ -460,7 +460,7 @@ func ParseSquashfsCompression(compression string) (string, *int, error) {
 			return "", nil, fmt.Errorf("Squashfs compression method %q does not support specifying levels", compression)
 		}
 
-		return "", nil, fmt.Errorf("Invalid squashfs compression level %q for method %q", level, compression)
+		return "", nil, fmt.Errorf("Invalid squashfs compression level %d for method %q", level, compression)
 	}
 
 	if compression == "lzop" {
