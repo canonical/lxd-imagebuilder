@@ -130,7 +130,6 @@ redirects = {}
 
 # Links to ignore when checking links
 linkcheck_ignore = [
-    'https://web.libera.chat/#lxd',
     'https://www.gnu.org/licenses/agpl-3.0.en.html',
     ]
 
