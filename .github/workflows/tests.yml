@@ -30,9 +30,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Require GHA pinning
-        uses: canonical/lxd/.github/actions/require-gha-pinning@main
+        uses: canonical/lxd/.github/actions/require-gha-pinning@main # zizmor: ignore[unpinned-uses]
 
       - name: Dependency Review
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
@@ -70,10 +72,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - uses: canonical/lxd/.github/actions/lp-snap-build@main
         with:
-          ssh-key: "${{ secrets.LAUNCHPAD_LXD_BOT_KEY}}"
+          persist-credentials: false
+
+      - uses: canonical/lxd/.github/actions/lp-snap-build@main # zizmor: ignore[unpinned-uses]
+        with:
+          ssh-key: "${{ secrets.LAUNCHPAD_LXD_BOT_KEY}}" # zizmor: ignore[secrets-outside-env]
 
       - name: Trigger Launchpad snap build
         run: |

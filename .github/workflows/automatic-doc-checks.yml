@@ -9,8 +9,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   documentation-checks:
-    uses: canonical/documentation-workflows/.github/workflows/documentation-checks.yaml@main
+    uses: canonical/documentation-workflows/.github/workflows/documentation-checks.yaml@aaeaf091e8f55145184ad897cb9834f224bd31de # main
     with:
       working-directory: 'doc'
