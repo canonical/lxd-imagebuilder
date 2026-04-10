@@ -19,13 +19,7 @@ defaults:
 jobs:
   code-tests:
     name: Code tests
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-22.04
-          - ubuntu-24.04
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
