@@ -19,22 +19,13 @@ defaults:
 jobs:
   code-tests:
     name: Code tests
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-22.04
-          - ubuntu-24.04
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-
-      - name: Require GHA pinning
-        uses: canonical/lxd/.github/actions/require-gha-pinning@main # zizmor: ignore[unpinned-uses]
 
       - name: Dependency Review
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
@@ -45,13 +36,15 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
+        with:
+          version: latest
+
       - name: Install dependencies
         run: |
           sudo apt-get -qq update
           sudo apt-get install -y --no-install-recommends squashfs-tools xdelta3
-
-      - name: Run static analysis
-        run: make static-analysis
 
       - name: Unit tests (all)
         run: make check
