@@ -1,7 +1,6 @@
 package sources
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -80,77 +79,6 @@ func (s *fedora) Run() error {
 	err = os.RemoveAll(ociDir)
 	if err != nil {
 		return fmt.Errorf("Failed to wipe OCI directory: %w", err)
-	}
-
-	return nil
-}
-
-func (s *fedora) unpackLayers(rootfsDir string) error {
-	// Read manifest file which contains the path to the layers
-	file, err := os.Open(filepath.Join(rootfsDir, "manifest.json"))
-	if err != nil {
-		return fmt.Errorf("Failed to open %q: %w", filepath.Join(rootfsDir, "manifest.json"), err)
-	}
-
-	defer file.Close()
-
-	data, err := io.ReadAll(file)
-	if err != nil {
-		return fmt.Errorf("Failed to read file %q: %w", file.Name(), err)
-	}
-
-	// Structure of the manifest excluding RepoTags
-	var manifests []struct {
-		Layers []string
-		Config string
-	}
-
-	err = json.Unmarshal(data, &manifests)
-	if err != nil {
-		return fmt.Errorf("Failed to unmarshal JSON data: %w", err)
-	}
-
-	pathsToRemove := []string{
-		filepath.Join(rootfsDir, "manifest.json"),
-		filepath.Join(rootfsDir, "repositories"),
-	}
-
-	// Unpack tarballs (or layers) which contain the rest of the rootfs, and
-	// remove files not relevant to the image.
-	for _, manifest := range manifests {
-		for _, layer := range manifest.Layers {
-			s.logger.WithField("file", filepath.Join(rootfsDir, layer)).Info("Unpacking layer")
-
-			err := shared.Unpack(filepath.Join(rootfsDir, layer), rootfsDir)
-			if err != nil {
-				return fmt.Errorf("Failed to unpack %q: %w", filepath.Join(rootfsDir, layer), err)
-			}
-
-			pathsToRemove = append(pathsToRemove,
-				filepath.Join(rootfsDir, filepath.Dir(layer)))
-		}
-
-		pathsToRemove = append(pathsToRemove, filepath.Join(rootfsDir, manifest.Config))
-	}
-
-	// Clean up /tmp since there are unnecessary files there
-	files, err := filepath.Glob(filepath.Join(rootfsDir, "tmp", "*"))
-	if err != nil {
-		return fmt.Errorf("Failed to find matching files: %w", err)
-	}
-
-	pathsToRemove = append(pathsToRemove, files...)
-
-	// Clean up /root since there are unnecessary files there
-	files, err = filepath.Glob(filepath.Join(rootfsDir, "root", "*"))
-	if err != nil {
-		return fmt.Errorf("Failed to find matching files: %w", err)
-	}
-
-	pathsToRemove = append(pathsToRemove, files...)
-
-	for _, f := range pathsToRemove {
-		os.RemoveAll(f)
 	}
 
 	return nil
