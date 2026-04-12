@@ -48,6 +48,8 @@ func (s *fedora) Run() error {
 		return fmt.Errorf("Failed to create OCI path: %q: %w", ociDir, err)
 	}
 
+	defer os.RemoveAll(ociDir)
+
 	err = os.Mkdir(filepath.Join(ociDir, "image"), 0755)
 	if err != nil {
 		return fmt.Errorf("Failed to create OCI path: %q: %w", filepath.Join(ociDir, "image"), err)
@@ -73,12 +75,6 @@ func (s *fedora) Run() error {
 	err = shared.RsyncLocal(s.ctx, fmt.Sprintf("%s/rootfs/", filepath.Join(ociDir, "content")), s.rootfsDir)
 	if err != nil {
 		return fmt.Errorf("Failed to run rsync: %w", err)
-	}
-
-	// Delete the temporary directory.
-	err = os.RemoveAll(ociDir)
-	if err != nil {
-		return fmt.Errorf("Failed to wipe OCI directory: %w", err)
 	}
 
 	return nil
