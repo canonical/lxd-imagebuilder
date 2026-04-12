@@ -23,8 +23,6 @@ type fedora struct {
 // Run downloads a container base image and unpacks it and its layers.
 func (s *fedora) Run() error {
 	base := "Fedora-Container-Base-Generic"
-	extension := "oci.tar.xz"
-
 	baseURL := fmt.Sprintf("%s/packages/%s", s.definition.Source.URL, base)
 
 	// Get latest build
@@ -33,7 +31,7 @@ func (s *fedora) Run() error {
 		return fmt.Errorf("Failed to get latest build: %w", err)
 	}
 
-	fname := fmt.Sprintf("%s-%s-%s.%s.%s", base, s.definition.Image.Release, build, s.definition.Image.ArchitectureMapped, extension)
+	fname := fmt.Sprintf("%s-%s-%s.%s.%s", base, s.definition.Image.Release, build, s.definition.Image.ArchitectureMapped, "oci.tar.xz")
 
 	// Download image
 	sourceURL := fmt.Sprintf("%s/%s/%s/images/%s", baseURL, s.definition.Image.Release, build, fname)
@@ -45,59 +43,43 @@ func (s *fedora) Run() error {
 
 	s.logger.WithField("file", filepath.Join(fpath, fname)).Info("Unpacking image")
 
-	if extension == "oci.tar.xz" {
-		// Unpack the OCI image.
-		ociDir, err := os.MkdirTemp(s.getTargetDir(), "oci.")
-		if err != nil {
-			return fmt.Errorf("Failed to create OCI path: %q: %w", ociDir, err)
-		}
+	// Unpack the OCI image.
+	ociDir, err := os.MkdirTemp(s.getTargetDir(), "oci.")
+	if err != nil {
+		return fmt.Errorf("Failed to create OCI path: %q: %w", ociDir, err)
+	}
 
-		err = os.Mkdir(filepath.Join(ociDir, "image"), 0755)
-		if err != nil {
-			return fmt.Errorf("Failed to create OCI path: %q: %w", ociDir, err)
-		}
+	err = os.Mkdir(filepath.Join(ociDir, "image"), 0755)
+	if err != nil {
+		return fmt.Errorf("Failed to create OCI path: %q: %w", ociDir, err)
+	}
 
-		err = shared.Unpack(filepath.Join(fpath, fname), filepath.Join(ociDir, "image"))
-		if err != nil {
-			return fmt.Errorf("Failed to unpack %q: %w", filepath.Join(fpath, fname), err)
-		}
+	err = shared.Unpack(filepath.Join(fpath, fname), filepath.Join(ociDir, "image"))
+	if err != nil {
+		return fmt.Errorf("Failed to unpack %q: %w", filepath.Join(fpath, fname), err)
+	}
 
-		// Extract the image to a temporary path.
-		err = os.Mkdir(filepath.Join(ociDir, "content"), 0755)
-		if err != nil {
-			return fmt.Errorf("Failed to create OCI path: %q: %w", ociDir, err)
-		}
+	// Extract the image to a temporary path.
+	err = os.Mkdir(filepath.Join(ociDir, "content"), 0755)
+	if err != nil {
+		return fmt.Errorf("Failed to create OCI path: %q: %w", ociDir, err)
+	}
 
-		_, err = lxdShared.RunCommandContext(s.ctx, "umoci", "unpack", "--keep-dirlinks", "--image", fmt.Sprintf("%s:fedora:%s", filepath.Join(ociDir, "image"), s.definition.Image.Release), filepath.Join(ociDir, "content"))
-		if err != nil {
-			return fmt.Errorf("Failed to run umoci: %w", err)
-		}
+	_, err = lxdShared.RunCommandContext(s.ctx, "umoci", "unpack", "--keep-dirlinks", "--image", fmt.Sprintf("%s:fedora:%s", filepath.Join(ociDir, "image"), s.definition.Image.Release), filepath.Join(ociDir, "content"))
+	if err != nil {
+		return fmt.Errorf("Failed to run umoci: %w", err)
+	}
 
-		// Transfer the content.
-		err = shared.RsyncLocal(s.ctx, fmt.Sprintf("%s/rootfs/", filepath.Join(ociDir, "content")), s.rootfsDir)
-		if err != nil {
-			return fmt.Errorf("Failed to run rsync: %w", err)
-		}
+	// Transfer the content.
+	err = shared.RsyncLocal(s.ctx, fmt.Sprintf("%s/rootfs/", filepath.Join(ociDir, "content")), s.rootfsDir)
+	if err != nil {
+		return fmt.Errorf("Failed to run rsync: %w", err)
+	}
 
-		// Delete the temporary directory.
-		err = os.RemoveAll(ociDir)
-		if err != nil {
-			return fmt.Errorf("Failed to wipe OCI directory: %w", err)
-		}
-	} else {
-		// Handle simple rootfs tarballs.
-		err = shared.Unpack(filepath.Join(fpath, fname), s.rootfsDir)
-		if err != nil {
-			return fmt.Errorf("Failed to unpack %q: %w", filepath.Join(fpath, fname), err)
-		}
-
-		s.logger.Info("Unpacking layers")
-
-		// Unpack the rest of the image (/bin, /sbin, /usr, etc.)
-		err = s.unpackLayers(s.rootfsDir)
-		if err != nil {
-			return fmt.Errorf("Failed to unpack: %w", err)
-		}
+	// Delete the temporary directory.
+	err = os.RemoveAll(ociDir)
+	if err != nil {
+		return fmt.Errorf("Failed to wipe OCI directory: %w", err)
 	}
 
 	return nil
