@@ -50,7 +50,7 @@ func (s *fedora) Run() error {
 
 	err = os.Mkdir(filepath.Join(ociDir, "image"), 0755)
 	if err != nil {
-		return fmt.Errorf("Failed to create OCI path: %q: %w", ociDir, err)
+		return fmt.Errorf("Failed to create OCI path: %q: %w", filepath.Join(ociDir, "image"), err)
 	}
 
 	err = shared.Unpack(filepath.Join(fpath, fname), filepath.Join(ociDir, "image"))
@@ -61,7 +61,7 @@ func (s *fedora) Run() error {
 	// Extract the image to a temporary path.
 	err = os.Mkdir(filepath.Join(ociDir, "content"), 0755)
 	if err != nil {
-		return fmt.Errorf("Failed to create OCI path: %q: %w", ociDir, err)
+		return fmt.Errorf("Failed to create OCI path: %q: %w", filepath.Join(ociDir, "content"), err)
 	}
 
 	_, err = lxdShared.RunCommandContext(s.ctx, "umoci", "unpack", "--keep-dirlinks", "--image", fmt.Sprintf("%s:fedora:%s", filepath.Join(ociDir, "image"), s.definition.Image.Release), filepath.Join(ociDir, "content"))
