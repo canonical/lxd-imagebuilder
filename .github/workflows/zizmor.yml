@@ -3,7 +3,7 @@ name: GHA Security Analysis
 on:
   push:
     branches:
-      - latest-edge
+      - main
   pull_request:
 
 permissions: {}
