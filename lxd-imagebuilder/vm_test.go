@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/canonical/lxd-imagebuilder/shared"
 )
 
@@ -102,6 +104,74 @@ func TestLsblkOutput(t *testing.T) {
 					t.Fatal(major, minor)
 				}
 			}
+		})
+	}
+}
+
+func TestNewVMSizeParsing(t *testing.T) {
+	tcs := []struct {
+		name      string
+		size      string
+		wantBytes uint64
+		wantErr   bool
+	}{
+		{
+			name:      "GiB",
+			size:      "2GiB",
+			wantBytes: 2 * 1024 * 1024 * 1024,
+		},
+		{
+			name:      "GB",
+			size:      "1GB",
+			wantBytes: 1 * 1000 * 1000 * 1000,
+		},
+		{
+			name:      "MiB",
+			size:      "512MiB",
+			wantBytes: 512 * 1024 * 1024,
+		},
+		{
+			name:      "MB",
+			size:      "100MB",
+			wantBytes: 100 * 1000 * 1000,
+		},
+		{
+			name:      "KiB",
+			size:      "1024KiB",
+			wantBytes: 1024 * 1024,
+		},
+		{
+			name:      "bytes",
+			size:      "4096B",
+			wantBytes: 4096,
+		},
+		{
+			name:      "zero uses default",
+			size:      "0B",
+			wantBytes: 4294967296,
+		},
+		{
+			name:    "negative is invalid",
+			size:    "-1",
+			wantErr: true,
+		},
+		{
+			name:    "invalid",
+			size:    "notasize",
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			v, err := newVM(context.Background(), "", t.TempDir(), "ext4", tc.size)
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantBytes, v.size)
 		})
 	}
 }
