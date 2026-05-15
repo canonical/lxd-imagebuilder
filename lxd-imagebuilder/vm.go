@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	lxdShared "github.com/canonical/lxd/shared"
+	"github.com/canonical/lxd/shared/units"
 	"golang.org/x/sys/unix"
 
 	"github.com/canonical/lxd-imagebuilder/shared"
@@ -26,7 +27,7 @@ type vm struct {
 	ctx        context.Context
 }
 
-func newVM(ctx context.Context, imageFile, rootfsDir, fs string, size uint64) (*vm, error) {
+func newVM(ctx context.Context, imageFile string, rootfsDir string, fs string, size string) (*vm, error) {
 	if fs == "" {
 		fs = "ext4"
 	}
@@ -35,11 +36,28 @@ func newVM(ctx context.Context, imageFile, rootfsDir, fs string, size uint64) (*
 		return nil, fmt.Errorf("Unsupported fs: %s", fs)
 	}
 
-	if size == 0 {
-		size = 4294967296
+	sizeBytes, err := units.ParseByteSizeString(size)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse VM size: %w", err)
 	}
 
-	return &vm{ctx: ctx, imageFile: imageFile, rootfsDir: rootfsDir, rootFS: fs, size: size}, nil
+	if sizeBytes < 0 {
+		return nil, fmt.Errorf("Invalid VM size: %s (%d)", size, sizeBytes)
+	}
+
+	// Safe to convert int64 to uint64 since negative values are rejected above.
+	vmSize := uint64(sizeBytes)
+	if vmSize == 0 {
+		vmSize = 4294967296 // 4GiB
+	}
+
+	return &vm{
+		ctx:       ctx,
+		imageFile: imageFile,
+		rootfsDir: rootfsDir,
+		rootFS:    fs,
+		size:      vmSize,
+	}, nil
 }
 
 func (v *vm) getLoopDev() string {
