@@ -47,7 +47,7 @@ You can also use it to build images from ISO files that require licenses and the
 It's an open source project that warmly welcomes community projects, contributions, suggestions, fixes and constructive feedback.
 
 - [Contribute to the project](https://github.com/canonical/lxd-imagebuilder/blob/main/CONTRIBUTING.md)
-- [Ask and answer questions on the forum](https://discourse.ubuntu.com/c/lxd/126)
+- [Ask and answer questions on the forum](https://discourse.ubuntu.com/c/project/lxd/126)
 
 ```{toctree}
 :hidden:
