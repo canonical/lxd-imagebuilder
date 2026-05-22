@@ -2,7 +2,7 @@
 
 <!-- Include start contributing -->
 
-The LXD team appreciates contributions to the project, through pull requests, issues on the [LXD GitHub repository](https://github.com/canonical/lxd/issues), or discussions or questions on the [forum](https://discourse.ubuntu.com/c/lxd/126).
+The LXD team appreciates contributions to the project, through pull requests, issues on the [LXD GitHub repository](https://github.com/canonical/lxd/issues), or discussions or questions on the [forum](https://discourse.ubuntu.com/c/project/lxd/126.
 
 Check the following guidelines before contributing to the project.
 
