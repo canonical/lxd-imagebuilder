@@ -66,7 +66,7 @@ func (s *fedora) Run() error {
 		return fmt.Errorf("Failed to create OCI path: %q: %w", filepath.Join(ociDir, "content"), err)
 	}
 
-	_, err = lxdShared.RunCommandContext(s.ctx, "umoci", "unpack", "--keep-dirlinks", "--image", fmt.Sprintf("%s:fedora:%s", filepath.Join(ociDir, "image"), s.definition.Image.Release), filepath.Join(ociDir, "content"))
+	_, err = lxdShared.RunCommand(s.ctx, "umoci", "unpack", "--keep-dirlinks", "--image", fmt.Sprintf("%s:fedora:%s", filepath.Join(ociDir, "image"), s.definition.Image.Release), filepath.Join(ociDir, "content"))
 	if err != nil {
 		return fmt.Errorf("Failed to run umoci: %w", err)
 	}

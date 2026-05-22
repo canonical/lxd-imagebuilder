@@ -51,5 +51,5 @@ func TestGetArch(t *testing.T) {
 	require.EqualError(t, err, "Architecture map isn't supported: distro")
 
 	_, err = GetArch("debian", "arch")
-	require.EqualError(t, err, "Architecture isn't supported: arch")
+	require.EqualError(t, err, "Architecture is not supported: \"arch\"")
 }
