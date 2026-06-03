@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -99,13 +100,21 @@ func pruneStreamProductVersions(rootDir string, streamVersion string, streamName
 				continue
 			}
 
-			// Remove versions older then retainDays.
-			if retainDays > 0 {
-				info, err := os.Stat(versionPath)
-				if err != nil {
-					return err
+			// If catalog references a non-existing version, remove it from the catalog
+			// and continue with the rest of versions.
+			info, err := os.Stat(versionPath)
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					slog.Warn("Dropping stale product version from catalog", "path", versionPath)
+					delete(catalog.Products[id].Versions, v)
+					continue
 				}
 
+				return err
+			}
+
+			// Remove versions older then retainDays.
+			if retainDays > 0 {
 				maxAge := time.Duration(retainDays) * 24 * time.Hour
 				if time.Since(info.ModTime()) > maxAge {
 					delete(catalog.Products[id].Versions, v)
