@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/canonical/lxd-imagebuilder/shared"
@@ -35,10 +36,14 @@ func (s *centOS) Run() error {
 		strings.ToLower(s.definition.Image.Release),
 		s.definition.Image.ArchitectureMapped)
 
-	if s.definition.Image.Release == "9-Stream" {
-		baseURL = fmt.Sprintf("%s/%s/BaseOS/%s/iso/", s.definition.Source.URL,
-			strings.ToLower(s.definition.Image.Release),
-			s.definition.Image.ArchitectureMapped)
+	base, hasSuffix := strings.CutSuffix(s.definition.Image.Release, "-Stream")
+	if hasSuffix {
+		versionNum, err := strconv.ParseInt(base, 10, 64)
+		if err == nil && versionNum >= 9 {
+			baseURL = fmt.Sprintf("%s/%s/BaseOS/%s/iso/", s.definition.Source.URL,
+				strings.ToLower(s.definition.Image.Release),
+				s.definition.Image.ArchitectureMapped)
+		}
 	}
 
 	s.fname, err = s.getRelease(s.definition.Source.URL, s.definition.Image.Release,
@@ -314,6 +319,42 @@ yy+mHmSv
 EOF
 	fi
 
+	if ! [ -f /etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial-SHA256 ]; then
+		mkdir -p /etc/pki/rpm-gpg
+		cat <<- "EOF" > /etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial-SHA256
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v2.0.22 (GNU/Linux)
+
+mQINBFzMWxkBEADHrskpBgN9OphmhRkc7P/YrsAGSvvl7kfu+e9KAaU6f5MeAVyn
+rIoM43syyGkgFyWgjZM8/rur7EMPY2yt+2q/1ZfLVCRn9856JqTIq0XRpDUe4nKQ
+8BlA7wDVZoSDxUZkSuTIyExbDf0cpw89Tcf62Mxmi8jh74vRlPy1PgjWL5494b3X
+5fxDidH4bqPZyxTBqPrUFuo+EfUVEqiGF94Ppq6ZUvrBGOVo1V1+Ifm9CGEK597c
+aevcGc1RFlgxIgN84UpuDjPR9/zSndwJ7XsXYvZ6HXcKGagRKsfYDWGPkA5cOL/e
+f+yObOnC43yPUvpggQ4KaNJ6+SMTZOKikM8yciyBwLqwrjo8FlJgkv8Vfag/2UR7
+JINbyqHHoLUhQ2m6HXSwK4YjtwidF9EUkaBZWrrskYR3IRZLXlWqeOi/+ezYOW0m
+vufrkcvsh+TKlVVnuwmEPjJ8mwUSpsLdfPJo1DHsd8FS03SCKPaXFdD7ePfEjiYk
+nHpQaKE01aWVSLUiygn7F7rYemGqV9Vt7tBw5pz0vqSC72a5E3zFzIIuHx6aANry
+Gat3aqU3qtBXOrA/dPkX9cWE+UR5wo/A2UdKJZLlGhM2WRJ3ltmGT48V9CeS6N9Y
+m4CKdzvg7EWjlTlFrd/8WJ2KoqOE9leDPeXRPncubJfJ6LLIHyG09h9kKQARAQAB
+tDpDZW50T1MgKENlbnRPUyBPZmZpY2lhbCBTaWduaW5nIEtleSkgPHNlY3VyaXR5
+QGNlbnRvcy5vcmc+iQI3BBMBCAAhAhsDBgsJCAcDAgYVCAIJCgsDFgIBAh4BAheA
+BQJczFsaAAoJEAW1VbOEg8ZdvOgQAMFTGIQokADy5+CynFKjfO7R0VVpJxmYGVr1
+TjnKaHmjxnJaYqoha9ukGgmLu0r+lJ42Kk6nREk1vlxfRAfiWd00Zkm+K3IMq1/D
+E0heC2vX8qqjsLJs3jzq0hgNvo9X0uHDaA4J1BHsD8sE5in/f4SivjbngvFovRGU
+1XLNCgoqpFNcROP18LqKUw8WtqgWdnYBa5i6D5qx+WMRX0NHNwcCMy1lz+sTFxIU
+9mW6cLsMaacPGD8pUXIVli8P9Vlv3jBk1wFIqRgQPW01ph/3bM7pf9hyM9FAfU4X
+AFcyb1oYI4/82EkICUe6jeuZrz67dPeLVAlYrGW4hp/825g0fqJHxPDp25GS4rAa
+4RqyibLzNjSGdXYeLj2NcB/8OqaP+T1hv3JDaqe70QoYa/GIC4rh15NyXVbUP+LG
+V4vUiL7mb9ynzvF5zYHJbcg4R7dOsiZHrMFwy7FZesQaVrXeJlxRcEj65rpm1ZtZ
+mwAE1k2LsRkvLyr9hpZkXnMeOKYIPwpdmBjXNVNVbq7097OxZOYPPos+iZKMWfl4
+UQnMsCVxonZtamdI4qEc3jMkSZPJKgOplGOms5jdY+EdSvsFWEQ0Snd3dChfU7DV
+o4Rbcy5klwHrvuZIOLaovhyxuRPhP6gV9+gzpTK/7vrvDlFbbZE6s212mDZ13RWB
+mTfAxz4h
+=agO/
+-----END PGP PUBLIC KEY BLOCK-----
+EOF
+	fi
+
 	# --- CentOS 7
 	if grep -q "CentOS Linux 7" /etc/os-release; then
 	cat <<- "EOF" > /etc/yum.repos.d/CentOS-Base.repo
@@ -345,24 +386,24 @@ gpgcheck=1
 enabled=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
 EOF
-	fi
 
-	# --- Only on Stream 9
-	if grep -q "CentOS Stream 9" /etc/os-release; then
+
+	# --- Stream 9 onwards
+	elif grep -q "CentOS Stream" /etc/os-release; then
 	cat <<- "EOF" > /etc/yum.repos.d/CentOS-Base.repo
 [baseos]
 name=CentOS Stream $releasever - BaseOS
-baseurl=https://mirror.xenyth.net/centos-stream/$releasever/BaseOS/$basearch/os
+baseurl=https://mirror1.hs-esslingen.de/pub/Mirrors/centos-stream/$releasever/BaseOS/$basearch/os
 gpgcheck=1
 enabled=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial-SHA256
 
 [appstream]
 name=CentOS Stream $releasever - AppStream
-baseurl=https://mirror.xenyth.net/centos-stream/$releasever/AppStream/$basearch/os
+baseurl=https://mirror1.hs-esslingen.de/pub/Mirrors/centos-stream/$releasever/AppStream/$basearch/os
 gpgcheck=1
 enabled=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial-SHA256
 EOF
 	fi
 
@@ -397,8 +438,12 @@ func (s *centOS) getRelease(URL, release, variant, arch string) (string, error) 
 	releaseFields := strings.Split(release, ".")
 	u := URL + path.Join("/", strings.ToLower(release), "isos", arch)
 
-	if release == "9-Stream" {
-		u = URL + path.Join("/", strings.ToLower(release), "BaseOS", arch, "iso")
+	base, hasSuffix := strings.CutSuffix(releaseFields[0], "-Stream")
+	if hasSuffix {
+		versionNum, err := strconv.ParseInt(base, 10, 64)
+		if err == nil && versionNum >= 9 {
+			u = URL + path.Join("/", strings.ToLower(release), "BaseOS", arch, "iso")
+		}
 	}
 
 	var (
