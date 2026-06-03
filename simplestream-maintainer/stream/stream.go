@@ -462,14 +462,14 @@ func GetVersion(rootDir string, versionRelPath string, options ...Option) (*Vers
 			checksumPath := filepath.Join(versionPath, file.Name())
 			version.Checksums, err = ReadChecksumFile(checksumPath)
 			if err != nil {
-				return nil, fmt.Errorf("Failed to read checksums file: %w", err)
+				return nil, fmt.Errorf("Failed reading checksums file %q: %w", checksumPath, err)
 			}
 		} else if file.Name() == FileImageConfig {
 			// Read the image config file.
 			configPath := filepath.Join(versionPath, file.Name())
 			config, err := shared.ReadYAMLFile(configPath, &shared.Definition{})
 			if err != nil {
-				return nil, fmt.Errorf("%w: %w", ErrVersionInvalidImageConfig, err)
+				return nil, fmt.Errorf("Failed reading image config %q: %w: %w", configPath, ErrVersionInvalidImageConfig, err)
 			}
 
 			version.ImageConfig = config.Simplestream
@@ -599,6 +599,11 @@ func ReadChecksumFile(path string) (map[string]string, error) {
 		filename := strings.TrimSpace(parts[1])
 
 		checksums[filename] = checksum
+	}
+
+	err = scanner.Err()
+	if err != nil {
+		return nil, err
 	}
 
 	return checksums, nil
