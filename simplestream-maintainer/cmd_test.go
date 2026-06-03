@@ -612,6 +612,37 @@ func TestPruneOldVersions(t *testing.T) {
 	}
 }
 
+func TestPruneOldVersions_MissingVersionDirInCatalog(t *testing.T) {
+	t.Parallel()
+
+	// Create product directory structure and initial product catalog.
+	p := testutils.MockProduct("images/ubuntu/noble/amd64/cloud").
+		AddVersions(
+			testutils.MockVersion("2026_01_01").WithFiles("lxd.tar.xz", "disk.qcow2"),
+			testutils.MockVersion("2026_01_02").WithFiles("lxd.tar.xz", "disk.qcow2")).
+		AddProductCatalog()
+	p.Create(t, t.TempDir())
+
+	// Simulate stale catalog state by deleting one existing version directory.
+	missingVersion := "2026_01_01"
+	err := os.RemoveAll(filepath.Join(p.AbsPath(), missingVersion))
+	require.NoError(t, err)
+
+	// Prune should not fail when catalog references a missing version path.
+	err = pruneStreamProductVersions(p.RootDir(), "v1", p.StreamName(), 10, 1)
+	require.NoError(t, err)
+
+	catalogPath := filepath.Join(p.RootDir(), "streams", "v1", fmt.Sprintf("%s.json", p.StreamName()))
+	catalog, err := shared.ReadJSONFile(catalogPath, &stream.ProductCatalog{})
+	require.NoError(t, err)
+
+	// Ensure version missing on disk is removed from catalog.
+	productID := strings.Join(strings.Split(p.RelPath(), "/")[1:], ":")
+	require.Contains(t, catalog.Products, productID)
+	require.Contains(t, catalog.Products[productID].Versions, "2026_01_02")
+	require.NotContains(t, catalog.Products[productID].Versions, missingVersion)
+}
+
 func TestPruneDanglingResources(t *testing.T) {
 	t.Parallel()
 
