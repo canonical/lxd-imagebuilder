@@ -169,6 +169,7 @@ Flag value | Version
 `w8.1`     | Windows 8.1
 `w7`       | Windows 7
 `xp`       | Windows XP
+`2k25`     | Windows Server 2025
 `2k22`     | Windows Server 2022
 `2k19`     | Windows Server 2019
 `2k16`     | Windows Server 2016
