@@ -2,6 +2,7 @@
 set -eux
 
 # Source helper functions.
+# shellcheck source=bin/helpers
 . "$(realpath "$(dirname "$0")/helpers")"
 
 # Check input arguments.
@@ -163,13 +164,15 @@ done
 # Wait for things to settle.
 echo "==> Waiting for instances to start"
 for i in ${INSTANCES}; do
-    if [ "${DISTRO}" == "busybox" ]; then
+    if [ "${DISTRO}" = "busybox" ]; then
         # Busybox has only 1 process running when ready.
+        # shellcheck disable=SC2034
         MIN_PROC_COUNT=1
     fi
 
-    if [ "${DISTRO}" == "centos" ]; then
+    if [ "${DISTRO}" = "centos" ]; then
         # Give CentOS a bit more time to boot.
+        # shellcheck disable=SC2034
         MAX_WAIT_SECONDS=180
     fi
 

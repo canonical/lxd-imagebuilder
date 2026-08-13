@@ -8,6 +8,7 @@ if [ "${1:-}" = "" ] || [ "${2:-}" = "" ] || [ "${3:-}" = "" ] || [ "${4:-}" = "
 fi
 
 YAML=${1}
+# shellcheck disable=SC2034
 ARCH=${2}
 TYPE=${3}
 TIMEOUT=${4}
@@ -55,4 +56,4 @@ sudo rm -Rf rootfs
 echo "${SERIAL}" > serial
 
 # Calculate checksums for all files within a directory.
-sha256sum * > SHA256SUMS
+sha256sum -- * > SHA256SUMS

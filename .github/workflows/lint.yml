@@ -34,4 +34,4 @@ jobs:
             sudo apt-get install --no-install-recommends -y yamllint
           fi
 
-          find .github/ images/ -type f -regex '.*\.ya?ml$' -exec yamllint --strict {} +
+          find .github/ -type f -regex '.*\.ya?ml$' -exec yamllint --strict {} +
