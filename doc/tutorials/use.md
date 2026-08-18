@@ -22,7 +22,7 @@ The YAML configuration file contains an image template that gives instructions t
 LXD imagebuilder provides examples of YAML files for various distributions in the [examples directory](https://github.com/canonical/lxd-imagebuilder/tree/main/doc/examples).
 [`scheme.yaml`](https://github.com/canonical/lxd-imagebuilder/blob/main/doc/examples/scheme.yaml) is a standard template that includes all available options.
 
-Official LXD templates for various distributions are available in the [`lxd-ci` repository](https://github.com/canonical/lxd-ci/tree/main/images).
+Official LXD templates for various distributions are available in the [`lxd-imagebuilder` repository](https://github.com/canonical/lxd-imagebuilder/tree/main/images).
 ```
 
 In this example, we are creating an Ubuntu image.
