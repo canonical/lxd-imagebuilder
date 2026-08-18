@@ -1,0 +1,28 @@
+#cloud-config
+apt:
+  # Speed things up by not pulling from backports/security and avoid restricted/multiverse pockets.
+  # In general, backported packages or those from restricted/multiverse shouldn't be relied on because
+  # they don't come with the same level of support as those from main for example.
+  # The security repo doesn't make much sense when pulling from a Canonical maintained archive mirror.
+  disable_suites:
+  - backports
+  - security
+  sources_list: |
+    deb [arch=amd64] $MIRROR $RELEASE main universe
+    deb [arch=amd64] $MIRROR $RELEASE-updates main universe
+  conf: |
+    # Faster downloads
+    Acquire::Languages "none";
+    APT::Get::Show-Versions "true";
+
+# Faster dpkg installs
+write_files:
+- content: "force-unsafe-io\n"
+  path: /etc/dpkg/dpkg.cfg
+  append: true
+
+runcmd:
+# Remove sources of noise
+- systemctl stop unattended-upgrades.service
+- apt-get autopurge -y cron needrestart networkd-dispatcher unattended-upgrades
+- cd /etc/systemd/system/timers.target.wants/ && systemctl disable --now *.timer

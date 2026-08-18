@@ -1,0 +1,37 @@
+name: Lint
+on:
+  pull_request:
+    paths:
+      - '.github/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Make sure bash is always invoked with `-eo pipefail`
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsshell
+    shell: bash
+
+jobs:
+  lint-tests:
+    name: Lint
+    runs-on: ubuntu-slim
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: yamllint
+        run: |
+          set -eux
+          if ! command -v yamllint > /dev/null; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y yamllint
+          fi
+
+          find .github/ -type f -regex '.*\.ya?ml$' -exec yamllint --strict {} +
