@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   mint:
-    if: github.event_name != 'schedule' || github.repository == 'canonical/lxd-ci'
+    if: github.event_name != 'schedule' || github.repository_owner == 'canonical'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -91,7 +91,7 @@ jobs:
 
       - name: Upload image
         uses: ./.github/actions/image-upload
-        if: github.repository == 'canonical/lxd-ci'
+        if: github.repository_owner == 'canonical'
         with:
           target: ${{ env.target }}
           image_dir: "${{ env.distro }}/${{ matrix.release }}/${{ matrix.architecture }}/${{ matrix.variant }}"

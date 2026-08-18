@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   devuan:
-    if: github.event_name != 'schedule' || github.repository == 'canonical/lxd-ci'
+    if: github.event_name != 'schedule' || github.repository_owner == 'canonical'
     # XXX: Ubuntu 24.04 debootstrap doesn't work with Devuan Chimera (oldoldstable). Revert this when dropping Chimera on 2026-08-15
     runs-on: ${{ matrix.architecture == 'arm64' && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
     strategy:
@@ -89,7 +89,7 @@ jobs:
 
       - name: Upload image
         uses: ./.github/actions/image-upload
-        if: github.repository == 'canonical/lxd-ci'
+        if: github.repository_owner == 'canonical'
         with:
           target: ${{ env.target }}
           image_dir: "${{ env.distro }}/${{ matrix.release }}/${{ matrix.architecture }}/${{ matrix.variant }}"
