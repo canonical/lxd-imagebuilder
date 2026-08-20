@@ -61,6 +61,7 @@ jobs:
         run: |
           timeout 10m sudo apt-get -qq update
           timeout 10m sudo apt-get install -y --no-install-recommends squashfs-tools xdelta3
+          sudo chown -R --no-dereference --from=root:root "${USER}:${USER}" "${GITHUB_WORKSPACE}"
 
       - name: Unit tests (all)
         run: make check
