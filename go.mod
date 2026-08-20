@@ -1,6 +1,6 @@
 module github.com/canonical/lxd-imagebuilder
 
-go 1.26.2
+go 1.26.5
 
 require (
 	github.com/canonical/lxd v0.0.0-20260521084752-704f941eaeb2

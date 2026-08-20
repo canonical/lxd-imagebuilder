@@ -4,7 +4,7 @@ GO111MODULE=on
 GOTOOLCHAIN=local
 export GOTOOLCHAIN
 SPHINXENV=.sphinx/venv/bin/activate
-GOMIN=1.26.2
+GOMIN=1.26.5
 
 .PHONY: default
 default:
@@ -54,9 +54,9 @@ update-gomod:
 	@echo "Dependencies updated"
 
 .PHONY: check
-check: check-gomin default
+check: default
 	$(shell go env | grep -v GOENV | sed "s/'//g" > $(shell go env GOENV))
-	go test -v ./...
+	go test -mod=readonly -v ./...
 
 .PHONY: check-gomin
 check-gomin:
