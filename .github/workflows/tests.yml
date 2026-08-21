@@ -59,8 +59,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get -qq update
-          sudo apt-get install -y --no-install-recommends squashfs-tools xdelta3
+          timeout 10m sudo apt-get -qq update
+          timeout 10m sudo apt-get install -y --no-install-recommends squashfs-tools xdelta3
 
       - name: Unit tests (all)
         run: make check

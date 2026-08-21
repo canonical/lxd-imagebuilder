@@ -38,8 +38,8 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        sudo apt-get -qq update
-        sudo apt-get install -y --no-install-recommends \
+        timeout 10m sudo apt-get -qq update
+        timeout 10m sudo apt-get install -y --no-install-recommends \
             build-essential \
             bzip2 \
             debootstrap \
@@ -61,7 +61,7 @@ runs:
         SNAP_CHANNEL: ${{ inputs.lxd-imagebuilder-channel }}
       shell: bash
       run: |
-        sudo snap install lxd-imagebuilder --channel="${SNAP_CHANNEL}" --classic
+        timeout 10m sudo snap install lxd-imagebuilder --channel="${SNAP_CHANNEL}" --classic
         lxd-imagebuilder --version
 
     - name: Setup LXD ${{ inputs.lxd-channel }}
