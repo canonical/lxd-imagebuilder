@@ -32,7 +32,6 @@ var downloaders = map[string]func() downloader{
 	"busybox":              func() downloader { return &busybox{} },
 	"centos-http":          func() downloader { return &centOS{} },
 	"debootstrap":          func() downloader { return &debootstrap{} },
-	"docker-http":          func() downloader { return &docker{} },
 	"fedora-http":          func() downloader { return &fedora{} },
 	"funtoo-http":          func() downloader { return &funtoo{} },
 	"gentoo-http":          func() downloader { return &gentoo{} },

@@ -395,7 +395,6 @@ func (d *Definition) Validate() error {
 		"gentoo-http",
 		"ubuntu-http",
 		"sabayon-http",
-		"docker-http",
 		"oraclelinux-http",
 		"openeuler-http",
 		"opensuse-http",
