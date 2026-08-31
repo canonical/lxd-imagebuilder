@@ -21,7 +21,6 @@ jobs:
       fail-fast: false
       matrix:
         release:
-          - bullseye  # EOL: 2026-08-31
           - bookworm  # EOL: 2028-06-30
           - trixie    # EOL: 2030-06-30
           - forky     # EOL: ?? (not officially released yet)
