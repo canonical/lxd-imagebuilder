@@ -194,6 +194,20 @@ func TestValidateDefinition(t *testing.T) {
 			true,
 		},
 		{
+			"unimplemented source.downloader",
+			Definition{
+				Image: DefinitionImage{
+					Distribution: "sabayon",
+					Release:      "rolling",
+				},
+				Source: DefinitionSource{
+					Downloader: "sabayon-http",
+				},
+			},
+			"source.downloader must be one of .+",
+			true,
+		},
+		{
 			"invalid package.manager",
 			Definition{
 				Image: DefinitionImage{

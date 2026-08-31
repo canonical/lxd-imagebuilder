@@ -33,7 +33,6 @@ It needs to be one of
 * `opensuse-http`
 * `openwrt-http`
 * `oraclelinux-http`
-* `sabayon-http`
 * `rootfs-http`
 * `ubuntu-http`
 * `voidlinux-http`
