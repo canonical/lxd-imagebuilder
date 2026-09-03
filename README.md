@@ -8,7 +8,7 @@ See https://canonical-lxd-imagebuilder.readthedocs-hosted.com/ for documentation
 ## Status
 Type            | Service               | Status
 ---             | ---                   | ---
-CI              | GitHub                | [![Build Status](https://github.com/canonical/lxd-imagebuilder/workflows/Tests/badge.svg)](https://github.com/canonical/lxd-imagebuilder/actions)
+CI              | GitHub                | [![Tests](https://github.com/canonical/lxd-imagebuilder/actions/workflows/tests.yml/badge.svg)](https://github.com/canonical/lxd-imagebuilder/actions/workflows/tests.yml)
 
 ## Images
 
