@@ -18,7 +18,7 @@ defaults:
 
 jobs:
   code-tests:
-    name: Code tests
+    name: Code
     runs-on: ubuntu-24.04
 
     steps:
