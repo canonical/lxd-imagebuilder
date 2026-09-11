@@ -25,7 +25,6 @@ It needs to be one of
 * `archlinux-http`
 * `centos-http`
 * `debootstrap`
-* `docker-http`
 * `fedora-http`
 * `funtoo-http`
 * `gentoo-http`
@@ -34,7 +33,6 @@ It needs to be one of
 * `opensuse-http`
 * `openwrt-http`
 * `oraclelinux-http`
-* `sabayon-http`
 * `rootfs-http`
 * `ubuntu-http`
 * `voidlinux-http`
