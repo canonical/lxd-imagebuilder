@@ -61,8 +61,7 @@ jobs:
 
           ./bin/build-distro "${YAML}" "${ARCH}" "${TYPE}" "${TIMEOUT}" "${{ env.target }}" \
               -o image.architecture="${IMAGE_ARCH}" \
-              -o image.release=${{ matrix.release }} \
-              -o source.url="https://mirrors.servercentral.com/voidlinux/live/current/"
+              -o image.release=${{ matrix.release }}
 
       - name: Print build artifacts
         run: ls -lah "${{ env.target }}"
