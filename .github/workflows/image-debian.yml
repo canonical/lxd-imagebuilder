@@ -42,7 +42,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup environment
-        uses: ./.github/actions/image-setup
+        uses: $/.github/actions/image-setup
 
       - name: Determine image types
         env:
@@ -70,7 +70,7 @@ jobs:
         run: ls -lah "${{ env.target }}"
 
       - name: Test container image
-        uses: ./.github/actions/image-test
+        uses: $/.github/actions/image-test
         # avoid runaway test burning 6 hours of CI
         timeout-minutes: 20
         if: contains(env.type, 'container')
@@ -82,7 +82,7 @@ jobs:
           variant: ${{ matrix.variant }}
 
       - name: Test VM image
-        uses: ./.github/actions/image-test
+        uses: $/.github/actions/image-test
         # avoid runaway test burning 6 hours of CI
         timeout-minutes: 40
         if: contains(env.type, 'vm')
@@ -94,7 +94,7 @@ jobs:
           variant: ${{ matrix.variant }}
 
       - name: Upload image
-        uses: ./.github/actions/image-upload
+        uses: $/.github/actions/image-upload
         if: github.repository_owner == 'canonical'
         with:
           target: ${{ env.target }}
