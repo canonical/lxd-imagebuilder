@@ -12,7 +12,7 @@ require (
 	github.com/tdewolff/minify/v2 v2.24.17
 	go.yaml.in/yaml/v2 v2.4.4
 	golang.org/x/sys v0.48.0
-	golang.org/x/text v0.41.0
+	golang.org/x/text v0.42.0
 	gopkg.in/antchfx/htmlquery.v1 v1.2.2
 )
 
@@ -47,6 +47,6 @@ require (
 	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
 )
