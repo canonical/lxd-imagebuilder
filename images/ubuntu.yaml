@@ -374,25 +374,29 @@ files:
   - default
   - desktop
 
+# VMs skip the NoCloud seed (it reboots lxd-agent); noble can miss the LXD datasource on first boot, see canonical/lxd#14605.
 - name: meta-data
   generator: cloud-init
+  types:
+  - container
 
 - name: network-config
   generator: cloud-init
+  types:
+  - container
 
 - name: user-data
   generator: cloud-init
+  types:
+  - container
 
 - name: vendor-data
   generator: cloud-init
+  types:
+  - container
 
 - name: ext4
   generator: fstab
-  types:
-  - vm
-
-- name: lxd-agent
-  generator: lxd-agent
   types:
   - vm
 
@@ -442,6 +446,12 @@ packages:
   - packages:
     - cloud-init
     action: install
+
+  - packages:
+    - lxd-agent-loader
+    action: install
+    types:
+    - vm
 
   - packages:
     - systemd-resolved
