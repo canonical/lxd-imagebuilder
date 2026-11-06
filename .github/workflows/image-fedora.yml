@@ -23,6 +23,7 @@ jobs:
         release:
           - 43 # EOL: 2026-12-09
           - 44 # EOL: 2027-06-02
+          - 45 # EOL: 2027-12-08
         variant:
           - default
           - cloud
