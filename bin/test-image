@@ -64,7 +64,19 @@ check_cloud_init_status() {
 
 # has_cloud_init: returns 0 if yes, 1 otherwise
 has_cloud_init() {
+    # Jammy and noble stay off until the lxd-agent-loader backport, so they cannot gate publication.
+    if [ "${DISTRO}" = "ubuntu" ]; then
+        case "${RELEASE}" in
+            jammy|noble) return 1 ;;
+        esac
+    fi
+
     if [ "${VARIANT}" = "cloud" ] || [ "${VARIANT}" = "desktop" ]; then
+        return 0
+    fi
+
+    # Ubuntu VMs have no seed and are configured through the LXD datasource.
+    if [ "${DISTRO}" = "ubuntu" ] && [ "${TYPE}" = "vm" ]; then
         return 0
     fi
     return 1
@@ -186,6 +198,40 @@ lxc list "${TEST_IMAGE}"
 # Check that all instances have an IPv4 and IPv6 address.
 echo "==> Performing network tests"
 FAIL=0
+
+# Ubuntu VMs ship lxd-agent-loader and must not reboot during their first boot.
+if [ "${DISTRO}" = "ubuntu" ] && [ "${TYPE}" = "vm" ]; then
+    echo "==> Performing first boot test"
+    for name in ${INSTANCES}; do
+        # Jammy and noble skip these checks until the lxd-agent-loader backport lands.
+        case "${RELEASE}" in
+            jammy|noble) continue ;;
+        esac
+
+        if lxc exec "${name}" -- dpkg -s lxd-agent-loader >/dev/null 2>&1; then
+            echo "===> PASS: lxd-agent-loader installed: ${name}"
+        else
+            echo "===> FAIL: lxd-agent-loader installed: ${name}"
+            FAIL=1
+        fi
+
+        # A volatile journal forgets earlier boots, which would hide a reboot.
+        if ! lxc exec "${name}" -- test -d /var/log/journal; then
+            echo "===> FAIL: persistent journal: ${name}"
+            FAIL=1
+            continue
+        fi
+
+        boots="$(lxc exec "${name}" -- journalctl --list-boots --no-pager | grep -cE '^ *-?[0-9]+ ' || true)"
+        if [ "${boots}" = "1" ]; then
+            echo "===> PASS: no reboot on first boot: ${name}"
+        else
+            echo "===> FAIL: no reboot on first boot (${boots} boots): ${name}"
+            lxc exec "${name}" -- journalctl --list-boots --no-pager || true
+            FAIL=1
+        fi
+    done
+fi
 for url in $(lxc query "/1.0/instances" | jq -r .[] | grep "${TEST_IMAGE}"); do
     name=$(echo "${url}" | cut -d/ -f4)
 
@@ -288,14 +334,14 @@ for url in $(lxc query "/1.0/instances" | jq -r .[] | grep "${TEST_IMAGE}"); do
 
     # Cloud-init testing
     if has_cloud_init; then
-        if [ "$(lxc file pull "${name}/user-data" - 2>/dev/null)" = "foo" ]; then
+        if [ "$(lxc file pull "${name}/user-data" -)" = "foo" ]; then
             echo "===> PASS: cloud-init user-data provisioning: ${name}"
         else
             echo "===> FAIL: cloud-init user-data provisioning: ${name}"
             FAIL=1
         fi
 
-        if [ "$(lxc file pull "${name}/vendor-data" - 2>/dev/null)" = "bar" ]; then
+        if [ "$(lxc file pull "${name}/vendor-data" -)" = "bar" ]; then
             echo "===> PASS: cloud-init vendor-data provisioning: ${name}"
         else
             echo "===> FAIL: cloud-init vendor-data provisioning: ${name}"
