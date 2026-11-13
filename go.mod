@@ -9,9 +9,9 @@ require (
 	github.com/sirupsen/logrus v1.10.2
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
-	github.com/tdewolff/minify/v2 v2.24.19
-	go.yaml.in/yaml/v2 v2.4.4
-	golang.org/x/sys v0.49.0
+	github.com/tdewolff/minify/v2 v2.24.25
+	go.yaml.in/yaml/v2 v2.4.5
+	golang.org/x/sys v0.50.0
 	golang.org/x/text v0.43.0
 	gopkg.in/antchfx/htmlquery.v1 v1.2.2
 )
@@ -35,7 +35,7 @@ require (
 	github.com/pkg/sftp v1.13.10 // indirect
 	github.com/pkg/xattr v0.4.12 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/tdewolff/parse/v2 v2.8.16 // indirect
+	github.com/tdewolff/parse/v2 v2.8.20 // indirect
 	github.com/zitadel/logging v0.7.0 // indirect
 	github.com/zitadel/oidc/v3 v3.47.5 // indirect
 	github.com/zitadel/schema v1.3.2 // indirect
