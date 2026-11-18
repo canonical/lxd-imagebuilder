@@ -243,13 +243,18 @@ for url in $(lxc query "/1.0/instances" | jq -r .[] | grep "${TEST_IMAGE}"); do
 
     # Systemd cleanliness.
     if lxc exec "${name}" -- test -d /run/systemd/system/; then
-        # XXX: Many (modern?) unpriv containers have a problem with console-getty.service which breaks `lxc console` for those images.
-        #      Rather than fail validation and skip the image publication, disable the bogus unit until a proper fix is implemented.
         if [ "${TYPE}" = "container" ] && [ "$(lxc config get "${name}" security.privileged)" != "true" ]; then
+            # Modern systemd resolves /dev/console through virtual-console sysfs.
+            # LXD masks host virtual consoles that do not exist in the container.
+            if lxc exec "${name}" -- test -s /sys/class/tty/console/active; then
+                echo "===> FAIL: console sysfs exposes a host virtual console: ${name}"
+                lxc exec "${name}" -- cat /sys/class/tty/console/active
+                FAIL=1
+            fi
+
             if isSystemdUnitFailed "${name}" console-getty.service; then
-                echo "::warning::Disabling console-getty.service on ${DISTRO} ${RELEASE} (broken)"
-                lxc exec "${name}" -- systemctl mask --now console-getty.service
-                systemdUnitResetFailed "${name}" console-getty.service
+                echo "===> FAIL: console-getty.service: ${name}"
+                FAIL=1
             fi
         fi
 
