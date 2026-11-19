@@ -21,7 +21,6 @@ jobs:
       fail-fast: false
       matrix:
         release:
-          - "3.21"  # EOL: 2026-11-01
           - "3.22"  # EOL: 2027-05-01
           - "3.23"  # EOL: 2027-11-01
           - "3.24"  # EOL: 2028-06-01
@@ -32,8 +31,6 @@ jobs:
         architecture:
           - amd64
           - arm64
-        exclude:
-          - {release: "3.21", variant: cloud}
     env:
       type: "container"
       distro: "${{ github.job }}"
