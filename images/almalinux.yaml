@@ -153,6 +153,17 @@ targets:
       content: |-
         lxc.arch = {{ image.architecture_kernel }}
 
+  lxd:
+    vm:
+      # Disable modern ext4 features not supported by older GRUB/e2fsck versions.
+      filesystem_options:
+      - options:
+        - -O
+        - ^metadata_csum_seed,^orphan_file
+        releases:
+        - 8
+        - 9
+
 files:
 - name: hostname
   path: /etc/hostname
