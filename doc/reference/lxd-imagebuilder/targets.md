@@ -16,6 +16,15 @@ targets:
         vm:
             size: <uint>
             filesystem: <string>
+            filesystem_options:
+                - options:
+                      - <string>
+                  releases:
+                      - <string>
+                  architectures:
+                      - <string>
+                  variants:
+                      - <string>
 ```
 
 ## LXC
@@ -34,7 +43,8 @@ If your desired compatibility level is 3 for example, you would use `before: 4` 
 
 ## LXD
 
-Valid keys are `size` and `filesystem`.
-The former specifies the VM image size in bytes.
-The latter specifies the root partition file system.
+Valid keys are `size`, `filesystem`, and `filesystem_options`.
+`size` specifies the VM image size in bytes.
+`filesystem` specifies the root partition file system.
 It currently supports `ext4` and `btrfs`.
+`filesystem_options` is a list of filtered entries whose `options` are passed as additional arguments to `mkfs.<filesystem>` (for example, `["-O", "^metadata_csum_seed,^orphan_file"]` for older releases whose GRUB or `e2fsck` does not support newer ext4 features).

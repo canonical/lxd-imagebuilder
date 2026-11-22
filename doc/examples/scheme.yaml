@@ -78,6 +78,12 @@ targets:
     vm:
       size: 2147483648
       filesystem: ext4
+      filesystem_options:
+        - options:
+            - -O
+            - ^metadata_csum_seed,^orphan_file
+          releases:
+            - a
 
 files:
   - generator: dump

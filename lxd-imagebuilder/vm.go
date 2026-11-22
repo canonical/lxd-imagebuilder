@@ -21,13 +21,14 @@ type vm struct {
 	imageFile  string
 	loopDevice string
 	rootFS     string
+	rootFSOpts []string
 	rootfsDir  string
 	bootfsDir  string
 	size       uint64
 	ctx        context.Context
 }
 
-func newVM(ctx context.Context, imageFile string, rootfsDir string, fs string, size string) (*vm, error) {
+func newVM(ctx context.Context, imageFile string, rootfsDir string, fs string, size string, fsOptions []string) (*vm, error) {
 	if fs == "" {
 		fs = "ext4"
 	}
@@ -52,11 +53,12 @@ func newVM(ctx context.Context, imageFile string, rootfsDir string, fs string, s
 	}
 
 	return &vm{
-		ctx:       ctx,
-		imageFile: imageFile,
-		rootfsDir: rootfsDir,
-		rootFS:    fs,
-		size:      vmSize,
+		ctx:        ctx,
+		imageFile:  imageFile,
+		rootfsDir:  rootfsDir,
+		rootFS:     fs,
+		rootFSOpts: fsOptions,
+		size:       vmSize,
 	}, nil
 }
 
@@ -293,7 +295,10 @@ func (v *vm) createRootFS() error {
 
 	switch v.rootFS {
 	case "btrfs":
-		err := shared.RunCommand(v.ctx, nil, nil, "mkfs.btrfs", "-f", "-L", "rootfs", v.getRootfsDevFile())
+		args := append([]string{"-f", "-L", "rootfs"}, v.rootFSOpts...)
+		args = append(args, v.getRootfsDevFile())
+
+		err := shared.RunCommand(v.ctx, nil, nil, "mkfs.btrfs", args...)
 		if err != nil {
 			return fmt.Errorf("Failed to create btrfs filesystem: %w", err)
 		}
@@ -311,7 +316,10 @@ func (v *vm) createRootFS() error {
 
 		return shared.RunCommand(v.ctx, nil, nil, "btrfs", "subvolume", "create", fmt.Sprintf("%s/@", v.rootfsDir))
 	case "ext4":
-		return shared.RunCommand(v.ctx, nil, nil, "mkfs.ext4", "-F", "-b", "4096", "-i 8192", "-m", "0", "-L", "rootfs", "-E", "resize=536870912", v.getRootfsDevFile())
+		args := append([]string{"-F", "-b", "4096", "-i 8192", "-m", "0", "-L", "rootfs", "-E", "resize=536870912"}, v.rootFSOpts...)
+		args = append(args, v.getRootfsDevFile())
+
+		return shared.RunCommand(v.ctx, nil, nil, "mkfs.ext4", args...)
 	}
 
 	return nil
