@@ -184,10 +184,17 @@ type DefinitionTargetLXC struct {
 	Config        []DefinitionTargetLXCConfig `yaml:"config,omitempty"`
 }
 
+// DefinitionTargetLXDVMFilesystemOption represents filtered filesystem options for LXD VMs.
+type DefinitionTargetLXDVMFilesystemOption struct {
+	DefinitionFilter `yaml:",inline"`
+	Options          []string `yaml:"options,omitempty"`
+}
+
 // DefinitionTargetLXDVM represents LXD VM specific options.
 type DefinitionTargetLXDVM struct {
-	Size       string `yaml:"size,omitempty"`
-	Filesystem string `yaml:"filesystem,omitempty"`
+	Size              string                                  `yaml:"size,omitempty"`
+	Filesystem        string                                  `yaml:"filesystem,omitempty"`
+	FilesystemOptions []DefinitionTargetLXDVMFilesystemOption `yaml:"filesystem_options,omitempty"`
 }
 
 // DefinitionTargetLXD represents LXD specific options.
@@ -571,6 +578,22 @@ func (d *Definition) GetRunnableActions(trigger string, imageTarget ImageTarget)
 		}
 
 		out = append(out, action)
+	}
+
+	return out
+}
+
+// GetVMFilesystemOptions returns a list of mkfs options for the VM root filesystem
+// matching the current release, architecture, variant, and target filters.
+func (d *Definition) GetVMFilesystemOptions(imageTarget ImageTarget) []string {
+	var out []string
+
+	for _, opt := range d.Targets.LXD.VM.FilesystemOptions {
+		if !ApplyFilter(&opt, d.Image.Release, d.Image.ArchitectureMapped, d.Image.Variant, d.Targets.Type, imageTarget) {
+			continue
+		}
+
+		out = append(out, opt.Options...)
 	}
 
 	return out

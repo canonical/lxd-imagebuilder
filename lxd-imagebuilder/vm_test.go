@@ -164,7 +164,7 @@ func TestNewVMSizeParsing(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			v, err := newVM(context.Background(), "", t.TempDir(), "ext4", tc.size)
+			v, err := newVM(context.Background(), "", t.TempDir(), "ext4", tc.size, nil)
 			if tc.wantErr {
 				require.Error(t, err)
 				return

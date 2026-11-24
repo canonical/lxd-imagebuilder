@@ -600,3 +600,40 @@ func TestDefinitionFilterTypeUnmarshalYAML(t *testing.T) {
 	err = yaml.Unmarshal([]byte(data), &out)
 	require.EqualError(t, err, `Invalid filter type "vms"`)
 }
+
+func TestGetVMFilesystemOptions(t *testing.T) {
+	input := `targets:
+  lxd:
+    vm:
+      filesystem: ext4
+      filesystem_options:
+      - options:
+        - -O
+        - ^metadata_csum_seed,^orphan_file
+        releases:
+        - 9-Stream
+      - options:
+        - -m
+        - "1"
+        architectures:
+        - x86_64
+`
+	def := Definition{}
+
+	err := yaml.Unmarshal([]byte(input), &def)
+	require.NoError(t, err)
+
+	def.Image.Release = "9-Stream"
+	def.Image.ArchitectureMapped = "x86_64"
+	def.Image.Variant = "default"
+	def.Targets.Type = DefinitionFilterTypeVM
+
+	imageTargets := ImageTargetUndefined | ImageTargetAll | ImageTargetVM
+	require.Equal(t, []string{"-O", "^metadata_csum_seed,^orphan_file", "-m", "1"}, def.GetVMFilesystemOptions(imageTargets))
+
+	def.Image.Release = "10-Stream"
+	require.Equal(t, []string{"-m", "1"}, def.GetVMFilesystemOptions(imageTargets))
+
+	def.Image.ArchitectureMapped = "aarch64"
+	require.Empty(t, def.GetVMFilesystemOptions(imageTargets))
+}

@@ -303,7 +303,7 @@ func (c *cmdLXD) run(cmd *cobra.Command, args []string, overlayDir string) error
 
 		imgFile := filepath.Join(c.global.flagCacheDir, imgFilename)
 
-		vm, err = newVM(c.global.ctx, imgFile, vmDir, c.global.definition.Targets.LXD.VM.Filesystem, c.global.definition.Targets.LXD.VM.Size)
+		vm, err = newVM(c.global.ctx, imgFile, vmDir, c.global.definition.Targets.LXD.VM.Filesystem, c.global.definition.Targets.LXD.VM.Size, c.global.definition.GetVMFilesystemOptions(imageTargets))
 		if err != nil {
 			return fmt.Errorf("Failed to instantiate VM: %w", err)
 		}
