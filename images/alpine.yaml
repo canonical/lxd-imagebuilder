@@ -8,7 +8,7 @@ simplestream:
 
 source:
   downloader: alpinelinux-http
-  same_as: 3.21
+  same_as: 3.24
   url: https://dl-cdn.alpinelinux.org/alpine/
   keys:
   # 0482D84022F52DF1C4E7CD43293ACD0907D9495A
